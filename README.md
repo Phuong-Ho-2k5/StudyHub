@@ -25,6 +25,6 @@ StudyHub/
 
 ## Bắt đầu
 
-Đây là skeleton cho initial commit. Mã ứng dụng, dependency và hạ tầng chạy thực tế sẽ được bổ sung theo các milestone trong file kế hoạch. Bắt đầu từ M1: Auth, User, Workspace và Course; sau đó mở rộng nội dung học tập, Quiz và AI/RAG.
+Backend đã có bộ khung Spring Boot cho M1-T01. Các API nghiệp vụ và phần AI sẽ được bổ sung theo các milestone trong file kế hoạch. M1 tiếp tục với User, Auth, Workspace và Course; sau đó mở rộng nội dung học tập, Quiz và AI/RAG.
 
 Sao chép `.env.example` thành `.env` khi triển khai và điền giá trị riêng của môi trường. Không commit `.env`.

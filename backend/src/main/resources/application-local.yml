@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/studyhub}
+    username: ${POSTGRES_USER:studyhub}
+    password: ${POSTGRES_PASSWORD:}
