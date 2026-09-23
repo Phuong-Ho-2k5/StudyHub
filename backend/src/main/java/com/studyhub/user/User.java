@@ -56,9 +56,26 @@ public class User {
         return id;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
     public Timestamp getUpdatedAt() {
         return updatedAt;
     }
+
 
     public void rename(String name) {
         this.name = name;
