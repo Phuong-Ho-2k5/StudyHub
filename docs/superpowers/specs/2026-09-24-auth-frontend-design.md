@@ -15,7 +15,7 @@ Build the first usable React frontend for the current StudyHub milestone. The fr
 - Protect the post-login route and redirect guests to login.
 - Log out and remove the stored token.
 - Show a restrained waiting page after login.
-- Responsive layouts and accessible form states.
+- Desktop web layout and accessible form states.
 
 ### Excluded
 
@@ -23,6 +23,8 @@ Build the first usable React frontend for the current StudyHub milestone. The fr
 - Workspace, Course, Document, Quiz, progress, and AI screens.
 - Mock business data or navigation to unfinished modules.
 - A current-user request, because `/api/auth/me` does not exist yet.
+- Mobile-specific and responsive layouts.
+- Automated frontend tests and test-runner dependencies.
 
 ## Technical approach
 
@@ -81,7 +83,7 @@ Use a quiet “study corner” visual direction rather than a generic SaaS templ
 - Moderate corner radii and very light shadows.
 - No gradients, glassmorphism, oversized marketing copy, or grids of decorative cards.
 
-On desktop, the authentication pages use a balanced split layout. One side contains the StudyHub identity and a few subtle study-related details; the other contains the form. On small screens, the identity area becomes a compact header above the form.
+The authentication pages use a balanced desktop split layout. One side contains the StudyHub identity and a few subtle study-related details; the other contains the form. The implementation targets a desktop web application and does not include a separate mobile layout.
 
 The welcome page reuses the same visual language. It shows a brief greeting using the email from the JWT, states honestly that learning spaces are coming next, and provides a logout action.
 
@@ -105,18 +107,9 @@ The welcome page reuses the same visual language. It shows a brief greeting usin
 - Unexpected response: show a concise fallback without exposing implementation details.
 - Missing, malformed, or expired stored token: clear it and redirect to login.
 
-## Testing and verification
+## Verification
 
-Use Vitest and React Testing Library for focused behavior tests:
-
-- Registration validation and successful redirect with prefilled email.
-- Login failure and successful token persistence.
-- Protected-route redirect for guests.
-- Access to `/welcome` with a valid non-expired token.
-- Cleanup of expired or malformed tokens.
-- Logout cleanup and redirect.
-
-Before completion, run the automated tests, lint checks, and a production build. Manually inspect authentication and welcome pages at desktop and mobile widths.
+No automated frontend tests or test dependencies are included in this milestone. Before completion, run lint checks and a production build, then manually verify registration, login, protected navigation, expired-token cleanup, the desktop welcome page, and logout.
 
 ## Future extension points
 
