@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.authentication.ProviderManager;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
     public class SecurityConfig {
@@ -39,6 +40,7 @@ import jakarta.servlet.http.HttpServletResponse;
                     .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                     .authenticationProvider(authenticationProvider)
                     .authorizeHttpRequests(authorize -> authorize
+                            .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                             .requestMatchers(
                             "/api/auth/register",
                             "/api/auth/login",
