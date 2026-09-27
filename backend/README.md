@@ -1,25 +1,42 @@
-# Backend
+# StudyHub Backend
 
-Ứng dụng Spring Boot 4.1.1 dùng Maven và biên dịch cho Java 21. M1-T01 thiết lập bộ khung, dependency và profile cấu hình; các API nghiệp vụ sẽ được bổ sung ở những task tiếp theo.
+Backend dùng Spring Boot 4.1.1, Java 21, Maven, PostgreSQL, Flyway và JWT. Các API hiện có gồm Auth, Workspace và Course. Xem [README gốc](../README.md) để chạy cả backend lẫn frontend.
 
 ## Cấu hình
 
-- `local` (mặc định): PostgreSQL tại `localhost:5432/studyhub`, có thể đổi bằng `DATABASE_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
-- `prod`: bắt buộc cung cấp ba biến môi trường trên và đặt `SPRING_PROFILES_ACTIVE=prod`.
-- `test`: H2 trong bộ nhớ, chỉ dùng khi chạy test.
+Profile `local` là mặc định. Khi chạy từ thư mục `backend/`, ứng dụng đọc `../.env` nếu có. Các biến cần thiết:
 
-Dependency đã có Spring MVC, JPA, Security, Validation, Actuator, Flyway và PostgreSQL. Migration `src/main/resources/db/migration/V1__create_users.sql` tạo bảng `users` trên database mới. Chưa có API đăng nhập/JWT hoặc business endpoint; Spring Security hiện dùng hành vi mặc định.
+| Biến | Mục đích |
+| --- | --- |
+| `DATABASE_URL` | JDBC URL, ví dụ `jdbc:postgresql://localhost:5432/studyhub` |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD` | Tài khoản PostgreSQL |
+| `JWT_SECRET` | Khóa JWT dạng Base64, giải mã thành ít nhất 32 byte |
+| `JWT_EXPIRATION` | Thời hạn token tính bằng mili giây; mặc định `900000` |
 
-## Chạy
+Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Test tích hợp dùng H2 trong bộ nhớ. Flyway tạo bảng qua `V1__create_users.sql`, `V2__create_workspaces.sql`, `V3__create_courses.sql`; JPA dùng `ddl-auto: validate`.
 
-Yêu cầu JDK 21 trở lên và PostgreSQL đang chạy cho profile `local`. Maven Wrapper đi kèm sẽ tải Maven 3.9.9 nếu máy chưa có.
+## Chạy và kiểm tra
 
-Trước khi chạy lần đầu, tạo database có tên khớp với `DATABASE_URL`. Sao chép `.env.example` thành `.env` tại gốc `StudyHub`, rồi điền `POSTGRES_USER`, `POSTGRES_PASSWORD` và `DATABASE_URL` theo dạng `KEY=value` (không bọc giá trị bằng dấu nháy). Profile `local` tự nạp file này khi chạy từ thư mục `backend`; biến môi trường đã đặt trong hệ thống được ưu tiên hơn giá trị trong file. Không commit `.env`.
+Tạo database PostgreSQL và cấu hình `.env` ở gốc repo trước khi chạy local:
 
 ```powershell
-cd backend
-.\mvnw.cmd test
 .\mvnw.cmd spring-boot:run
+.\mvnw.cmd test
 ```
 
-Nếu Maven báo `JAVA_HOME` không hợp lệ, đặt biến này trỏ tới **thư mục JDK** (không phải `java.exe`) trước khi chạy lệnh.
+Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 21 trở lên.
+
+## API
+
+- `POST /api/auth/register`, `POST /api/auth/login`: đăng ký và nhận JWT.
+- `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}`: CRUD Workspace theo owner.
+- `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
+- `GET /actuator/health`: health check.
+
+Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `GET /api/courses` nhận `workspaceId`, `status`, `q`, `page`, `size`, `sort`; ví dụ:
+
+```text
+/api/courses?status=IN_PROGRESS&q=java&page=0&size=10&sort=name,asc
+```
+
+Test tích hợp trong `src/test/java/com/studyhub/` kiểm tra quyền truy cập và các luồng API hiện có.

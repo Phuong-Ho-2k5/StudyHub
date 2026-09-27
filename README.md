@@ -1,30 +1,87 @@
 # StudyHub
 
-StudyHub là nền tảng quản lý học tập và trợ lý AI/RAG.
+StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và CRUD Course với lọc, phân trang, sắp xếp. Giao diện React hiện phục vụ luồng đăng ký, đăng nhập và trang chào sau đăng nhập. Document, Quiz và AI/RAG nằm trong kế hoạch phát triển, chưa có API hoạt động.
 
-## Cấu trúc
+## Cấu trúc dự án
+
+| Thư mục | Vai trò hiện tại |
+| --- | --- |
+| `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
+| `frontend/` | React/Vite cho đăng ký, đăng nhập và trang chào |
+| `ai-service/` | Bộ khung cho dịch vụ AI/RAG trong tương lai |
+| `infra/` | Vị trí dành cho cấu hình hạ tầng trong tương lai |
+
+## Chạy local
+
+Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Repo chưa có Docker Compose để khởi tạo database tự động.
+
+1. Sao chép `.env.example` thành `.env` tại thư mục gốc và điền tối thiểu:
+
+   ```properties
+   POSTGRES_USER=studyhub
+   POSTGRES_PASSWORD=<mật khẩu PostgreSQL>
+   DATABASE_URL=jdbc:postgresql://localhost:5432/studyhub
+   JWT_SECRET=<chuỗi Base64 của ít nhất 32 byte ngẫu nhiên>
+   ```
+
+   `JWT_EXPIRATION` tùy chọn, tính bằng mili giây; mặc định là `900000` (15 phút). Không commit `.env`. Profile `local` đọc file này khi chạy từ thư mục `backend/`.
+
+2. Chạy backend trong một terminal:
+
+   ```powershell
+   cd backend
+   .\mvnw.cmd spring-boot:run
+   ```
+
+   Backend mặc định ở `http://localhost:8080`. Flyway áp dụng các migration tạo bảng `users`, `workspaces`, `courses`; Hibernate kiểm tra schema khi khởi động. Nếu Maven báo `JAVA_HOME` không hợp lệ, đặt biến này trỏ tới **thư mục JDK**, không phải file `java.exe`.
+
+3. Chạy frontend trong terminal khác:
+
+   ```powershell
+   cd frontend
+   npm ci
+   npm run dev
+   ```
+
+   Mở `http://localhost:5173`. Vite chuyển tiếp `/api` tới backend ở cổng 8080. Khi frontend và backend dùng hai origin khác nhau, đặt `VITE_API_URL` trong `frontend/.env.local`; xem [hướng dẫn frontend](frontend/README.md).
+
+Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
+
+## API hiện có
+
+| Nhóm | Endpoint | Chức năng |
+| --- | --- | --- |
+| Auth | `POST /api/auth/register`, `POST /api/auth/login` | Tạo tài khoản, nhận JWT |
+| Workspace | `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}` | Quản lý Workspace của người dùng hiện tại |
+| Course | `POST /api/workspaces/{workspaceId}/courses` | Tạo Course trong Workspace đã sở hữu |
+| Course | `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}` | Liệt kê, đọc, sửa và xóa Course được phép truy cập |
+| Health | `GET /actuator/health` | Kiểm tra trạng thái backend |
+
+Ngoài đăng ký, đăng nhập và health check, các API yêu cầu header `Authorization: Bearer <accessToken>`. Quyền Course được suy ra từ owner của Workspace; truy cập tài nguyên của người khác trả về 404.
+
+`GET /api/courses` nhận các bộ lọc tùy chọn `workspaceId`, `status` (`PLANNED`, `IN_PROGRESS`, `COMPLETED`, `ARCHIVED`) và `q` (tìm trong tên, không phân biệt chữ hoa/thường). Spring Data hỗ trợ `page` (bắt đầu từ 0), `size` và `sort`:
 
 ```text
-StudyHub/
-├── backend/                 # Spring Boot: API, xác thực, quyền, nghiệp vụ
-├── ai-service/              # FastAPI: ingestion, retrieval, generation
-├── frontend/                # Ứng dụng React trong tương lai
-├── infra/                   # Cấu hình hạ tầng và triển khai
-├── docs/                    # Tài liệu kỹ thuật bổ sung
-├── .env.example             # Tên biến môi trường cần cấu hình
-├── .editorconfig
-└── .gitignore
+GET /api/courses?workspaceId=3&status=PLANNED&q=java&page=0&size=10&sort=name,asc
 ```
 
-## Nguyên tắc kiến trúc
+Kết quả là một trang dữ liệu có `content`, `totalElements`, `totalPages` và thông tin phân trang. Chi tiết request/response nằm trong các DTO và controller của [backend](backend/src/main/java/com/studyhub/).
 
-- Backend kiểm tra JWT và quyền truy cập Course trước mọi tác vụ nghiệp vụ hoặc AI.
-- AI service xử lý tài liệu, embedding, retrieval và gọi LLM; kết quả AI được backend kiểm tra trước khi lưu thành dữ liệu nghiệp vụ.
-- Retrieval luôn được giới hạn theo Course đã được cấp quyền; citation phải truy ngược được về Document/page/chunk.
-- Không lưu secret, token, dữ liệu tải lên hoặc file môi trường vào Git.
+## Kiểm tra
 
-## Bắt đầu
+```powershell
+cd backend
+.\mvnw.cmd test
+```
 
-Backend đã có bộ khung Spring Boot cho M1-T01. Các API nghiệp vụ và phần AI sẽ được bổ sung theo các milestone trong file kế hoạch. M1 tiếp tục với User, Auth, Workspace và Course; sau đó mở rộng nội dung học tập, Quiz và AI/RAG.
+Test backend dùng H2 ở chế độ tương thích PostgreSQL. Bộ test hiện kiểm tra luồng Workspace và Course, gồm quyền owner, CRUD Course, lọc kết hợp, phân trang và sắp xếp.
 
-Sao chép `.env.example` thành `.env` khi triển khai và điền giá trị riêng của môi trường. Không commit `.env`.
+```powershell
+cd frontend
+npm run lint
+npm run build
+```
+
+## Hướng phát triển
+
+`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Các tính năng Document, Concept, Quiz, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các milestone sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
