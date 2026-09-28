@@ -1,13 +1,13 @@
 # StudyHub
 
-StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và CRUD Course với lọc, phân trang, sắp xếp. Giao diện React hiện phục vụ luồng đăng ký, đăng nhập và trang chào sau đăng nhập. Document, Quiz và AI/RAG nằm trong kế hoạch phát triển, chưa có API hoạt động.
+StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và CRUD Course với lọc, phân trang, sắp xếp. Giao diện React hỗ trợ các luồng này sau đăng nhập. Document, Quiz và AI/RAG nằm trong kế hoạch phát triển, chưa có API hoạt động.
 
 ## Cấu trúc dự án
 
 | Thư mục | Vai trò hiện tại |
 | --- | --- |
 | `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
-| `frontend/` | React/Vite cho đăng ký, đăng nhập và trang chào |
+| `frontend/` | React/Vite cho xác thực và quản lý Workspace/Course |
 | `ai-service/` | Bộ khung cho dịch vụ AI/RAG trong tương lai |
 | `infra/` | Vị trí dành cho cấu hình hạ tầng trong tương lai |
 
@@ -78,6 +78,7 @@ Test backend dùng H2 ở chế độ tương thích PostgreSQL. Bộ test hiệ
 
 ```powershell
 cd frontend
+npm test
 npm run lint
 npm run build
 ```

@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
+const API_URL = import.meta.env?.VITE_API_URL?.replace(/\/$/, '') ?? ''
 const CONNECTION_ERROR = 'Không thể kết nối tới máy chủ. Vui lòng thử lại.'
 
 export class ApiError extends Error {
@@ -10,7 +10,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, options) {
+export async function request(path, options = {}) {
   let response
 
   try {

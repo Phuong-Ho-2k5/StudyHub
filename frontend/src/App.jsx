@@ -3,7 +3,7 @@ import { useAuth } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
-import { WelcomePage } from './pages/WelcomePage'
+import { DashboardPage } from './pages/DashboardPage'
 
 function PublicOnlyRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -27,7 +27,7 @@ function App() {
         path="/welcome"
         element={(
           <ProtectedRoute>
-            <WelcomePage />
+            <DashboardPage />
           </ProtectedRoute>
         )}
       />
