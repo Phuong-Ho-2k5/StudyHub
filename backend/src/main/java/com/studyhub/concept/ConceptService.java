@@ -45,6 +45,12 @@ public class ConceptService {
         return toResponse(concept);
     }
 
+    public List<ConceptResponse> getConceptsWithLowConfidence(Long courseId, Integer confidenceThreshold, Long currentUserId) {
+        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        List<Concept> concepts = conceptRepository.findAllByCourseIdAndConfidenceLessThan(courseId, confidenceThreshold);
+        return concepts.stream().map(this::toResponse).toList();
+    }
+
     public ConceptResponse createConcept(Long courseId, CreateConceptRequest request, Long currentUserId) {
         Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
         Concept concept = conceptRepository.save(new Concept(request.name(), request.description(), request.confidence(), request.status(), course));

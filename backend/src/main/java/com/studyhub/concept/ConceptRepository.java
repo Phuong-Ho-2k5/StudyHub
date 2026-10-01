@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface ConceptRepository extends JpaRepository<Concept, Long> {
     List<Concept> findAllByCourseId(Long courseId);
     Optional<Concept> findByIdAndCourseWorkspaceOwnerId(Long conceptId, Long ownerId);
+    List<Concept> findAllByCourseIdAndConfidenceLessThan(Long courseId, Integer confidence);
 }

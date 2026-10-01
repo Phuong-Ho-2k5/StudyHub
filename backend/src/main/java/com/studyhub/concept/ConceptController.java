@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 import com.studyhub.security.CustomUserDetails;
 import com.studyhub.concept.dto.CreateConceptRequest;
@@ -44,6 +46,15 @@ public class ConceptController {
         @RequestParam Long courseId,
         @AuthenticationPrincipal CustomUserDetails currentUser) {
         List<ConceptResponse> concepts = conceptService.getConceptFromCourse(courseId, currentUser.getId());
+        return ResponseEntity.ok(concepts);
+    }
+
+    @GetMapping("/courses/{courseId}/concepts")
+    public ResponseEntity<List<ConceptResponse>> getConceptsWithLowConfidence(
+        @PathVariable Long courseId,
+        @RequestParam @Min(0) @Max(100) Integer confidenceBelow,
+        @AuthenticationPrincipal CustomUserDetails currentUser) {
+        List<ConceptResponse> concepts = conceptService.getConceptsWithLowConfidence(courseId, confidenceBelow, currentUser.getId());
         return ResponseEntity.ok(concepts);
     }
 
