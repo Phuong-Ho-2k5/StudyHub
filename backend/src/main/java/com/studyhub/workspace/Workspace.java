@@ -58,6 +58,10 @@ public class Workspace {
         return description;
     }
 
+    public User getOwner() {
+        return owner;
+    }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }

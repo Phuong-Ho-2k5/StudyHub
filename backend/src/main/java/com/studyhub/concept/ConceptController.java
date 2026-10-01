@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Min;
 import com.studyhub.security.CustomUserDetails;
 import com.studyhub.concept.dto.CreateConceptRequest;
 import com.studyhub.concept.dto.UpdateConceptRequest;
+import com.studyhub.concept.dto.AddPrerequisiteRequest;
 import com.studyhub.concept.dto.ConceptResponse;
 
 import com.studyhub.concept.ConceptService;
@@ -58,6 +59,14 @@ public class ConceptController {
         return ResponseEntity.ok(concepts);
     }
 
+    @GetMapping("/concepts/{id}/prerequisites")
+    public ResponseEntity<List<ConceptResponse>> getPrerequisites(
+        @PathVariable Long id,
+        @AuthenticationPrincipal CustomUserDetails currentUser) {
+        List<ConceptResponse> prerequisites = conceptService.getPrerequisites(id, currentUser.getId());
+        return ResponseEntity.ok(prerequisites);
+    }
+
     @PostMapping("/courses/{courseId}/concepts")
     public ResponseEntity<ConceptResponse> createConcept(
         @PathVariable Long courseId,
@@ -65,6 +74,15 @@ public class ConceptController {
         @AuthenticationPrincipal CustomUserDetails currentUser) {
         ConceptResponse response = conceptService.createConcept(courseId, request, currentUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/concepts/{id}/prerequisites")
+    public ResponseEntity<Void> addPrerequisite(
+        @PathVariable Long id,
+        @Valid @RequestBody AddPrerequisiteRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser) {
+        conceptService.addPrerequisite(id, request, currentUser.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PutMapping("/concepts/{id}")
@@ -81,6 +99,15 @@ public class ConceptController {
         @PathVariable Long id,
         @AuthenticationPrincipal CustomUserDetails currentUser) {
         conceptService.deleteConcept(id, currentUser.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/concepts/{id}/prerequisites/{prerequisiteId}")
+    public ResponseEntity<Void> removePrerequisite(
+        @PathVariable Long id,
+        @PathVariable Long prerequisiteId,
+        @AuthenticationPrincipal CustomUserDetails currentUser) {
+        conceptService.removePrerequisite(id, prerequisiteId, currentUser.getId());
         return ResponseEntity.noContent().build();
     }
 }
