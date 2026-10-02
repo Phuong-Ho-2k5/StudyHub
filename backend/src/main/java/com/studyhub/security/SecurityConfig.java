@@ -11,10 +11,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.http.HttpStatus;
+import com.studyhub.error.SecurityErrorWriter;
 
 import org.springframework.security.authentication.ProviderManager;
 
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.DispatcherType;
 
 @Configuration
@@ -33,7 +34,8 @@ import jakarta.servlet.DispatcherType;
         public SecurityFilterChain securityFilterChain(
                 HttpSecurity http,
                 AuthenticationProvider authenticationProvider,
-                JwtAuthenticationFilter jwtAuthenticationFilter
+                JwtAuthenticationFilter jwtAuthenticationFilter,
+                SecurityErrorWriter errorWriter
         ) throws Exception {
             return http
                     .csrf(AbstractHttpConfigurer::disable)
@@ -51,9 +53,12 @@ import jakarta.servlet.DispatcherType;
                     )
                     .exceptionHandling(exceptions -> exceptions
                             .authenticationEntryPoint(
-                                    (request, response, authException) -> {
-                                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                            })
+                                    (request, response, authException) ->
+                                            errorWriter.write(request, response, HttpStatus.UNAUTHORIZED,
+                                                    "UNAUTHORIZED", "Unauthorized"))
+                            .accessDeniedHandler((request, response, accessDeniedException) ->
+                                    errorWriter.write(request, response, HttpStatus.FORBIDDEN,
+                                            "FORBIDDEN", "Forbidden"))
                     )
 
                     .httpBasic(AbstractHttpConfigurer::disable)

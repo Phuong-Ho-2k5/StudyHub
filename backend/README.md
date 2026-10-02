@@ -40,3 +40,31 @@ Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `G
 ```
 
 Test tích hợp trong `src/test/java/com/studyhub/` kiểm tra quyền truy cập và các luồng API hiện có.
+
+## Cấu trúc lỗi API
+
+Các lỗi dưới `/api/**` trả về JSON cùng cấu trúc. HTTP status nằm ở response; body có `code`, `message`, `path`, `timestamp` (UTC, ISO-8601). Lỗi Bean Validation có thêm `fieldErrors` theo tên trường. Frontend hiện tại hiển thị `message`.
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "path": "/api/workspaces",
+  "timestamp": "2026-10-02T05:00:00Z",
+  "fieldErrors": { "name": "must not be blank" }
+}
+```
+
+| HTTP status | `code` | Trường hợp |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | Bean Validation trên body |
+| 400 | `INVALID_REQUEST` | JSON/parameter sai hoặc quy tắc nghiệp vụ bị vi phạm |
+| 401 | `UNAUTHORIZED` | Chưa xác thực, JWT sai/hết hạn, hoặc sai thông tin đăng nhập |
+| 403 | `FORBIDDEN` | Bị chặn ở tầng Spring Security |
+| 404 | `NOT_FOUND` | Endpoint/tài nguyên không tồn tại hoặc không thuộc owner |
+| 405 | `METHOD_NOT_ALLOWED` | HTTP method không được hỗ trợ |
+| 409 | `CONFLICT` | Email đã tồn tại |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Content-Type không được hỗ trợ |
+| 5xx | `INTERNAL_ERROR` | Lỗi server ngoài dự kiến, `message` không lộ chi tiết nội bộ |
+
+Các HTTP status khác có mã `HTTP_<status>`. Response không trả token, stack trace hay giá trị input bị từ chối. `/actuator/health` tiếp tục dùng response của Actuator.
