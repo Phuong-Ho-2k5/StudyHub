@@ -3,19 +3,11 @@ package com.studyhub.document;
 import java.util.List;
 import org.springframework.data.domain.Page;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
-import com.studyhub.user.User;
-import com.studyhub.user.UserRepository;
-import com.studyhub.workspace.Workspace;
-import com.studyhub.workspace.WorkspaceRepository;
+import com.studyhub.security.ResourceAccessService;
 import com.studyhub.course.Course;
-import com.studyhub.course.CourseRepository;
-import com.studyhub.document.Document;
-import com.studyhub.document.DocumentRepository;
 import com.studyhub.document.dto.UpdateDocumentRequest;
 import com.studyhub.document.dto.CreateDocumentRequest;
 import com.studyhub.document.dto.DocumentResponse;
@@ -24,27 +16,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Optional;
 import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class DocumentService {
     private final DocumentRepository documentRepository;
-    private final CourseRepository courseRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final UserRepository userRepository;
+    private final ResourceAccessService resourceAccessService;
 
-    public DocumentService(DocumentRepository documentRepository, CourseRepository courseRepository, WorkspaceRepository workspaceRepository, UserRepository userRepository) {
+    public DocumentService(DocumentRepository documentRepository, ResourceAccessService resourceAccessService) {
         this.documentRepository = documentRepository;
-        this.courseRepository = courseRepository;
-        this.workspaceRepository = workspaceRepository;
-        this.userRepository = userRepository;
+        this.resourceAccessService = resourceAccessService;
     }
 
     @Transactional
     public DocumentResponse createDocument(Long courseId, CreateDocumentRequest request, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = resourceAccessService.requireCourse(courseId, currentUserId);
         Document document = new Document(request.title(), request.fileName(), request.fileType(),
                 request.storagePath(), DocumentStatus.READY, course);
         return toResponse(documentRepository.save(document));
@@ -52,8 +38,7 @@ public class DocumentService {
 
     @Transactional
     public DocumentResponse updateDocument(Long documentId, UpdateDocumentRequest request, Long currentUserId) {
-        Document document = documentRepository.findByIdAndCourseWorkspaceOwnerId(documentId, currentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+        Document document = resourceAccessService.requireDocument(documentId, currentUserId);
         document.setTitle(request.title());
         document.setFileName(request.fileName());
         document.setFileType(request.fileType());
@@ -63,15 +48,13 @@ public class DocumentService {
 
     @Transactional
     public void deleteDocument(Long documentId, Long currentUserId) {
-        Document document = documentRepository.findByIdAndCourseWorkspaceOwnerId(documentId, currentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+        Document document = resourceAccessService.requireDocument(documentId, currentUserId);
         documentRepository.delete(document);
     }
 
     @Transactional (readOnly = true)
     public DocumentResponse getDocument(Long documentId, Long currentUserId) {
-        Document document = documentRepository.findByIdAndCourseWorkspaceOwnerId(documentId, currentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+        Document document = resourceAccessService.requireDocument(documentId, currentUserId);
         return toResponse(document);
     } 
 

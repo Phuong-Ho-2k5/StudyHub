@@ -2,11 +2,10 @@ package com.studyhub.workspace;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
+import com.studyhub.security.ResourceAccessService;
 import com.studyhub.user.User;
 import com.studyhub.user.UserRepository;
 import com.studyhub.workspace.dto.CreateWorkspaceRequest;
@@ -17,10 +16,13 @@ import com.studyhub.workspace.dto.WorkspaceResponse;
 public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
+    private final ResourceAccessService resourceAccessService;
 
-    public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository) {
+    public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository,
+            ResourceAccessService resourceAccessService) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
+        this.resourceAccessService = resourceAccessService;
     }
 
     @Transactional
@@ -32,7 +34,7 @@ public class WorkspaceService {
 
     @Transactional(readOnly = true)
     public WorkspaceResponse getWorkspace(Long workspaceId, Long currentUserId) {
-        return toResponse(findOwnedWorkspace(workspaceId, currentUserId));
+        return toResponse(resourceAccessService.requireWorkspace(workspaceId, currentUserId));
     }
 
     @Transactional(readOnly = true)
@@ -42,7 +44,7 @@ public class WorkspaceService {
 
     @Transactional
     public WorkspaceResponse updateWorkspace(Long workspaceId, UpdateWorkspaceRequest request, Long currentUserId) {
-        Workspace workspace = findOwnedWorkspace(workspaceId, currentUserId);
+        Workspace workspace = resourceAccessService.requireWorkspace(workspaceId, currentUserId);
         workspace.setName(request.name());
         workspace.setDescription(request.description());
         workspaceRepository.flush();
@@ -51,12 +53,9 @@ public class WorkspaceService {
 
     @Transactional
     public void deleteWorkspace(Long workspaceId, Long currentUserId) {
-        workspaceRepository.delete(findOwnedWorkspace(workspaceId, currentUserId));
+        workspaceRepository.delete(resourceAccessService.requireWorkspace(workspaceId, currentUserId));
     }
 
-    private Workspace findOwnedWorkspace(Long workspaceId, Long currentUserId) {
-        return workspaceRepository.findByIdAndOwnerId(workspaceId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workspace not found"));
-    }
 
     private WorkspaceResponse toResponse(Workspace workspace) {
         return new WorkspaceResponse(workspace.getId(), workspace.getName(), workspace.getDescription(), workspace.getCreatedAt(), workspace.getUpdatedAt());

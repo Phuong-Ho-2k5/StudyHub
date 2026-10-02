@@ -7,63 +7,52 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.studyhub.user.User;
-import com.studyhub.user.UserRepository;
-import com.studyhub.workspace.Workspace;
-import com.studyhub.workspace.WorkspaceRepository;
 import com.studyhub.course.Course;
-import com.studyhub.course.CourseRepository;
-import com.studyhub.concept.Concept;
-import com.studyhub.concept.ConceptRepository;
-import com.studyhub.concept.ConceptDependency;
-import com.studyhub.concept.ConceptDependencyRepository;
 import com.studyhub.concept.dto.CreateConceptRequest;
 import com.studyhub.concept.dto.UpdateConceptRequest;
 import com.studyhub.concept.dto.AddPrerequisiteRequest;
 import com.studyhub.concept.dto.ConceptResponse;
+import com.studyhub.security.ResourceAccessService;
 
 @Service
 @Transactional
 public class ConceptService {
     private final ConceptRepository conceptRepository;
-    private final UserRepository userRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final CourseRepository courseRepository;
     private final ConceptDependencyRepository conceptDependencyRepository;
+    private final ResourceAccessService resourceAccessService;
 
-    public ConceptService(ConceptRepository conceptRepository, UserRepository userRepository, WorkspaceRepository workspaceRepository, CourseRepository courseRepository, ConceptDependencyRepository conceptDependencyRepository) {
+    public ConceptService(ConceptRepository conceptRepository,
+            ConceptDependencyRepository conceptDependencyRepository, ResourceAccessService resourceAccessService) {
         this.conceptRepository = conceptRepository;
-        this.userRepository = userRepository;
-        this.workspaceRepository = workspaceRepository;
-        this.courseRepository = courseRepository;
         this.conceptDependencyRepository = conceptDependencyRepository;
+        this.resourceAccessService = resourceAccessService;
     }
 
     public List<ConceptResponse> getConceptFromCourse(Long courseId, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        resourceAccessService.requireCourse(courseId, currentUserId);
         List<Concept> concept = conceptRepository.findAllByCourseId(courseId);
         return concept.stream().map(this::toResponse).toList();
     }
 
     public ConceptResponse getConcept(Long id, Long currentUserId) {
-        Concept concept = conceptRepository.findByIdAndCourseWorkspaceOwnerId(id, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
+        Concept concept = resourceAccessService.requireConcept(id, currentUserId);
         return toResponse(concept);
     }
 
     public List<ConceptResponse> getConceptsWithLowConfidence(Long courseId, Integer confidenceThreshold, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        resourceAccessService.requireCourse(courseId, currentUserId);
         List<Concept> concepts = conceptRepository.findAllByCourseIdAndConfidenceLessThan(courseId, confidenceThreshold);
         return concepts.stream().map(this::toResponse).toList();
     }
 
     public ConceptResponse createConcept(Long courseId, CreateConceptRequest request, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = resourceAccessService.requireCourse(courseId, currentUserId);
         Concept concept = conceptRepository.save(new Concept(request.name(), request.description(), request.confidence(), request.status(), course));
         return toResponse(concept);
     }
 
     public ConceptResponse updateConcept(Long id, UpdateConceptRequest request, Long currentUserId) {
-        Concept concept = conceptRepository.findByIdAndCourseWorkspaceOwnerId(id, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
+        Concept concept = resourceAccessService.requireConcept(id, currentUserId);
         concept.setName(request.name());
         concept.setDescription(request.description());
         concept.setConfidence(request.confidence());
@@ -72,14 +61,14 @@ public class ConceptService {
     }
 
     public void deleteConcept(Long id, Long currentUserId) {
-        Concept concept = conceptRepository.findByIdAndCourseWorkspaceOwnerId(id, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
+        Concept concept = resourceAccessService.requireConcept(id, currentUserId);
         conceptRepository.delete(concept);
     }
 
     public void addPrerequisite(Long conceptId, AddPrerequisiteRequest request, Long currentUserId) {
         Long prerequisiteId = request.prerequisiteId();
-        Concept concept = conceptRepository.findByIdAndCourseWorkspaceOwnerId(conceptId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
-        Concept prerequisite = conceptRepository.findByIdAndCourseWorkspaceOwnerId(prerequisiteId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prerequisite concept not found"));
+        Concept concept = resourceAccessService.requireConcept(conceptId, currentUserId);
+        Concept prerequisite = resourceAccessService.requirePrerequisiteConcept(prerequisiteId, currentUserId);
         if (concept.getId().equals(prerequisite.getId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A concept cannot be a prerequisite of itself");
         }
@@ -94,7 +83,7 @@ public class ConceptService {
     }
 
     public List<ConceptResponse> getPrerequisites(Long conceptId, Long currentUserId) {
-        Concept concept = conceptRepository.findByIdAndCourseWorkspaceOwnerId(conceptId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
+        resourceAccessService.requireConcept(conceptId, currentUserId);
         return conceptDependencyRepository.findAllByDependentConcept_Id(conceptId).stream()
                 .map(ConceptDependency::getPrerequisiteConcept)
                 .map(this::toResponse)
@@ -102,8 +91,8 @@ public class ConceptService {
     }
 
     public void removePrerequisite(Long conceptId, Long prerequisiteId, Long currentUserId) {
-        conceptRepository.findByIdAndCourseWorkspaceOwnerId(conceptId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
-        conceptRepository.findByIdAndCourseWorkspaceOwnerId(prerequisiteId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prerequisite concept not found"));
+        resourceAccessService.requireConcept(conceptId, currentUserId);
+        resourceAccessService.requirePrerequisiteConcept(prerequisiteId, currentUserId);
         ConceptDependency prerequisite = conceptDependencyRepository.findByDependentConcept_IdAndPrerequisiteConcept_Id(conceptId, prerequisiteId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prerequisite not found"));
         conceptDependencyRepository.delete(prerequisite);
     }

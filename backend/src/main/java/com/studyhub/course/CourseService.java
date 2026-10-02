@@ -3,17 +3,11 @@ package com.studyhub.course;
 import java.util.List;
 import org.springframework.data.domain.Page;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
-import com.studyhub.user.User;
-import com.studyhub.user.UserRepository;
+import com.studyhub.security.ResourceAccessService;
 import com.studyhub.workspace.Workspace;
-import com.studyhub.workspace.WorkspaceRepository;
-import com.studyhub.course.Course;
-import com.studyhub.course.CourseRepository;
 import com.studyhub.course.dto.CreateCourseRequest;
 import com.studyhub.course.dto.UpdateCourseRequest;
 import com.studyhub.course.dto.CourseResponse;
@@ -22,31 +16,28 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Optional;
 import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class CourseService {
     private final CourseRepository courseRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final UserRepository userRepository;
+    private final ResourceAccessService resourceAccessService;
 
-    public CourseService(CourseRepository courseRepository, WorkspaceRepository workspaceRepository, UserRepository userRepository) {
+    public CourseService(CourseRepository courseRepository, ResourceAccessService resourceAccessService) {
         this.courseRepository = courseRepository;
-        this.workspaceRepository = workspaceRepository;
-        this.userRepository = userRepository;
+        this.resourceAccessService = resourceAccessService;
     }
 
     @Transactional
     public CourseResponse createCourse(Long workspaceId, CreateCourseRequest request, Long currentUserId) {
-        Workspace workspace = workspaceRepository.findByIdAndOwnerId(workspaceId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workspace not found"));
+        Workspace workspace = resourceAccessService.requireWorkspace(workspaceId, currentUserId);
         Course course = new Course(request.name(), request.description(), workspace, CourseStatus.PLANNED);
         return toResponse(courseRepository.save(course));
     }
 
     @Transactional (readOnly = true)
     public CourseResponse getCourse(Long courseId, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = resourceAccessService.requireCourse(courseId, currentUserId);
         return toResponse(course);
     }
 
@@ -72,7 +63,7 @@ public class CourseService {
 
     @Transactional
     public CourseResponse updateCourse(Long courseId, UpdateCourseRequest request, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = resourceAccessService.requireCourse(courseId, currentUserId);
         course.setName(request.name());
         course.setDescription(request.description());
         course.setStatus(request.status());
@@ -82,7 +73,7 @@ public class CourseService {
 
     @Transactional
     public void deleteCourse(Long courseId, Long currentUserId) {
-        Course course = courseRepository.findByIdAndWorkspaceOwnerId(courseId, currentUserId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = resourceAccessService.requireCourse(courseId, currentUserId);
         courseRepository.delete(course);
     }
 
