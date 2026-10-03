@@ -40,10 +40,13 @@ VITE_API_URL=http://localhost:8080
 | `/login` | Đăng nhập bằng email và mật khẩu. |
 | `/register` | Tạo tài khoản mới; đăng ký thành công sẽ chuyển về đăng nhập. |
 | `/welcome` | Bảng học tập yêu cầu đăng nhập. |
+| `/courses/:courseId` | Chi tiết khóa học: quản lý tài liệu và khái niệm. |
 
 Trong bảng học tập, người dùng có thể tạo, chọn, sửa và xóa Workspace; tạo, sửa và xóa Course trong Workspace; tìm Course theo tên, lọc theo trạng thái và chuyển trang kết quả. Các trạng thái Course là `PLANNED`, `IN_PROGRESS`, `COMPLETED` và `ARCHIVED`. Khi xóa Workspace, backend cũng xóa các Course thuộc Workspace đó.
 
-Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: Bearer <token>` cho các API được bảo vệ và kết thúc phiên khi token hết hạn. Document, Quiz và AI/RAG chưa có API hoạt động nên chưa có giao diện tương ứng.
+Trong chi tiết khóa học, người dùng có thể thêm, sửa, xóa và tìm tài liệu theo tiêu đề; thêm, sửa, xóa khái niệm, lọc theo mức độ hiểu và quản lý kiến thức tiên quyết trong cùng khóa học. API Document hiện chỉ lưu metadata gồm tiêu đề, tên/loại tệp và đường dẫn lưu trữ; chưa có API tải tệp lên hoặc tải tệp xuống. Quiz và AI/RAG chưa có giao diện vì chưa có API tương ứng.
+
+Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: Bearer <token>` cho các API được bảo vệ và kết thúc phiên khi token hết hạn.
 
 ## Cấu trúc mã nguồn
 

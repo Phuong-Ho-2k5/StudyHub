@@ -36,3 +36,42 @@ export const updateCourse = (token, id, data) => request(`/api/courses/${id}`, a
 export const deleteCourse = (token, id) => request(`/api/courses/${id}`, authorized(token, {
   method: 'DELETE',
 }))
+
+export const getCourse = (token, id) => request(`/api/courses/${id}`, authorized(token))
+
+export function buildDocumentQuery({ courseId, q = '', page = 0 }) {
+  const params = new URLSearchParams({ courseId: String(courseId) })
+  if (q.trim()) params.set('q', q.trim())
+  params.set('page', String(page))
+  params.set('size', '10')
+  params.set('sort', 'title,asc')
+  return `?${params}`
+}
+
+export const listDocuments = (token, filters) => request(`/api/documents${buildDocumentQuery(filters)}`, authorized(token))
+export const createDocument = (token, courseId, data) => request(`/api/courses/${courseId}/documents`, authorized(token, {
+  method: 'POST', body: JSON.stringify(data),
+}))
+export const updateDocument = (token, id, data) => request(`/api/documents/${id}`, authorized(token, {
+  method: 'PUT', body: JSON.stringify(data),
+}))
+export const deleteDocument = (token, id) => request(`/api/documents/${id}`, authorized(token, { method: 'DELETE' }))
+
+export function buildLowConfidenceQuery(threshold) {
+  return `?${new URLSearchParams({ confidenceBelow: String(threshold) })}`
+}
+
+export const listConcepts = (token, courseId) => request(`/api/concepts?${new URLSearchParams({ courseId: String(courseId) })}`, authorized(token))
+export const listLowConfidenceConcepts = (token, courseId, threshold) => request(`/api/courses/${courseId}/concepts${buildLowConfidenceQuery(threshold)}`, authorized(token))
+export const createConcept = (token, courseId, data) => request(`/api/courses/${courseId}/concepts`, authorized(token, {
+  method: 'POST', body: JSON.stringify(data),
+}))
+export const updateConcept = (token, id, data) => request(`/api/concepts/${id}`, authorized(token, {
+  method: 'PUT', body: JSON.stringify(data),
+}))
+export const deleteConcept = (token, id) => request(`/api/concepts/${id}`, authorized(token, { method: 'DELETE' }))
+export const listPrerequisites = (token, id) => request(`/api/concepts/${id}/prerequisites`, authorized(token))
+export const addPrerequisite = (token, id, prerequisiteId) => request(`/api/concepts/${id}/prerequisites`, authorized(token, {
+  method: 'POST', body: JSON.stringify({ prerequisiteId }),
+}))
+export const removePrerequisite = (token, id, prerequisiteId) => request(`/api/concepts/${id}/prerequisites/${prerequisiteId}`, authorized(token, { method: 'DELETE' }))

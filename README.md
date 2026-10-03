@@ -1,13 +1,13 @@
 # StudyHub
 
-StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và CRUD Course với lọc, phân trang, sắp xếp. Giao diện React hỗ trợ các luồng này sau đăng nhập. Document, Quiz và AI/RAG nằm trong kế hoạch phát triển, chưa có API hoạt động.
+StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document và Concept trong từng Course. Giao diện React hỗ trợ các luồng này sau đăng nhập. Quiz và AI/RAG nằm trong kế hoạch phát triển.
 
 ## Cấu trúc dự án
 
 | Thư mục | Vai trò hiện tại |
 | --- | --- |
 | `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
-| `frontend/` | React/Vite cho xác thực và quản lý Workspace/Course |
+| `frontend/` | React/Vite cho xác thực và quản lý Workspace/Course/Document/Concept |
 | `ai-service/` | Bộ khung cho dịch vụ AI/RAG trong tương lai |
 | `infra/` | Vị trí dành cho cấu hình hạ tầng trong tương lai |
 
@@ -55,6 +55,9 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Workspace | `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}` | Quản lý Workspace của người dùng hiện tại |
 | Course | `POST /api/workspaces/{workspaceId}/courses` | Tạo Course trong Workspace đã sở hữu |
 | Course | `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}` | Liệt kê, đọc, sửa và xóa Course được phép truy cập |
+| Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
+| Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
+| Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |
 | Health | `GET /actuator/health` | Kiểm tra trạng thái backend |
 
 Ngoài đăng ký, đăng nhập và health check, các API yêu cầu header `Authorization: Bearer <accessToken>`. Quyền Course được suy ra từ owner của Workspace; truy cập tài nguyên của người khác trả về 404.
@@ -85,4 +88,4 @@ npm run build
 
 ## Hướng phát triển
 
-`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Các tính năng Document, Concept, Quiz, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các milestone sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Quiz, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các milestone sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
