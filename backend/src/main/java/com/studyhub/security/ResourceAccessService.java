@@ -10,6 +10,8 @@ import com.studyhub.course.Course;
 import com.studyhub.course.CourseRepository;
 import com.studyhub.document.Document;
 import com.studyhub.document.DocumentRepository;
+import com.studyhub.quiz.Quiz;
+import com.studyhub.quiz.QuizRepository;
 import com.studyhub.workspace.Workspace;
 import com.studyhub.workspace.WorkspaceRepository;
 
@@ -19,13 +21,15 @@ public class ResourceAccessService {
     private final CourseRepository courseRepository;
     private final DocumentRepository documentRepository;
     private final ConceptRepository conceptRepository;
+    private final QuizRepository quizRepository;
 
     public ResourceAccessService(WorkspaceRepository workspaceRepository, CourseRepository courseRepository,
-            DocumentRepository documentRepository, ConceptRepository conceptRepository) {
+            DocumentRepository documentRepository, ConceptRepository conceptRepository, QuizRepository quizRepository) {
         this.workspaceRepository = workspaceRepository;
         this.courseRepository = courseRepository;
         this.documentRepository = documentRepository;
         this.conceptRepository = conceptRepository;
+        this.quizRepository = quizRepository;
     }
 
     public Workspace requireWorkspace(Long workspaceId, Long userId) {
@@ -49,6 +53,11 @@ public class ResourceAccessService {
 
     public Concept requirePrerequisiteConcept(Long conceptId, Long userId) {
         return requireConcept(conceptId, userId, "Prerequisite concept not found");
+    }
+
+    public Quiz requireQuiz(Long quizId, Long userId) {
+        return quizRepository.findByIdAndCourseWorkspaceOwnerId(quizId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found"));
     }
 
     private Concept requireConcept(Long conceptId, Long userId, String notFoundReason) {
