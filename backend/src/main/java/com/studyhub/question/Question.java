@@ -37,27 +37,33 @@ public class Question {
     @Column(name = "question_type", nullable = false, length = 20)
     private QuestionType type;
 
+    @Column(name = "reference_answer", length = 4000)
+    private String referenceAnswer;
+
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<AnswerOption> options = new ArrayList<>();
 
     protected Question() {}
 
-    public Question(Quiz quiz, String text, QuestionType type) {
+    public Question(Quiz quiz, String text, QuestionType type, String referenceAnswer) {
         this.quiz = quiz;
         this.text = text;
         this.type = type;
+        this.referenceAnswer = referenceAnswer;
     }
 
     public Long getId() { return id; }
     public Quiz getQuiz() { return quiz; }
     public String getText() { return text; }
     public QuestionType getType() { return type; }
+    public String getReferenceAnswer() { return referenceAnswer; }
     public List<AnswerOption> getOptions() { return options; }
 
-    public void update(String text, QuestionType type, List<AnswerOption> newOptions) {
+    public void update(String text, QuestionType type, String referenceAnswer, List<AnswerOption> newOptions) {
         this.text = text;
         this.type = type;
+        this.referenceAnswer = referenceAnswer;
         options.clear();
         options.addAll(newOptions);
     }

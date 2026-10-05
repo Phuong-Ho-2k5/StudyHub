@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.studyhub.quiz.dto.CreateQuizRequest;
 import com.studyhub.quiz.dto.QuizResponse;
+import com.studyhub.quiz.dto.SubmitQuizRequest;
 import com.studyhub.quiz.dto.UpdateQuizRequest;
 import com.studyhub.security.CustomUserDetails;
 
@@ -25,9 +26,11 @@ import jakarta.validation.Valid;
 @RequestMapping("/api")
 public class QuizController {
     private final QuizService quizService;
+    private final QuizSubmissionService quizSubmissionService;
 
-    public QuizController(QuizService quizService) {
+    public QuizController(QuizService quizService, QuizSubmissionService quizSubmissionService) {
         this.quizService = quizService;
+        this.quizSubmissionService = quizSubmissionService;
     }
 
     @PostMapping("/courses/{courseId}/quizzes")
@@ -61,6 +64,14 @@ public class QuizController {
     public ResponseEntity<Void> delete(@PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         quizService.delete(id, currentUser.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/quizzes/{quizId}/submit")
+    public ResponseEntity<Void> submit(@PathVariable Long quizId,
+            @Valid @RequestBody SubmitQuizRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        quizSubmissionService.validate(quizId, request, currentUser.getId());
         return ResponseEntity.noContent().build();
     }
 }

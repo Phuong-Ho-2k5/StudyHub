@@ -27,7 +27,7 @@ public class QuestionService {
     public QuestionResponse create(Long quizId, QuestionRequest request, Long userId) {
         Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
         validate(request);
-        Question question = new Question(quiz, request.text(), request.type());
+        Question question = new Question(quiz, request.text(), request.type(), request.referenceAnswer());
         for (AnswerOptionRequest option : request.options()) {
             question.addOption(option.text(), option.correct());
         }
@@ -49,7 +49,7 @@ public class QuestionService {
     public QuestionResponse update(Long id, QuestionRequest request, Long userId) {
         Question question = requireQuestion(id, userId);
         validate(request);
-        question.update(request.text(), request.type(), request.options().stream()
+        question.update(request.text(), request.type(), request.referenceAnswer(), request.options().stream()
                 .map(option -> new AnswerOption(question, option.text(), option.correct())).toList());
         questionRepository.flush();
         return toResponse(question);
@@ -68,10 +68,11 @@ public class QuestionService {
     private void validate(QuestionRequest request) {
         List<AnswerOptionRequest> options = request.options();
         long correctCount = options.stream().filter(AnswerOptionRequest::correct).count();
+        boolean hasReferenceAnswer = request.referenceAnswer() != null && !request.referenceAnswer().isBlank();
         boolean valid = switch (request.type()) {
-            case MULTIPLE_CHOICE -> options.size() >= 4 && correctCount >= 1;
-            case TRUE_FALSE -> options.size() == 2 && correctCount == 1;
-            case SHORT_ANSWER -> options.size() == 1 && correctCount == 1;
+            case MULTIPLE_CHOICE -> request.referenceAnswer() == null && options.size() >= 4 && correctCount >= 1;
+            case TRUE_FALSE -> request.referenceAnswer() == null && options.size() == 2 && correctCount == 1;
+            case SHORT_ANSWER -> hasReferenceAnswer && options.isEmpty();
         };
         if (!valid) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid options for question type");
@@ -80,7 +81,7 @@ public class QuestionService {
 
     private QuestionResponse toResponse(Question question) {
         return new QuestionResponse(question.getId(), question.getQuiz().getId(), question.getText(),
-                question.getType(), question.getOptions().stream()
+                question.getType(), question.getReferenceAnswer(), question.getOptions().stream()
                         .map(option -> new AnswerOptionResponse(option.getId(), option.getText(), option.isCorrect()))
                         .toList());
     }
