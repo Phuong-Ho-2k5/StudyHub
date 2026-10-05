@@ -32,6 +32,7 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}`: CRUD Workspace theo owner.
 - `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
 - `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}`: CRUD metadata Quiz theo owner Course. Tạo Quiz với `{"title":"..."}`; cập nhật với `{"title":"...","status":"DRAFT|PUBLISHED|ARCHIVED"}`. Quiz tạo thủ công có `sourceType=MANUAL`.
+- `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng; `SHORT_ANSWER` cần 1 đáp án đúng.
 - `GET /actuator/health`: health check.
 
 Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `GET /api/courses` nhận `workspaceId`, `status`, `q`, `page`, `size`, `sort`; ví dụ:

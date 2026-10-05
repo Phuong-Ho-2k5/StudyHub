@@ -1,0 +1,87 @@
+package com.studyhub.question;
+
+import java.util.List;
+
+import com.studyhub.question.dto.AnswerOptionRequest;
+import com.studyhub.question.dto.AnswerOptionResponse;
+import com.studyhub.question.dto.QuestionRequest;
+import com.studyhub.question.dto.QuestionResponse;
+import com.studyhub.quiz.Quiz;
+import com.studyhub.security.ResourceAccessService;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+public class QuestionService {
+    private final QuestionRepository questionRepository;
+    private final ResourceAccessService resourceAccessService;
+
+    public QuestionService(QuestionRepository questionRepository, ResourceAccessService resourceAccessService) {
+        this.questionRepository = questionRepository;
+        this.resourceAccessService = resourceAccessService;
+    }
+
+    @Transactional
+    public QuestionResponse create(Long quizId, QuestionRequest request, Long userId) {
+        Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
+        validate(request);
+        Question question = new Question(quiz, request.text(), request.type());
+        for (AnswerOptionRequest option : request.options()) {
+            question.addOption(option.text(), option.correct());
+        }
+        return toResponse(questionRepository.saveAndFlush(question));
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionResponse> list(Long quizId, Long userId) {
+        resourceAccessService.requireQuiz(quizId, userId);
+        return questionRepository.findAllByQuizIdOrderByIdAsc(quizId).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public QuestionResponse get(Long id, Long userId) {
+        return toResponse(requireQuestion(id, userId));
+    }
+
+    @Transactional
+    public QuestionResponse update(Long id, QuestionRequest request, Long userId) {
+        Question question = requireQuestion(id, userId);
+        validate(request);
+        question.update(request.text(), request.type(), request.options().stream()
+                .map(option -> new AnswerOption(question, option.text(), option.correct())).toList());
+        questionRepository.flush();
+        return toResponse(question);
+    }
+
+    @Transactional
+    public void delete(Long id, Long userId) {
+        questionRepository.delete(requireQuestion(id, userId));
+    }
+
+    private Question requireQuestion(Long id, Long userId) {
+        return questionRepository.findByIdAndQuizCourseWorkspaceOwnerId(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Question not found"));
+    }
+
+    private void validate(QuestionRequest request) {
+        List<AnswerOptionRequest> options = request.options();
+        long correctCount = options.stream().filter(AnswerOptionRequest::correct).count();
+        boolean valid = switch (request.type()) {
+            case MULTIPLE_CHOICE -> options.size() >= 4 && correctCount >= 1;
+            case TRUE_FALSE -> options.size() == 2 && correctCount == 1;
+            case SHORT_ANSWER -> options.size() == 1 && correctCount == 1;
+        };
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid options for question type");
+        }
+    }
+
+    private QuestionResponse toResponse(Question question) {
+        return new QuestionResponse(question.getId(), question.getQuiz().getId(), question.getText(),
+                question.getType(), question.getOptions().stream()
+                        .map(option -> new AnswerOptionResponse(option.getId(), option.getText(), option.isCorrect()))
+                        .toList());
+    }
+}
