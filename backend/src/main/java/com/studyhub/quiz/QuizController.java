@@ -18,6 +18,7 @@ import com.studyhub.quiz.dto.CreateQuizRequest;
 import com.studyhub.quiz.dto.QuizResponse;
 import com.studyhub.quiz.dto.SubmitQuizRequest;
 import com.studyhub.quiz.dto.UpdateQuizRequest;
+import com.studyhub.quiz.dto.QuizResult;
 import com.studyhub.security.CustomUserDetails;
 
 import jakarta.validation.Valid;
@@ -68,10 +69,10 @@ public class QuizController {
     }
 
     @PostMapping("/quizzes/{quizId}/submit")
-    public ResponseEntity<Void> submit(@PathVariable Long quizId,
+    public ResponseEntity<QuizResult> submit(@PathVariable Long quizId,
             @Valid @RequestBody SubmitQuizRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        quizSubmissionService.validate(quizId, request, currentUser.getId());
-        return ResponseEntity.noContent().build();
+        QuizResult result = quizSubmissionService.submitQuiz(quizId, request, currentUser.getId());
+        return ResponseEntity.ok(result);
     }
 }

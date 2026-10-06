@@ -11,6 +11,8 @@ import com.studyhub.question.QuestionRepository;
 import com.studyhub.question.QuestionType;
 import com.studyhub.quiz.dto.SubmitAnswerRequest;
 import com.studyhub.quiz.dto.SubmitQuizRequest;
+import com.studyhub.quiz.dto.QuizResult;
+import com.studyhub.quiz.dto.QuestionResult;
 import com.studyhub.security.ResourceAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,7 +30,7 @@ public class QuizSubmissionService {
     }
 
     @Transactional(readOnly = true)
-    public void validate(Long quizId, SubmitQuizRequest request, Long userId) {
+    public QuizResult submitQuiz(Long quizId, SubmitQuizRequest request, Long userId) {
         Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
         if (quiz.getStatus() != QuizStatus.PUBLISHED) {
             invalid("Quiz is not published");
@@ -51,6 +53,32 @@ public class QuizSubmissionService {
             }
             validateAnswer(question, answer);
         }
+        List<QuestionResult> results = new java.util.ArrayList<>();
+        int correctCount = 0;
+        int gradedCount = 0;
+        int incorrectCount = 0;
+        int pendingCount = 0;
+
+        for (SubmitAnswerRequest answer : request.answers()) {
+            Question question = questionsById.get(answer.questionId());
+            Boolean isCorrect = isCorrect(question, answer);
+            if (isCorrect == null) {
+                pendingCount++;
+            } else if (isCorrect) {
+                correctCount++;
+                gradedCount++;
+            } else {
+                incorrectCount++;
+                gradedCount++;
+            }
+            results.add(new QuestionResult(question.getId(), isCorrect));
+        }
+        int totalQuestions = questions.size();
+        if (totalQuestions == 0) {
+            invalid("Quiz has no questions");
+        }
+        double questionPercentage = (double) correctCount / totalQuestions * 100;
+        return new QuizResult(quizId, totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage, List.copyOf(results));
     }
 
     private void validateAnswer(Question question, SubmitAnswerRequest answer) {
@@ -72,6 +100,16 @@ public class QuizSubmissionService {
         if (new HashSet<>(selected).size() != selected.size() || !validOptionIds.containsAll(selected)) {
             invalid("Unknown or duplicate answer option");
         }
+    }
+
+    private Boolean isCorrect(Question question, SubmitAnswerRequest answer) {
+        if (question.getType() == QuestionType.SHORT_ANSWER) {
+            return null;
+        }
+        Set<Long> correctOptionIds = new HashSet<>();
+        question.getOptions().stream().filter(option -> option.isCorrect()).forEach(option -> correctOptionIds.add(option.getId()));
+        Set<Long> selectedOptionIds = new HashSet<>(answer.answerOptionIds());
+        return correctOptionIds.equals(selectedOptionIds);
     }
 
     private void invalid(String message) {
