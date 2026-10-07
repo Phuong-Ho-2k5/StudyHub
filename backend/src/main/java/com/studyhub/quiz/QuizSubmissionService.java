@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.studyhub.concept.ConceptService;
 import com.studyhub.question.Question;
 import com.studyhub.question.QuestionRepository;
 import com.studyhub.question.QuestionType;
@@ -26,13 +27,16 @@ public class QuizSubmissionService {
     private final QuestionRepository questionRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final UserRepository userRepository;
+    private final ConceptService conceptService;
 
     public QuizSubmissionService(ResourceAccessService resourceAccessService, QuestionRepository questionRepository,
-            QuizAttemptRepository quizAttemptRepository, UserRepository userRepository) {
+            QuizAttemptRepository quizAttemptRepository, UserRepository userRepository,
+            ConceptService conceptService) {
         this.resourceAccessService = resourceAccessService;
         this.questionRepository = questionRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.userRepository = userRepository;
+        this.conceptService = conceptService;
     }
 
     @Transactional
@@ -84,6 +88,7 @@ public class QuizSubmissionService {
             invalid("Quiz has no questions");
         }
         double questionPercentage = (double) correctCount / totalQuestions * 100;
+        conceptService.updateConceptConfidenceFromQuiz(quiz, questionsById, results, userId);
         quizAttemptRepository.save(new QuizAttempt(quiz, userRepository.getReferenceById(userId),
                 totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage));
         return new QuizResult(quizId, totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage, List.copyOf(results));

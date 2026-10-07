@@ -3,6 +3,7 @@ package com.studyhub.question;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.studyhub.concept.Concept;
 import com.studyhub.quiz.Quiz;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -29,6 +30,10 @@ public class Question {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quiz_id", nullable = false)
     private Quiz quiz;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "concept_id")
+    private Concept concept;
 
     @Column(name = "question_text", nullable = false, length = 500)
     private String text;
@@ -59,6 +64,7 @@ public class Question {
     public QuestionType getType() { return type; }
     public String getReferenceAnswer() { return referenceAnswer; }
     public List<AnswerOption> getOptions() { return options; }
+    public Concept getConcept() { return concept; }
 
     public void update(String text, QuestionType type, String referenceAnswer, List<AnswerOption> newOptions) {
         this.text = text;
@@ -70,5 +76,9 @@ public class Question {
 
     public void addOption(String text, boolean correct) {
         options.add(new AnswerOption(this, text, correct));
+    }
+
+    public void setConcept(Concept concept) {
+        this.concept = concept;
     }
 }

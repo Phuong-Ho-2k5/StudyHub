@@ -8,11 +8,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.studyhub.course.Course;
+import com.studyhub.quiz.Quiz;
+import com.studyhub.question.Question;
+import com.studyhub.quiz.dto.QuestionResult;
 import com.studyhub.concept.dto.CreateConceptRequest;
 import com.studyhub.concept.dto.UpdateConceptRequest;
 import com.studyhub.concept.dto.AddPrerequisiteRequest;
 import com.studyhub.concept.dto.ConceptResponse;
 import com.studyhub.security.ResourceAccessService;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -58,6 +64,27 @@ public class ConceptService {
         concept.setConfidence(request.confidence());
         concept.setStatus(request.status());
         return toResponse(conceptRepository.save(concept));
+    }
+
+    public void updateConceptConfidenceFromQuiz(Quiz quiz, Map<Long, Question> questionsById, List<QuestionResult> results, Long currentUserId) {
+        Map<Long, Integer> deltas = new HashMap<>();
+        for (QuestionResult result : results) {
+            Question question = questionsById.get(result.questionId());
+            Concept concept = question.getConcept();
+            if (concept == null || result.isCorrect() == null) {
+                continue;
+            }
+            int delta = result.isCorrect() ? 10 : -10;
+            deltas.merge(concept.getId(), delta, Integer::sum);
+        }
+        for (Map.Entry<Long, Integer> entry : deltas.entrySet()) {
+            Concept concept = resourceAccessService.requireConcept(entry.getKey(), currentUserId);
+            if (!concept.getCourse().getId().equals(quiz.getCourse().getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Concept must belong to the same course as the quiz");
+            }
+            int newConfidence = concept.getConfidence() + entry.getValue();
+            concept.setConfidence(Math.max(0, Math.min(100, newConfidence)));
+        }
     }
 
     public void deleteConcept(Long id, Long currentUserId) {

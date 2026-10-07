@@ -7,6 +7,7 @@ import com.studyhub.question.dto.AnswerOptionResponse;
 import com.studyhub.question.dto.QuestionRequest;
 import com.studyhub.question.dto.QuestionResponse;
 import com.studyhub.quiz.Quiz;
+import com.studyhub.concept.Concept;
 import com.studyhub.security.ResourceAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class QuestionService {
         Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
         validate(request);
         Question question = new Question(quiz, request.text(), request.type(), request.referenceAnswer());
+        question.setConcept(resolveConcept(request.conceptId(), quiz, userId));
         for (AnswerOptionRequest option : request.options()) {
             question.addOption(option.text(), option.correct());
         }
@@ -51,6 +53,7 @@ public class QuestionService {
         validate(request);
         question.update(request.text(), request.type(), request.referenceAnswer(), request.options().stream()
                 .map(option -> new AnswerOption(question, option.text(), option.correct())).toList());
+        question.setConcept(resolveConcept(request.conceptId(), question.getQuiz(), userId));
         questionRepository.flush();
         return toResponse(question);
     }
@@ -79,10 +82,21 @@ public class QuestionService {
         }
     }
 
+    private Concept resolveConcept(Long conceptId, Quiz quiz, Long userId) {
+        if (conceptId == null) {
+            return null;
+        }
+        Concept concept = resourceAccessService.requireConcept(conceptId, userId);
+        if (!concept.getCourse().getId().equals(quiz.getCourse().getId())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Concept does not belong to the same course as the quiz");
+        }
+        return concept;
+    }
+
     private QuestionResponse toResponse(Question question) {
         return new QuestionResponse(question.getId(), question.getQuiz().getId(), question.getText(),
                 question.getType(), question.getReferenceAnswer(), question.getOptions().stream()
                         .map(option -> new AnswerOptionResponse(option.getId(), option.getText(), option.isCorrect()))
-                        .toList());
+                        .toList(), question.getConcept() != null ? question.getConcept().getId() : null);
     }
 }
