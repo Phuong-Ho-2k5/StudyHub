@@ -1,6 +1,6 @@
 # StudyHub
 
-StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept sau đăng nhập. Question, nộp Quiz và AI/RAG nằm trong kế hoạch phát triển.
+StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Backend hỗ trợ Question, nộp Quiz, tính điểm và lưu kết quả tổng hợp mỗi lần nộp vào QuizAttempt. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept sau đăng nhập. AI/RAG nằm trong kế hoạch phát triển.
 
 ## Cấu trúc dự án
 
@@ -59,6 +59,8 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |
 | Quiz | `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}` | Quản lý Quiz thuộc Course |
+| Question | `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}` | Quản lý câu hỏi và đáp án |
+| Submit Quiz | `POST /api/quizzes/{quizId}/submit` | Validate, tính điểm và lưu kết quả tổng hợp mỗi lần nộp |
 | Health | `GET /actuator/health` | Kiểm tra trạng thái backend |
 
 Ngoài đăng ký, đăng nhập và health check, các API yêu cầu header `Authorization: Bearer <accessToken>`. Quyền Course được suy ra từ owner của Workspace; truy cập tài nguyên của người khác trả về 404.
@@ -89,4 +91,4 @@ npm run build
 
 ## Hướng phát triển
 
-`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Quiz hiện chỉ có CRUD metadata; Question, nộp bài, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các milestone sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm và lưu QuizAttempt; câu tự luận ngắn hiện chờ chấm. API xem lịch sử, cập nhật confidence của Concept, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.

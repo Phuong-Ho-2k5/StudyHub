@@ -13,7 +13,7 @@ Profile `local` là mặc định. Khi chạy từ thư mục `backend/`, ứng 
 | `JWT_SECRET` | Khóa JWT dạng Base64, giải mã thành ít nhất 32 byte |
 | `JWT_EXPIRATION` | Thời hạn token tính bằng mili giây; mặc định `900000` |
 
-Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Test tích hợp dùng H2 trong bộ nhớ. Flyway tạo bảng qua `V1__create_users.sql`, `V2__create_workspaces.sql`, `V3__create_courses.sql`; JPA dùng `ddl-auto: validate`.
+Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Test tích hợp dùng H2 trong bộ nhớ. Flyway áp dụng các migration trong `src/main/resources/db/migration/`; JPA dùng `ddl-auto: validate`.
 
 ## Chạy và kiểm tra
 
@@ -33,7 +33,11 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
 - `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}`: CRUD metadata Quiz theo owner Course. Tạo Quiz với `{"title":"..."}`; cập nhật với `{"title":"...","status":"DRAFT|PUBLISHED|ARCHIVED"}`. Quiz tạo thủ công có `sourceType=MANUAL`.
 - `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"...","type":"SHORT_ANSWER","referenceAnswer":"Đáp án mẫu cho AI","options":[]}`. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
-- `POST /api/quizzes/{quizId}/submit`: kiểm tra bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"Lời giải"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu, `SHORT_ANSWER` nhận văn bản tối đa 4000 ký tự. Hiện endpoint trả `204` sau khi validate; chưa tính điểm, gọi AI hay lưu QuizAttempt.
+- `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"Lời giải"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu, `SHORT_ANSWER` nhận văn bản tối đa 4000 ký tự và hiện chờ chấm (`isCorrect=null`). Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Điểm bằng số câu đúng chia tổng số câu, nhân 100.
+
+Mỗi lần submit thành công tạo một bản ghi mới trong `quiz_attempts`, lưu Quiz, người dùng đăng nhập, các số đếm, điểm và thời điểm `created_at`. Làm lại không ghi đè lần trước; thay đổi Question sau đó không tính lại điểm đã lưu. Luồng submit chạy trong một transaction; bài nộp không hợp lệ hoặc không có quyền không tạo Attempt, lỗi lưu không trả thành công. Attempt hiện lưu kết quả tổng hợp; API lịch sử thuộc M4-T04. Xóa Quiz hoặc User sẽ xóa các Attempt liên quan theo khóa ngoại `ON DELETE CASCADE`.
+
+Migration V10 tạo bảng Attempt; V11 đổi `question_percentage` sang `DOUBLE PRECISION` để giữ độ chính xác của response và thêm index `(user_id, quiz_id, created_at)`. Các migration được Flyway áp dụng khi khởi động.
 - `GET /actuator/health`: health check.
 
 Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `GET /api/courses` nhận `workspaceId`, `status`, `q`, `page`, `size`, `sort`; ví dụ:

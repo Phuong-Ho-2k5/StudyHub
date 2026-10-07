@@ -14,6 +14,7 @@ import com.studyhub.quiz.dto.SubmitQuizRequest;
 import com.studyhub.quiz.dto.QuizResult;
 import com.studyhub.quiz.dto.QuestionResult;
 import com.studyhub.security.ResourceAccessService;
+import com.studyhub.user.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,13 +24,18 @@ import org.springframework.web.server.ResponseStatusException;
 public class QuizSubmissionService {
     private final ResourceAccessService resourceAccessService;
     private final QuestionRepository questionRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final UserRepository userRepository;
 
-    public QuizSubmissionService(ResourceAccessService resourceAccessService, QuestionRepository questionRepository) {
+    public QuizSubmissionService(ResourceAccessService resourceAccessService, QuestionRepository questionRepository,
+            QuizAttemptRepository quizAttemptRepository, UserRepository userRepository) {
         this.resourceAccessService = resourceAccessService;
         this.questionRepository = questionRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
+        this.userRepository = userRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public QuizResult submitQuiz(Long quizId, SubmitQuizRequest request, Long userId) {
         Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
         if (quiz.getStatus() != QuizStatus.PUBLISHED) {
@@ -78,6 +84,8 @@ public class QuizSubmissionService {
             invalid("Quiz has no questions");
         }
         double questionPercentage = (double) correctCount / totalQuestions * 100;
+        quizAttemptRepository.save(new QuizAttempt(quiz, userRepository.getReferenceById(userId),
+                totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage));
         return new QuizResult(quizId, totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage, List.copyOf(results));
     }
 
