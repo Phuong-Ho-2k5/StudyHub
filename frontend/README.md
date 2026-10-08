@@ -40,11 +40,16 @@ VITE_API_URL=http://localhost:8080
 | `/login` | Đăng nhập bằng email và mật khẩu. |
 | `/register` | Tạo tài khoản mới; đăng ký thành công sẽ chuyển về đăng nhập. |
 | `/welcome` | Bảng học tập yêu cầu đăng nhập. |
-| `/courses/:courseId` | Chi tiết khóa học: quản lý tài liệu và khái niệm. |
+| `/courses/:courseId` | Chi tiết khóa học: quản lý tài liệu, khái niệm và Quiz. |
+| `/courses/:courseId/quizzes/:quizId` | Soạn câu hỏi, xuất bản, làm bài và xem kết quả Quiz. |
 
 Trong bảng học tập, người dùng có thể tạo, chọn, sửa và xóa Workspace; tạo, sửa và xóa Course trong Workspace; tìm Course theo tên, lọc theo trạng thái và chuyển trang kết quả. Các trạng thái Course là `PLANNED`, `IN_PROGRESS`, `COMPLETED` và `ARCHIVED`. Khi xóa Workspace, backend cũng xóa các Course thuộc Workspace đó.
 
-Trong chi tiết khóa học, người dùng có thể thêm, sửa, xóa và tìm tài liệu theo tiêu đề; thêm, sửa, xóa khái niệm, lọc theo mức độ hiểu và quản lý kiến thức tiên quyết trong cùng khóa học. API Document hiện chỉ lưu metadata gồm tiêu đề, tên/loại tệp và đường dẫn lưu trữ; chưa có API tải tệp lên hoặc tải tệp xuống. Quiz và AI/RAG chưa có giao diện vì chưa có API tương ứng.
+Trong chi tiết khóa học, người dùng có thể thêm, sửa, xóa và tìm tài liệu theo tiêu đề; thêm, sửa, xóa khái niệm, lọc theo mức độ hiểu và quản lý kiến thức tiên quyết trong cùng khóa học. API Document hiện chỉ lưu metadata gồm tiêu đề, tên/loại tệp và đường dẫn lưu trữ; chưa có API tải tệp lên hoặc tải tệp xuống.
+
+Tab Quiz hỗ trợ tạo, sửa, xóa bài kiểm tra và mở trang riêng để quản lý câu hỏi. Người dùng có thể soạn trắc nghiệm (ít nhất 4 lựa chọn, có thể nhiều đáp án đúng), đúng/sai (2 lựa chọn và 1 đáp án đúng), tự luận ngắn (có đáp án tham chiếu), và gắn từng câu hỏi với khái niệm trong khóa học. Bài mới ở trạng thái bản nháp; xuất bản sau khi thêm câu hỏi để làm bài.
+
+Màn làm bài yêu cầu trả lời đủ câu hỏi, gửi bài một lần khi nhấn Nộp bài và hiển thị kết quả do backend trả về. Câu tự luận ngắn được ghi nhận là chờ chấm. Sau lần nộp thành công, giao diện tải lại mức độ hiểu của các khái niệm liên quan; người dùng có thể làm lại để tạo một lần nộp mới. Luồng nộp sử dụng API có transaction của M3-T07. Chưa có API đọc lịch sử QuizAttempt nên giao diện chỉ hiển thị kết quả lần nộp hiện tại; tải lại trang không khôi phục kết quả này. AI/RAG chưa có giao diện.
 
 Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: Bearer <token>` cho các API được bảo vệ và kết thúc phiên khi token hết hạn.
 
@@ -52,10 +57,10 @@ Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: B
 
 | Thư mục/tệp | Vai trò |
 | --- | --- |
-| `src/pages/` | Trang đăng nhập, đăng ký và bảng học tập. |
-| `src/components/` | Thành phần dùng chung cho giao diện xác thực. |
+| `src/pages/` | Trang xác thực, bảng học tập, chi tiết khóa học và Quiz. |
+| `src/components/` | Thành phần dùng chung; `quiz/` chứa form soạn đề và luồng làm bài. |
 | `src/auth/` | Lưu phiên, đọc JWT và bảo vệ route. |
-| `src/api/` | Gọi API xác thực, Workspace và Course; tạo query tìm kiếm/phân trang. |
+| `src/api/` | Gọi API xác thực và tài nguyên học tập, gồm Quiz/Question/Submit; kiểm thử query, payload và API. |
 | `src/styles.css` | Kiểu giao diện và responsive layout. |
 | `vite.config.js` | Cấu hình Vite và proxy `/api` khi phát triển. |
 
@@ -64,7 +69,7 @@ Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: B
 Chạy các lệnh sau trong thư mục `frontend/`:
 
 ```powershell
-npm test       # Kiểm tra query dùng cho API Course
+npm test       # Kiểm tra query, API Quiz và kiểm tra dữ liệu câu hỏi/bài nộp
 npm run lint   # Kiểm tra mã nguồn bằng ESLint
 npm run build  # Tạo bản production trong dist/
 ```

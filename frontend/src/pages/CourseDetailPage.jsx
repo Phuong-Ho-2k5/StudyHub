@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api/authApi'
 import {
   addPrerequisite, createConcept, createDocument, deleteConcept, deleteDocument,
@@ -7,6 +7,7 @@ import {
   listPrerequisites, removePrerequisite, updateConcept, updateDocument,
 } from '../api/studyApi'
 import { useAuth } from '../auth/AuthContext'
+import { QuizPanel } from '../components/quiz/QuizPanel'
 
 const CONCEPT_STATUSES = [
   ['NEW', 'Mới'], ['LEARNING', 'Đang học'], ['UNDERSTOOD', 'Đã hiểu'], ['MASTERED', 'Thành thạo'],
@@ -138,7 +139,9 @@ export function CourseDetailPage() {
   const { token } = useAuth()
   const [course, setCourse] = useState(null)
   const [courseError, setCourseError] = useState('')
-  const [tab, setTab] = useState('documents')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedTab = searchParams.get('tab')
+  const tab = ['documents', 'concepts', 'quizzes'].includes(selectedTab) ? selectedTab : 'documents'
   const [documents, setDocuments] = useState([])
   const [documentPage, setDocumentPage] = useState(0)
   const [documentPages, setDocumentPages] = useState(0)
@@ -160,6 +163,7 @@ export function CourseDetailPage() {
   }, [token, courseId])
 
   useEffect(() => {
+    if (tab === 'quizzes') return undefined
     let active = true
     const request = tab === 'documents'
       ? listDocuments(token, { courseId, q: search, page: documentPage })
@@ -177,7 +181,10 @@ export function CourseDetailPage() {
   }, [token, courseId, tab, search, documentPage, threshold, revision])
 
   function refresh() { setRevision((value) => value + 1); setDialog(null); setLoading(true) }
-  function changeTab(value) { setTab(value); setError(''); setLoading(true) }
+  function changeTab(value) {
+    if (value === tab) return
+    setSearchParams({ tab: value }); setError(''); setLoading(true)
+  }
   async function remove(type, item) {
     if (!window.confirm(`Xóa “${type === 'document' ? item.title : item.name}”?`)) return
     setDeleting(`${type}-${item.id}`)
@@ -198,7 +205,9 @@ export function CourseDetailPage() {
       <div className="page-heading"><div><p className="section-kicker">Chi tiết khóa học</p><h1>{course?.name ?? 'Khóa học'}</h1><p>{course?.description}</p></div></div>
       {courseError && <p className="form-message error" role="alert">{courseError}</p>}
       {!courseError && <div className="course-panel">
-        <div className="detail-toolbar"><div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học"><button type="button" role="tab" aria-selected={tab === 'documents'} className={tab === 'documents' ? 'active' : ''} onClick={() => changeTab('documents')}>Tài liệu</button><button type="button" role="tab" aria-selected={tab === 'concepts'} className={tab === 'concepts' ? 'active' : ''} onClick={() => changeTab('concepts')}>Khái niệm</button></div><button className="primary-button detail-add" type="button" onClick={() => setDialog({ type: tab === 'documents' ? 'document' : 'concept' })}>+ Thêm {tab === 'documents' ? 'tài liệu' : 'khái niệm'}</button></div>
+        <div className="detail-toolbar"><div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học"><button type="button" role="tab" aria-selected={tab === 'documents'} className={tab === 'documents' ? 'active' : ''} onClick={() => changeTab('documents')}>Tài liệu</button><button type="button" role="tab" aria-selected={tab === 'concepts'} className={tab === 'concepts' ? 'active' : ''} onClick={() => changeTab('concepts')}>Khái niệm</button><button type="button" role="tab" aria-selected={tab === 'quizzes'} className={tab === 'quizzes' ? 'active' : ''} onClick={() => changeTab('quizzes')}>Quiz</button></div>{tab !== 'quizzes' && <button className="primary-button detail-add" type="button" onClick={() => setDialog({ type: tab === 'documents' ? 'document' : 'concept' })}>+ Thêm {tab === 'documents' ? 'tài liệu' : 'khái niệm'}</button>}</div>
+        {tab === 'quizzes' && <QuizPanel key={courseId} courseId={courseId} token={token} />}
+        {tab !== 'quizzes' && <>
         {tab === 'documents' ? <>
           <p className="inline-help">Tài liệu ở giai đoạn này chỉ là thông tin tệp và đường dẫn lưu trữ.</p>
           <form className="search-form detail-search" role="search" onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); setDocumentPage(0); setLoading(true) }}><label className="sr-only" htmlFor="document-search">Tìm tài liệu</label><input id="document-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Tìm theo tiêu đề…" /><button className="secondary-button" type="submit">Tìm</button></form>
@@ -208,6 +217,7 @@ export function CourseDetailPage() {
         {!loading && !error && tab === 'documents' && (documents.length ? <div className="resource-list">{documents.map((item) => <article className="resource-card" key={item.id}><div className="resource-copy"><h3>{item.title}</h3><p>{item.fileName} · {item.fileType}</p><p className="resource-path">{item.storagePath}</p></div><span className="status-badge">{DOCUMENT_LABELS[item.status] ?? item.status}</span><div className="course-actions"><button type="button" onClick={() => setDialog({ type: 'document', item })}>Sửa</button><button type="button" onClick={() => remove('document', item)} disabled={deleting === `document-${item.id}`}>Xóa</button></div></article>)}</div> : <div className="empty-state"><h3>Chưa có tài liệu</h3><p>Thêm thông tin tệp để quản lý tài liệu của khóa học.</p></div>)}
         {!loading && !error && tab === 'documents' && documentPages > 1 && <div className="pagination"><span>Trang {documentPage + 1} / {documentPages}</span><div><button className="secondary-button" type="button" disabled={documentPage === 0} onClick={() => { setDocumentPage((page) => page - 1); setLoading(true) }}>Trước</button><button className="secondary-button" type="button" disabled={documentPage + 1 >= documentPages} onClick={() => { setDocumentPage((page) => page + 1); setLoading(true) }}>Sau</button></div></div>}
         {!loading && !error && tab === 'concepts' && (concepts.length ? <div className="resource-list">{concepts.map((item) => <article className="resource-card" key={item.id}><div className="resource-copy"><h3>{item.name}</h3><p>{item.description || 'Chưa có mô tả'}</p><div className="confidence-track" aria-label={`Mức độ hiểu ${item.confidence}%`}><span style={{ width: `${item.confidence}%` }} /></div></div><div className="concept-meta"><strong>{item.confidence}%</strong><span className="status-badge">{CONCEPT_LABELS[item.status] ?? item.status}</span></div><div className="course-actions"><button type="button" onClick={() => setDialog({ type: 'prerequisite', item })}>Tiên quyết</button><button type="button" onClick={() => setDialog({ type: 'concept', item })}>Sửa</button><button type="button" onClick={() => remove('concept', item)} disabled={deleting === `concept-${item.id}`}>Xóa</button></div></article>)}</div> : <div className="empty-state"><h3>Chưa có khái niệm phù hợp</h3><p>Thêm khái niệm hoặc thay đổi mức lọc.</p></div>)}
+        </>}
       </div>}
     </div>
     {dialog?.type === 'prerequisite' && <PrerequisiteDialog concept={dialog.item} token={token} onClose={() => setDialog(null)} onSaved={() => setRevision((value) => value + 1)} />}

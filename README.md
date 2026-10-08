@@ -1,13 +1,13 @@
 # StudyHub
 
-StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Backend hỗ trợ Question, nộp Quiz, tính điểm và lưu kết quả tổng hợp mỗi lần nộp vào QuizAttempt. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept sau đăng nhập. AI/RAG nằm trong kế hoạch phát triển.
+StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Backend hỗ trợ Question, nộp Quiz, tính điểm và lưu kết quả tổng hợp mỗi lần nộp vào QuizAttempt. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept, quản lý Quiz/câu hỏi, làm bài và xem kết quả sau đăng nhập. AI/RAG nằm trong kế hoạch phát triển.
 
 ## Cấu trúc dự án
 
 | Thư mục | Vai trò hiện tại |
 | --- | --- |
 | `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
-| `frontend/` | React/Vite cho xác thực và quản lý Workspace/Course/Document/Concept |
+| `frontend/` | React/Vite cho xác thực, quản lý tài nguyên học tập, soạn Quiz và làm bài |
 | `ai-service/` | Bộ khung cho dịch vụ AI/RAG trong tương lai |
 | `infra/` | Vị trí dành cho cấu hình hạ tầng trong tương lai |
 
@@ -91,4 +91,4 @@ npm run build
 
 ## Hướng phát triển
 
-`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm và lưu QuizAttempt; câu tự luận ngắn hiện chờ chấm. API xem lịch sử, cập nhật confidence của Concept, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction; câu tự luận ngắn hiện chờ chấm. API xem lịch sử, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.

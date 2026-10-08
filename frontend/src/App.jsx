@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CourseDetailPage } from './pages/CourseDetailPage'
+import { QuizDetailPage } from './pages/QuizDetailPage'
 
 function PublicOnlyRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -33,6 +34,7 @@ function App() {
         )}
       />
       <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
+      <Route path="/courses/:courseId/quizzes/:quizId" element={<ProtectedRoute><QuizDetailPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to={isAuthenticated ? '/welcome' : '/login'} replace />} />
       <Route path="*" element={<Navigate to={isAuthenticated ? '/welcome' : '/login'} replace />} />
     </Routes>
