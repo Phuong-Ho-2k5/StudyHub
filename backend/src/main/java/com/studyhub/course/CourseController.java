@@ -17,6 +17,7 @@ import com.studyhub.security.CustomUserDetails;
 import com.studyhub.course.dto.CreateCourseRequest;
 import com.studyhub.course.dto.UpdateCourseRequest;
 import com.studyhub.course.dto.CourseResponse;
+import com.studyhub.course.dto.CourseProgressResponse;
 
 import org.springframework.data.domain.Pageable;
 
@@ -30,9 +31,11 @@ import jakarta.validation.Valid;
 @RequestMapping("/api")
 public class CourseController {
     private final CourseService courseService;
+    private final CourseProgressService courseProgressService;
 
-    public CourseController(CourseService courseService) {
+    public CourseController(CourseService courseService, CourseProgressService courseProgressService) {
         this.courseService = courseService;
+        this.courseProgressService = courseProgressService;
     }
 
     @PostMapping("/workspaces/{workspaceId}/courses")
@@ -49,6 +52,13 @@ public class CourseController {
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return courseService.getCourse(id, currentUser.getId());
+    }
+
+    @GetMapping("/courses/{courseId}/progress")
+    public CourseProgressResponse getProgress(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return courseProgressService.getProgress(courseId, currentUser.getId());
     }
 
     @PutMapping("/courses/{id}")

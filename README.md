@@ -55,6 +55,7 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Workspace | `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}` | Quản lý Workspace của người dùng hiện tại |
 | Course | `POST /api/workspaces/{workspaceId}/courses` | Tạo Course trong Workspace đã sở hữu |
 | Course | `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}` | Liệt kê, đọc, sửa và xóa Course được phép truy cập |
+| Progress | `GET /api/courses/{courseId}/progress` | Tiến độ trung bình confidence và tỷ lệ Concept nắm vững; xem [quy tắc](backend/README.md#tiến-độ-course) |
 | Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |
@@ -73,22 +74,6 @@ GET /api/courses?workspaceId=3&status=PLANNED&q=java&page=0&size=10&sort=name,as
 
 Kết quả là một trang dữ liệu có `content`, `totalElements`, `totalPages` và thông tin phân trang. Chi tiết request/response nằm trong các DTO và controller của [backend](backend/src/main/java/com/studyhub/).
 
-## Kiểm tra
-
-```powershell
-cd backend
-.\mvnw.cmd test
-```
-
-Test backend dùng H2 ở chế độ tương thích PostgreSQL. Bộ test hiện kiểm tra luồng Workspace và Course, gồm quyền owner, CRUD Course, lọc kết hợp, phân trang và sắp xếp.
-
-```powershell
-cd frontend
-npm test
-npm run lint
-npm run build
-```
-
 ## Hướng phát triển
 
-`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction; câu tự luận ngắn hiện chờ chấm. API xem lịch sử, theo dõi tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction; câu tự luận ngắn hiện chờ chấm. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept. API xem lịch sử, giao diện tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
