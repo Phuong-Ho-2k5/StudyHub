@@ -74,6 +74,17 @@ Ví dụ Course có confidence `100, 80, 60, 40, 0`:
 
 API chỉ đọc và tính từ dữ liệu hiện tại, không lưu bảng tiến độ hay đổi `Course.status`. Thêm Concept hoặc giảm confidence có thể khiến tiến độ giảm. Quiz đã cập nhật confidence nên không cộng điểm Quiz lần nữa. `CourseProgressApiTest` kiểm tra công thức, ngưỡng, làm tròn, dữ liệu rỗng, thay đổi dữ liệu, phạm vi Course và quyền truy cập.
 
+## Phiên học (M4-T02)
+
+Hai API yêu cầu JWT và chỉ thao tác với dữ liệu của người dùng đăng nhập:
+
+- `POST /api/study-sessions/start`, body `{"courseId": 1}`: kiểm tra quyền Course, tạo phiên học và trả `201`.
+- `POST /api/study-sessions/{id}/finish`, không cần body: kết thúc phiên và trả `200`. Phiên không tồn tại hoặc thuộc người khác trả `404`; phiên đã kết thúc trả `409`.
+
+Response gồm `id`, `userId`, `courseId`, `startTime`, `endTime`, `duration`. Thời gian do server ghi theo UTC; `duration` là số giây hoàn chỉnh giữa hai thời điểm. Khi đang học, `endTime` và `duration` là `null`. Mỗi lần start tạo một phiên mới.
+
+Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transaction và khóa bản ghi để hai request đồng thời chỉ kết thúc thành công một lần. `StudySessionApiTest` kiểm tra lưu dữ liệu, thời lượng, validation, JWT, quyền sở hữu và finish trùng/đồng thời.
+
 ## Cấu trúc lỗi API
 
 Các lỗi dưới `/api/**` trả về JSON cùng cấu trúc. HTTP status nằm ở response; body có `code`, `message`, `path`, `timestamp` (UTC, ISO-8601). Lỗi Bean Validation có thêm `fieldErrors` theo tên trường. Frontend hiện tại hiển thị `message`.
