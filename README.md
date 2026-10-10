@@ -56,6 +56,7 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Course | `POST /api/workspaces/{workspaceId}/courses` | Tạo Course trong Workspace đã sở hữu |
 | Course | `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}` | Liệt kê, đọc, sửa và xóa Course được phép truy cập |
 | Progress | `GET /api/courses/{courseId}/progress` | Tiến độ trung bình confidence và tỷ lệ Concept nắm vững; xem [quy tắc](backend/README.md#tiến-độ-course) |
+| Statistics | `GET /api/users/me/statistics` | Tổng thời gian học, số phiên đã kết thúc, số lần làm Quiz và điểm trung bình của user hiện tại; xem [quy tắc](backend/README.md#thống-kê-người-dùng-m4-t03) |
 | Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |

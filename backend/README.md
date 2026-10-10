@@ -85,6 +85,28 @@ Response gồm `id`, `userId`, `courseId`, `startTime`, `endTime`, `duration`. T
 
 Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transaction và khóa bản ghi để hai request đồng thời chỉ kết thúc thành công một lần. `StudySessionApiTest` kiểm tra lưu dữ liệu, thời lượng, validation, JWT, quyền sở hữu và finish trùng/đồng thời.
 
+## Thống kê người dùng (M4-T03)
+
+`GET /api/users/me/statistics` yêu cầu `Authorization: Bearer <accessToken>` và trả `200` với thống kê của user trong JWT, tổng hợp trên tất cả Course. API không nhận userId để chọn người dùng; JWT thiếu hoặc không hợp lệ trả `401`.
+
+```json
+{
+  "completedStudySessions": 2,
+  "totalStudySeconds": 1800,
+  "quizAttemptCount": 2,
+  "averageQuizScore": 75.0
+}
+```
+
+- `completedStudySessions`: số phiên đã kết thúc (`endTime` khác null), tính cả phiên có thời lượng 0.
+- `totalStudySeconds`: tổng duration đã lưu của các phiên đã kết thúc, đơn vị giây. Phiên đang học chưa được tính.
+- `quizAttemptCount`: số lần nộp Quiz đã lưu; làm lại cùng Quiz vẫn tính từng lần.
+- `averageQuizScore`: trung bình cộng `questionPercentage` đã lưu của tất cả Attempt (0–100), làm tròn 2 chữ số thập phân theo `HALF_UP`. Mỗi Attempt có trọng số bằng nhau, không phụ thuộc số câu. Attempt có câu chờ chấm vẫn được tính theo điểm đã lưu; sửa Question không tính lại điểm lịch sử.
+
+Khi không có phiên đã kết thúc hoặc không có Attempt, các chỉ số tương ứng bằng 0. Ví dụ trên dùng hai phiên 600/1200 giây và hai Attempt 50/100 điểm. API chỉ đọc, dùng hai query `COUNT/SUM` và `COUNT/AVG` riêng để tránh nhân bản dữ liệu khi join; không cần bảng hoặc migration mới.
+
+`UserStatisticsApiTest` kiểm tra tổng hợp trên nhiều Course, làm Quiz nhiều lần, làm tròn, câu chờ chấm, phiên đang học, dữ liệu rỗng, thời lượng lớn, JWT và tách dữ liệu giữa các user.
+
 ## Cấu trúc lỗi API
 
 Các lỗi dưới `/api/**` trả về JSON cùng cấu trúc. HTTP status nằm ở response; body có `code`, `message`, `path`, `timestamp` (UTC, ISO-8601). Lỗi Bean Validation có thêm `fieldErrors` theo tên trường. Frontend hiện tại hiển thị `message`.
