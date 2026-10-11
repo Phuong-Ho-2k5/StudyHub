@@ -59,7 +59,7 @@ export function QuizAttempt({ quiz, questions, token, onSubmitted, onBusyChange 
       <dl className="quiz-result-stats"><div><dt>Đúng</dt><dd>{result.correctCount}</dd></div>
         <div><dt>Sai</dt><dd>{result.incorrectCount}</dd></div><div><dt>Chờ chấm</dt><dd>{result.pendingCount}</dd></div>
         <div><dt>Tổng số câu</dt><dd>{result.totalQuestions}</dd></div></dl>
-      {result.pendingCount > 0 && <p className="inline-help">Câu tự luận ngắn đang chờ chấm; chưa được tính là câu trả lời đúng.</p>}
+      {result.pendingCount > 0 && <p className="inline-help">Các câu chờ chấm chưa được tính là câu trả lời đúng.</p>}
     </section> : <div className="quiz-progress"><span>Đã trả lời {answered} / {questions.length} câu</span>
       <progress max={questions.length} value={answered} aria-label="Tiến độ trả lời" /></div>}
     <form className="quiz-attempt-form" onSubmit={submit}>
@@ -73,7 +73,12 @@ export function QuizAttempt({ quiz, questions, token, onSubmitted, onBusyChange 
           </div>
           {question.type === 'SHORT_ANSWER' ? <div className="field"><label className="field-label" htmlFor={`answer-text-${question.id}`}>Câu trả lời của bạn</label>
             <textarea id={`answer-text-${question.id}`} rows={4} maxLength={4000} value={answers[question.id] ?? ''}
+              aria-describedby={`answer-help-${question.id}`}
               onChange={(event) => { setAnswers((current) => ({ ...current, [question.id]: event.target.value })); setError('') }} />
+            <p className="inline-help" id={`answer-help-${question.id}`}>
+              Trả lời đúng định dạng đề yêu cầu. Câu trả lời phải khớp từng ký tự với đáp án mẫu,
+              bao gồm chữ hoa/thường, dấu, khoảng trắng và xuống dòng. Không thêm phần giải thích nếu đề không yêu cầu.
+            </p>
           </div> : <>
             {question.type === 'MULTIPLE_CHOICE' && <p className="inline-help">Chọn tất cả đáp án bạn cho là đúng.</p>}
             <div className="answer-options">{question.options.map((option) => <label className={`answer-option${result && option.correct ? ' revealed-correct' : ''}`} key={option.id}>
@@ -82,7 +87,7 @@ export function QuizAttempt({ quiz, questions, token, onSubmitted, onBusyChange 
               <span>{option.text}</span>{result && option.correct && <span className="correct-label">Đáp án đúng</span>}
             </label>)}</div>
           </>}
-          {result && question.type === 'SHORT_ANSWER' && <p className="reference-answer"><strong>Đáp án tham chiếu:</strong> {question.referenceAnswer}</p>}
+          {result && question.type === 'SHORT_ANSWER' && <p className="reference-answer"><strong>Đáp án mẫu:</strong> {question.referenceAnswer}</p>}
         </fieldset>
       })}
       {error && <p className="form-message error" role="alert">{error}</p>}

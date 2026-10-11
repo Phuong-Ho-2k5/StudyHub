@@ -33,10 +33,12 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
 - `GET /api/courses/{courseId}/progress`: tổng hợp tiến độ từ confidence hiện tại của các Concept, theo quyền owner Course; chi tiết bên dưới.
 - `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}`: CRUD metadata Quiz theo owner Course. Tạo Quiz với `{"title":"..."}`; cập nhật với `{"title":"...","status":"DRAFT|PUBLISHED|ARCHIVED"}`. Quiz tạo thủ công có `sourceType=MANUAL`.
-- `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"...","type":"SHORT_ANSWER","referenceAnswer":"Đáp án mẫu cho AI","options":[]}`. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
-- `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"Lời giải"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu, `SHORT_ANSWER` nhận văn bản tối đa 4000 ký tự và hiện chờ chấm (`isCorrect=null`). Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Điểm bằng số câu đúng chia tổng số câu, nhân 100.
+- `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"HTTP mặc định dùng cổng nào? Chỉ nhập số nguyên, không ghi đơn vị, không thêm khoảng trắng.","type":"SHORT_ANSWER","referenceAnswer":"80","options":[]}`. Đáp án mẫu phải có nội dung, tối đa 4000 ký tự và được lưu nguyên chuỗi. Người soạn ghi rõ định dạng trả lời trong `text`; chưa có trường hướng dẫn riêng. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
+- `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"80"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu. `SHORT_ANSWER` chỉ nhận `answerText` có nội dung, tối đa 4000 ký tự và chấm ngay bằng `referenceAnswer.equals(answerText)`, trả `isCorrect=true/false`, không gọi AI. Phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không trim hoặc chuẩn hóa chuỗi. Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Với các loại câu hiện tại, bài nộp mới có `gradedCount=totalQuestions`, `pendingCount=0`. Điểm bằng số câu đúng chia tổng số câu, nhân 100. Câu trả lời ngắn gắn Concept cũng cập nhật confidence theo kết quả đúng/sai như các loại câu khác.
 
-Mỗi lần submit thành công tạo một bản ghi mới trong `quiz_attempts`, lưu Quiz, người dùng đăng nhập, các số đếm, điểm và thời điểm `created_at`. Làm lại không ghi đè lần trước; thay đổi Question sau đó không tính lại điểm đã lưu. Luồng submit chạy trong một transaction; bài nộp không hợp lệ hoặc không có quyền không tạo Attempt, lỗi lưu không trả thành công. Attempt hiện lưu kết quả tổng hợp; xem API [lịch sử Quiz](#lịch-sử-quiz-m4-t04) bên dưới. Xóa Quiz hoặc User sẽ xóa các Attempt liên quan theo khóa ngoại `ON DELETE CASCADE`.
+`QuizSubmitApiTest` kiểm tra khớp chính xác, sai hoa/thường/dấu/khoảng trắng/xuống dòng, lưu và sửa đáp án mẫu nguyên chuỗi, tính điểm, lưu Attempt và cập nhật confidence trong giới hạn 0–100. Frontend giữ nguyên `referenceAnswer` khi lưu và `answerText` khi nộp; chỉ kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn độ dài. Nên dùng câu trả lời ngắn cho số, từ khóa hoặc cụm từ có đáp án duy nhất.
+
+Mỗi lần submit thành công tạo một bản ghi mới trong `quiz_attempts`, lưu Quiz, người dùng đăng nhập, các số đếm, điểm và thời điểm `created_at`. Làm lại không ghi đè lần trước; thay đổi Question sau đó không tính lại điểm đã lưu. Luồng submit chạy trong một transaction; bài nộp không hợp lệ hoặc không có quyền không tạo Attempt, lỗi lưu không trả thành công. Attempt hiện lưu kết quả tổng hợp; xem API [lịch sử Quiz](#lịch-sử-quiz) bên dưới. Xóa Quiz hoặc User sẽ xóa các Attempt liên quan theo khóa ngoại `ON DELETE CASCADE`.
 
 Migration V10 tạo bảng Attempt; V11 đổi `question_percentage` sang `DOUBLE PRECISION` để giữ độ chính xác của response và thêm index `(user_id, quiz_id, created_at)`. Các migration được Flyway áp dụng khi khởi động.
 - `GET /actuator/health`: health check.
@@ -74,7 +76,7 @@ Ví dụ Course có confidence `100, 80, 60, 40, 0`:
 
 API chỉ đọc và tính từ dữ liệu hiện tại, không lưu bảng tiến độ hay đổi `Course.status`. Thêm Concept hoặc giảm confidence có thể khiến tiến độ giảm. Quiz đã cập nhật confidence nên không cộng điểm Quiz lần nữa. `CourseProgressApiTest` kiểm tra công thức, ngưỡng, làm tròn, dữ liệu rỗng, thay đổi dữ liệu, phạm vi Course và quyền truy cập.
 
-## Phiên học (M4-T02)
+## Phiên học
 
 Hai API yêu cầu JWT và chỉ thao tác với dữ liệu của người dùng đăng nhập:
 
@@ -85,7 +87,7 @@ Response gồm `id`, `userId`, `courseId`, `startTime`, `endTime`, `duration`. T
 
 Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transaction và khóa bản ghi để hai request đồng thời chỉ kết thúc thành công một lần. `StudySessionApiTest` kiểm tra lưu dữ liệu, thời lượng, validation, JWT, quyền sở hữu và finish trùng/đồng thời.
 
-## Thống kê người dùng (M4-T03)
+## Thống kê người dùng
 
 `GET /api/users/me/statistics` yêu cầu `Authorization: Bearer <accessToken>` và trả `200` với thống kê của user trong JWT, tổng hợp trên tất cả Course. API không nhận userId để chọn người dùng; JWT thiếu hoặc không hợp lệ trả `401`.
 
@@ -107,7 +109,7 @@ Khi không có phiên đã kết thúc hoặc không có Attempt, các chỉ s�
 
 `UserStatisticsApiTest` kiểm tra tổng hợp trên nhiều Course, làm Quiz nhiều lần, làm tròn, câu chờ chấm, phiên đang học, dữ liệu rỗng, thời lượng lớn, JWT và tách dữ liệu giữa các user.
 
-## Lịch sử Quiz (M4-T04)
+## Lịch sử Quiz
 
 `GET /api/users/me/quiz-history` yêu cầu JWT và trả `200` với một trang lịch sử làm Quiz của user trong JWT trên tất cả Course. Không nhận userId để chọn người dùng; JWT thiếu hoặc không hợp lệ trả `401`.
 
@@ -126,16 +128,16 @@ Ví dụ một phần tử trong `content`:
   "attemptId": 1,
   "quizId": 2,
   "totalQuestions": 3,
-  "gradedCount": 2,
+  "gradedCount": 3,
   "correctCount": 1,
-  "incorrectCount": 1,
-  "pendingCount": 1,
+  "incorrectCount": 2,
+  "pendingCount": 0,
   "questionPercentage": 33.333333333333336,
   "createdAt": "2026-10-11T01:00:00Z"
 }
 ```
 
-Mỗi lần submit được liệt kê riêng, kể cả làm lại cùng Quiz. Các số đếm và điểm lấy nguyên từ Attempt đã lưu, không làm tròn thêm hoặc tính lại khi Question thay đổi; `createdAt` trả theo UTC. Lịch sử chỉ có kết quả tổng hợp, chưa lưu hoặc trả đáp án từng câu. Attempt bị xóa theo Quiz/User không còn xuất hiện.
+Mỗi lần submit được liệt kê riêng, kể cả làm lại cùng Quiz. Các số đếm và điểm lấy nguyên từ Attempt đã lưu, không làm tròn thêm hoặc tính lại khi Question thay đổi; `createdAt` trả theo UTC. Attempt cũ có câu chờ chấm giữ nguyên `pendingCount` và điểm đã lưu; thay đổi cách chấm chỉ áp dụng cho lần nộp mới. Lịch sử chỉ có kết quả tổng hợp, chưa lưu hoặc trả đáp án từng câu nên không có đủ dữ liệu để tự chấm lại những lần nộp cũ. Attempt bị xóa theo Quiz/User không còn xuất hiện.
 
 API chỉ đọc, map entity sang DTO trong transaction và tải kèm Quiz bằng `EntityGraph`. Không cần bảng hoặc migration mới. `QuizHistoryApiTest` kiểm tra JWT, tách dữ liệu giữa user, nhiều Course/lần nộp, trang rỗng/vượt cuối, thứ tự mặc định/tùy chọn, thời gian UTC và kết quả sau khi thay đổi Question.
 

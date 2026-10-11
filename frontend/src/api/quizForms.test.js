@@ -23,10 +23,10 @@ test('true false accepts exactly two choices with exactly one correct answer', (
   assert.throws(() => buildQuestionPayload({ ...draft, options: [...draft.options, option('Khác')] }))
 })
 
-test('short answer requires a reference and clears stale option answers', () => {
+test('short answer preserves the reference exactly and clears stale option answers', () => {
   assert.deepEqual(buildQuestionPayload({ text: ' Giải thích ', type: 'SHORT_ANSWER',
     referenceAnswer: ' Lời giải ', options: [option('stale', true)], conceptId: '' }), {
-    text: 'Giải thích', type: 'SHORT_ANSWER', referenceAnswer: 'Lời giải', options: [], conceptId: null,
+    text: 'Giải thích', type: 'SHORT_ANSWER', referenceAnswer: ' Lời giải ', options: [], conceptId: null,
   })
   assert.throws(() => buildQuestionPayload({ text: 'Giải thích', type: 'SHORT_ANSWER', referenceAnswer: ' ' }))
 })
@@ -49,8 +49,24 @@ const questions = [
 test('submission uses option ids for choice answers and only text for short answers', () => {
   assert.deepEqual(buildSubmission(questions, { 1: [11, 13], 2: [22], 3: '  Giải thích  ' }), {
     answers: [{ questionId: 1, answerOptionIds: [11, 13] }, { questionId: 2, answerOptionIds: [22] },
-      { questionId: 3, answerText: 'Giải thích' }],
+      { questionId: 3, answerText: '  Giải thích  ' }],
   })
+})
+
+test('short answer payloads preserve case, accents, repeated spaces and newlines', () => {
+  const value = ' Hà  Nội\nViệt Nam '
+  const question = buildQuestionPayload({ text: 'Thủ đô?', type: 'SHORT_ANSWER', referenceAnswer: value })
+  assert.equal(question.referenceAnswer, value)
+  assert.equal(buildSubmission([questions[2]], { 3: value }).answers[0].answerText, value)
+})
+
+test('short answer length validation counts leading and trailing whitespace', () => {
+  const value = ` ${'x'.repeat(3999)} `
+  assert.throws(() => buildQuestionPayload({ text: 'Câu hỏi', type: 'SHORT_ANSWER', referenceAnswer: value }))
+  assert.throws(() => buildSubmission([questions[2]], { 3: value }))
+  const limit = ` ${'x'.repeat(3998)} `
+  assert.equal(buildQuestionPayload({ text: 'Câu hỏi', type: 'SHORT_ANSWER', referenceAnswer: limit }).referenceAnswer, limit)
+  assert.equal(buildSubmission([questions[2]], { 3: limit }).answers[0].answerText, limit)
 })
 
 test('submission rejects missing answers, empty quizzes and blank or oversized free text', () => {

@@ -117,7 +117,7 @@ public class QuizSubmissionService {
 
     private Boolean isCorrect(Question question, SubmitAnswerRequest answer) {
         if (question.getType() == QuestionType.SHORT_ANSWER) {
-            return null;
+            return question.getReferenceAnswer().equals(answer.answerText());
         }
         Set<Long> correctOptionIds = new HashSet<>();
         question.getOptions().stream().filter(option -> option.isCorrect()).forEach(option -> correctOptionIds.add(option.getId()));

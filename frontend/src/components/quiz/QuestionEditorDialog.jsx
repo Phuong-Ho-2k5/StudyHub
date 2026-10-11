@@ -49,7 +49,15 @@ export function QuestionEditorDialog({ item, quizId, concepts, token, onClose, o
     <form className="editor-form" onSubmit={save}>
       {error && <p className="form-message error" role="alert">{error}</p>}
       <div className="field"><label className="field-label" htmlFor="question-text">Nội dung câu hỏi</label>
-        <textarea id="question-text" value={draft.text} onChange={(event) => field('text', event.target.value)} maxLength={500} required disabled={saving} rows={3} />
+        <textarea id="question-text" value={draft.text} onChange={(event) => field('text', event.target.value)} maxLength={500} required disabled={saving} rows={3}
+          placeholder={draft.type === 'SHORT_ANSWER'
+            ? 'Ví dụ: HTTP mặc định dùng cổng nào? Chỉ nhập số nguyên, không ghi đơn vị, không thêm khoảng trắng.'
+            : undefined}
+          aria-describedby={draft.type === 'SHORT_ANSWER' ? 'question-text-help' : undefined} />
+        {draft.type === 'SHORT_ANSWER' && <p className="inline-help" id="question-text-help">
+          Nên viết hướng dẫn trả lời ngay trong ô Nội dung câu hỏi để người làm bài biết chính xác định dạng cần nhập:
+          chữ hoa/thường, dấu, đơn vị, định dạng số và khoảng trắng.
+        </p>}
       </div>
       <div className="question-fields">
         <div className="field"><label className="field-label" htmlFor="question-type">Loại câu hỏi</label>
@@ -65,10 +73,13 @@ export function QuestionEditorDialog({ item, quizId, concepts, token, onClose, o
         </div>
       </div>
       {draft.type === 'SHORT_ANSWER' ? <>
-        <div className="field"><label className="field-label" htmlFor="question-reference">Đáp án tham chiếu</label>
-          <textarea id="question-reference" value={draft.referenceAnswer} onChange={(event) => field('referenceAnswer', event.target.value)} maxLength={4000} required disabled={saving} rows={4} />
+        <div className="field"><label className="field-label" htmlFor="question-reference">Đáp án mẫu</label>
+          <textarea id="question-reference" value={draft.referenceAnswer} onChange={(event) => field('referenceAnswer', event.target.value)} maxLength={4000} required disabled={saving} rows={4} aria-describedby="question-reference-help" />
         </div>
-        <p className="inline-help">Câu tự luận ngắn hiện được ghi nhận là chờ chấm khi nộp bài.</p>
+        <p className="inline-help" id="question-reference-help">
+          Câu trả lời được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu,
+          bao gồm chữ hoa/thường, dấu, khoảng trắng và xuống dòng. Đáp án mẫu được giữ nguyên khi lưu.
+        </p>
       </> : <fieldset className="option-editor" disabled={saving}>
         <legend>Các lựa chọn và đáp án đúng</legend>
         <p className="inline-help">{draft.type === 'TRUE_FALSE' ? 'Chọn một đáp án đúng.' : 'Nhập ít nhất 4 lựa chọn. Có thể chọn nhiều đáp án đúng.'}</p>

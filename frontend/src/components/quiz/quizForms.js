@@ -1,5 +1,5 @@
 export const QUESTION_TYPES = [
-  ['MULTIPLE_CHOICE', 'Trắc nghiệm'], ['TRUE_FALSE', 'Đúng / Sai'], ['SHORT_ANSWER', 'Tự luận ngắn'],
+  ['MULTIPLE_CHOICE', 'Trắc nghiệm'], ['TRUE_FALSE', 'Đúng / Sai'], ['SHORT_ANSWER', 'Trả lời ngắn'],
 ]
 export const QUESTION_LABELS = Object.fromEntries(QUESTION_TYPES)
 export const QUIZ_STATUSES = [['DRAFT', 'Bản nháp'], ['PUBLISHED', 'Đã xuất bản'], ['ARCHIVED', 'Đã lưu trữ']]
@@ -14,8 +14,8 @@ export function buildQuestionPayload(draft) {
     throw new Error('Khái niệm không hợp lệ.')
   }
   if (draft.type === 'SHORT_ANSWER') {
-    const referenceAnswer = (draft.referenceAnswer ?? '').trim()
-    if (!referenceAnswer || referenceAnswer.length > 4000) throw new Error('Nhập đáp án tham chiếu từ 1 đến 4.000 ký tự.')
+    const referenceAnswer = draft.referenceAnswer ?? ''
+    if (!referenceAnswer.trim() || referenceAnswer.length > 4000) throw new Error('Nhập đáp án mẫu từ 1 đến 4.000 ký tự.')
     return { text, type: draft.type, conceptId, referenceAnswer, options: [] }
   }
   const options = (draft.options ?? []).map((item) => ({ text: item.text.trim(), correct: Boolean(item.correct) }))
@@ -36,8 +36,8 @@ export function buildSubmission(questions, answers) {
     const value = answers[question.id]
     const fail = () => { throw new Error(`Vui lòng trả lời hợp lệ câu ${index + 1} trước khi nộp bài.`) }
     if (question.type === 'SHORT_ANSWER') {
-      if (typeof value !== 'string' || !value.trim() || value.trim().length > 4000) fail()
-      return { questionId: question.id, answerText: value.trim() }
+      if (typeof value !== 'string' || !value.trim() || value.length > 4000) fail()
+      return { questionId: question.id, answerText: value }
     }
     if (!Array.isArray(value) || !value.length || new Set(value).size !== value.length
       || value.some((id) => !question.options.some((option) => option.id === id))

@@ -112,10 +112,10 @@ function QuizDetail({ courseId, quizId, token }) {
                   <button type="button" disabled={disabled} onClick={() => removeQuestion(question)}>Xóa</button></div>
               </div><div className="question-meta"><span className="status-badge">{QUESTION_LABELS[question.type]}</span>
                 <span>{concepts.find((concept) => concept.id === question.conceptId)?.name ?? 'Không gắn khái niệm'}</span></div>
-              {question.type === 'SHORT_ANSWER' ? <p className="reference-answer"><strong>Đáp án tham chiếu:</strong> {question.referenceAnswer}</p>
+              {question.type === 'SHORT_ANSWER' ? <p className="reference-answer"><strong>Đáp án mẫu:</strong> {question.referenceAnswer}</p>
                 : <ul className="question-option-summary">{question.options.map((option) => <li key={option.id} className={option.correct ? 'is-correct' : ''}>
                   <span>{option.text}</span>{option.correct && <span className="correct-label">Đáp án đúng</span>}</li>)}</ul>}
-            </article>)}</div> : <div className="empty-state"><h3>Chưa có câu hỏi</h3><p>Thêm câu hỏi trắc nghiệm, đúng/sai hoặc tự luận ngắn.</p></div>}
+            </article>)}</div> : <div className="empty-state"><h3>Chưa có câu hỏi</h3><p>Thêm câu hỏi trắc nghiệm, đúng/sai hoặc trả lời ngắn.</p></div>}
           </section>
           <section id="quiz-attempt-panel" role="tabpanel" aria-labelledby="quiz-attempt-tab" hidden={mode !== 'attempt'}>
             <QuizAttempt key={questionRevision} quiz={quiz} questions={questions} token={token} onSubmitted={refreshConfidence} onBusyChange={setSubmitting} />
