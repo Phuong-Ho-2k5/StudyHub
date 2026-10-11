@@ -36,7 +36,7 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"...","type":"SHORT_ANSWER","referenceAnswer":"Đáp án mẫu cho AI","options":[]}`. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
 - `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"Lời giải"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu, `SHORT_ANSWER` nhận văn bản tối đa 4000 ký tự và hiện chờ chấm (`isCorrect=null`). Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Điểm bằng số câu đúng chia tổng số câu, nhân 100.
 
-Mỗi lần submit thành công tạo một bản ghi mới trong `quiz_attempts`, lưu Quiz, người dùng đăng nhập, các số đếm, điểm và thời điểm `created_at`. Làm lại không ghi đè lần trước; thay đổi Question sau đó không tính lại điểm đã lưu. Luồng submit chạy trong một transaction; bài nộp không hợp lệ hoặc không có quyền không tạo Attempt, lỗi lưu không trả thành công. Attempt hiện lưu kết quả tổng hợp; API lịch sử thuộc M4-T04. Xóa Quiz hoặc User sẽ xóa các Attempt liên quan theo khóa ngoại `ON DELETE CASCADE`.
+Mỗi lần submit thành công tạo một bản ghi mới trong `quiz_attempts`, lưu Quiz, người dùng đăng nhập, các số đếm, điểm và thời điểm `created_at`. Làm lại không ghi đè lần trước; thay đổi Question sau đó không tính lại điểm đã lưu. Luồng submit chạy trong một transaction; bài nộp không hợp lệ hoặc không có quyền không tạo Attempt, lỗi lưu không trả thành công. Attempt hiện lưu kết quả tổng hợp; xem API [lịch sử Quiz](#lịch-sử-quiz-m4-t04) bên dưới. Xóa Quiz hoặc User sẽ xóa các Attempt liên quan theo khóa ngoại `ON DELETE CASCADE`.
 
 Migration V10 tạo bảng Attempt; V11 đổi `question_percentage` sang `DOUBLE PRECISION` để giữ độ chính xác của response và thêm index `(user_id, quiz_id, created_at)`. Các migration được Flyway áp dụng khi khởi động.
 - `GET /actuator/health`: health check.
@@ -106,6 +106,38 @@ Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transac
 Khi không có phiên đã kết thúc hoặc không có Attempt, các chỉ số tương ứng bằng 0. Ví dụ trên dùng hai phiên 600/1200 giây và hai Attempt 50/100 điểm. API chỉ đọc, dùng hai query `COUNT/SUM` và `COUNT/AVG` riêng để tránh nhân bản dữ liệu khi join; không cần bảng hoặc migration mới.
 
 `UserStatisticsApiTest` kiểm tra tổng hợp trên nhiều Course, làm Quiz nhiều lần, làm tròn, câu chờ chấm, phiên đang học, dữ liệu rỗng, thời lượng lớn, JWT và tách dữ liệu giữa các user.
+
+## Lịch sử Quiz (M4-T04)
+
+`GET /api/users/me/quiz-history` yêu cầu JWT và trả `200` với một trang lịch sử làm Quiz của user trong JWT trên tất cả Course. Không nhận userId để chọn người dùng; JWT thiếu hoặc không hợp lệ trả `401`.
+
+```text
+GET /api/users/me/quiz-history?page=0&size=10
+```
+
+- `page` bắt đầu từ 0; `size` mặc định là 10. Mặc định sắp xếp `createdAt DESC, id DESC`, lần nộp mới nhất trước; ID dùng để phân định khi trùng thời điểm.
+- Có thể chọn thứ tự bằng `sort`, ví dụ `?sort=createdAt,asc&sort=id,asc`.
+- Response là trang Spring Data có `content`, `totalElements`, `totalPages`, `number`, `size` và các thông tin phân trang khác. User chưa có Attempt trả `content: []`, `totalElements: 0`, `totalPages: 0`; trang vượt cuối trả danh sách rỗng và giữ tổng số bản ghi.
+
+Ví dụ một phần tử trong `content`:
+
+```json
+{
+  "attemptId": 1,
+  "quizId": 2,
+  "totalQuestions": 3,
+  "gradedCount": 2,
+  "correctCount": 1,
+  "incorrectCount": 1,
+  "pendingCount": 1,
+  "questionPercentage": 33.333333333333336,
+  "createdAt": "2026-10-11T01:00:00Z"
+}
+```
+
+Mỗi lần submit được liệt kê riêng, kể cả làm lại cùng Quiz. Các số đếm và điểm lấy nguyên từ Attempt đã lưu, không làm tròn thêm hoặc tính lại khi Question thay đổi; `createdAt` trả theo UTC. Lịch sử chỉ có kết quả tổng hợp, chưa lưu hoặc trả đáp án từng câu. Attempt bị xóa theo Quiz/User không còn xuất hiện.
+
+API chỉ đọc, map entity sang DTO trong transaction và tải kèm Quiz bằng `EntityGraph`. Không cần bảng hoặc migration mới. `QuizHistoryApiTest` kiểm tra JWT, tách dữ liệu giữa user, nhiều Course/lần nộp, trang rỗng/vượt cuối, thứ tự mặc định/tùy chọn, thời gian UTC và kết quả sau khi thay đổi Question.
 
 ## Cấu trúc lỗi API
 

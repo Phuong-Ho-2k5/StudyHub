@@ -57,6 +57,7 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Course | `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}` | Liệt kê, đọc, sửa và xóa Course được phép truy cập |
 | Progress | `GET /api/courses/{courseId}/progress` | Tiến độ trung bình confidence và tỷ lệ Concept nắm vững; xem [quy tắc](backend/README.md#tiến-độ-course) |
 | Statistics | `GET /api/users/me/statistics` | Tổng thời gian học, số phiên đã kết thúc, số lần làm Quiz và điểm trung bình của user hiện tại; xem [quy tắc](backend/README.md#thống-kê-người-dùng-m4-t03) |
+| Quiz History | `GET /api/users/me/quiz-history` | Lịch sử làm Quiz của user hiện tại, phân trang và trả kết quả đã lưu; xem [quy tắc](backend/README.md#lịch-sử-quiz-m4-t04) |
 | Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |
@@ -77,4 +78,4 @@ Kết quả là một trang dữ liệu có `content`, `totalElements`, `totalPa
 
 ## Hướng phát triển
 
-`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction; câu tự luận ngắn hiện chờ chấm. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept. API xem lịch sử, giao diện tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng này đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction; câu tự luận ngắn hiện chờ chấm. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Giao diện lịch sử/tiến độ và AI/RAG sẽ được bổ sung ở các task sau. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
