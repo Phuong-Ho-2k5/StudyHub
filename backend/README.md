@@ -15,6 +15,8 @@ Profile `local` là mặc định. Khi chạy từ thư mục `backend/`, ứng 
 
 Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Test tích hợp dùng H2 trong bộ nhớ. Flyway áp dụng các migration trong `src/main/resources/db/migration/`; JPA dùng `ddl-auto: validate`.
 
+Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. H2 chạy các migration chung V1–V13; cú pháp partial index của PostgreSQL được kiểm tra riêng trên PostgreSQL. Kết quả đo trước/sau nằm trong [báo cáo M4-T05](../docs/performance/m4-t05/report.md). V14 được áp dụng khi backend khởi động với PostgreSQL.
+
 ## Chạy và kiểm tra
 
 Tạo database PostgreSQL và cấu hình `.env` ở gốc repo trước khi chạy local:
@@ -50,6 +52,16 @@ Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `G
 ```
 
 Test tích hợp trong `src/test/java/com/studyhub/` kiểm tra quyền truy cập và các luồng API hiện có.
+
+## Kiểm tra N+1
+
+Danh sách Question dùng EntityGraph để tải `options` cùng câu hỏi; cả luồng xem câu hỏi và nộp Quiz dùng query này. Danh sách prerequisite tải `prerequisiteConcept` cùng dependency. Khi nộp Quiz, các Concept cần cập nhật confidence được lấy bằng một query `IN` có điều kiện owner Workspace; toàn bộ Concept phải hợp lệ và cùng Course trước khi cập nhật. Các thay đổi vẫn nằm trong transaction của submit.
+
+`QueryEfficiencyTest` dùng Hibernate Statistics trên H2, xóa persistence context trước khi đo với 6 câu hỏi và 6 Concept. Test giới hạn số statement khi liệt kê câu hỏi/prerequisite và số query HQL khi submit, đồng thời kiểm tra không fetch collection riêng lúc submit, thứ tự đáp án, confidence đã lưu và từ chối liên kết Concept sai owner/Course. Test này kiểm tra số query; hiệu năng index và execution plan cần đo riêng trên PostgreSQL.
+
+```powershell
+.\mvnw.cmd "-Dtest=QueryEfficiencyTest" test
+```
 
 ## Tiến độ Course
 

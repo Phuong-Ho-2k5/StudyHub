@@ -3,6 +3,8 @@ spring:
     name: studyhub-backend
   profiles:
     default: local
+  flyway:
+    locations: classpath:db/migration,classpath:db/vendor/{vendor}
   jpa:
     open-in-view: false
     hibernate:

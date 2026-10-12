@@ -77,12 +77,21 @@ public class ConceptService {
             int delta = result.isCorrect() ? 10 : -10;
             deltas.merge(concept.getId(), delta, Integer::sum);
         }
-        for (Map.Entry<Long, Integer> entry : deltas.entrySet()) {
-            Concept concept = resourceAccessService.requireConcept(entry.getKey(), currentUserId);
+        if (deltas.isEmpty()) {
+            return;
+        }
+        List<Concept> affectedConcepts = conceptRepository
+                .findAllByIdInAndCourseWorkspaceOwnerId(deltas.keySet(), currentUserId);
+        if (affectedConcepts.size() != deltas.size()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found");
+        }
+        for (Concept concept : affectedConcepts) {
             if (!concept.getCourse().getId().equals(quiz.getCourse().getId())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Concept must belong to the same course as the quiz");
             }
-            int newConfidence = concept.getConfidence() + entry.getValue();
+        }
+        for (Concept concept : affectedConcepts) {
+            int newConfidence = concept.getConfidence() + deltas.get(concept.getId());
             concept.setConfidence(Math.max(0, Math.min(100, newConfidence)));
         }
     }
