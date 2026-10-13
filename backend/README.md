@@ -1,6 +1,6 @@
 # StudyHub Backend
 
-Backend dùng Spring Boot 4.1.1, Java 21, Maven, PostgreSQL, Flyway và JWT. Các API hiện có gồm Auth, Workspace, Course, Document, Concept, Quiz và DiscussionPost. Xem [README gốc](../README.md) để chạy cả backend lẫn frontend.
+Backend dùng Spring Boot 4.1.1, Java 21, Maven, PostgreSQL, Flyway và JWT. Các API hiện có gồm Auth, Workspace, Course, Document, Concept, Quiz, DiscussionPost và Comment. Xem [README gốc](../README.md) để chạy cả backend lẫn frontend.
 
 ## Cấu hình
 
@@ -15,7 +15,7 @@ Profile `local` là mặc định. Khi chạy từ thư mục `backend/`, ứng 
 
 Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Flyway áp dụng các migration trong `src/main/resources/db/migration/`; JPA dùng `ddl-auto: validate`.
 
-Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. V14 được áp dụng khi backend khởi động với PostgreSQL. V15 tạo bảng `discussion_posts`, các khóa ngoại và index phục vụ danh sách bài theo Course.
+Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. V14 được áp dụng khi backend khởi động với PostgreSQL. V15 tạo bảng `discussion_posts`, các khóa ngoại và index phục vụ danh sách bài theo Course. V16 tạo bảng `comments`, các khóa ngoại cascade và index phục vụ danh sách bình luận theo bài.
 
 ## Chạy backend
 
@@ -34,6 +34,7 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
 - `GET /api/courses/{courseId}/progress`: tổng hợp tiến độ từ confidence hiện tại của các Concept, theo quyền owner Course; chi tiết bên dưới.
 - `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}`: CRUD bài thảo luận theo quyền Course và tác giả; xem [quy tắc](#bài-thảo-luận).
+- `GET/POST /api/discussion-posts/{postId}/comments`, `GET/PUT/DELETE /api/comments/{id}`: CRUD bình luận theo quyền Course và tác giả; xem [quy tắc](#bình-luận).
 - `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}`: CRUD metadata Quiz theo owner Course. Tạo Quiz với `{"title":"..."}`; cập nhật với `{"title":"...","status":"DRAFT|PUBLISHED|ARCHIVED"}`. Quiz tạo thủ công có `sourceType=MANUAL`.
 - `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"HTTP mặc định dùng cổng nào? Chỉ nhập số nguyên, không ghi đơn vị, không thêm khoảng trắng.","type":"SHORT_ANSWER","referenceAnswer":"80","options":[]}`. Đáp án mẫu phải có nội dung, tối đa 4000 ký tự và được lưu nguyên chuỗi. Người soạn ghi rõ định dạng trả lời trong `text`; chưa có trường hướng dẫn riêng. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
 - `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"80"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu. `SHORT_ANSWER` chỉ nhận `answerText` có nội dung, tối đa 4000 ký tự và chấm ngay bằng `referenceAnswer.equals(answerText)`, trả `isCorrect=true/false`, không gọi AI. Phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không trim hoặc chuẩn hóa chuỗi. Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Với các loại câu hiện tại, bài nộp mới có `gradedCount=totalQuestions`, `pendingCount=0`. Điểm bằng số câu đúng chia tổng số câu, nhân 100. Câu trả lời ngắn gắn Concept cũng cập nhật confidence theo kết quả đúng/sai như các loại câu khác.
@@ -76,7 +77,27 @@ POST và PUT nhận cùng body; PUT thay cả tiêu đề và nội dung:
 
 Response gồm `id`, `courseId`, `authorId`, `title`, `content`, `createdAt`, `updatedAt`. Thời gian do server ghi. Không trả entity User/Course hoặc mật khẩu. GET danh sách nhận `page`, `size`, `sort`; mặc định `page=0`, `size=20`, `createdAt DESC, id DESC`. Ví dụ `/api/courses/1/discussion-posts?page=0&size=10&sort=id,asc`. Response dùng trang Spring Data có `content`, `totalElements`, `totalPages`, `number`, `size`. Course rỗng trả trang rỗng; Course không tồn tại trả 404.
 
-Sửa/xóa kiểm tra thêm tác giả: quyền Course không thay thế quyền tác giả. JWT thiếu/sai trả 401; validation thất bại trả 400 với `fieldErrors`; Course/bài không tồn tại hoặc không có quyền trả 404 theo cấu trúc lỗi API chung. Xóa Course hoặc tác giả sẽ xóa bài liên quan theo khóa ngoại `ON DELETE CASCADE` của V15. Chức năng bình luận chưa được triển khai.
+Sửa/xóa kiểm tra thêm tác giả: quyền Course không thay thế quyền tác giả. JWT thiếu/sai trả 401; validation thất bại trả 400 với `fieldErrors`; Course/bài không tồn tại hoặc không có quyền trả 404 theo cấu trúc lỗi API chung. Xóa Course hoặc tác giả sẽ xóa bài liên quan theo khóa ngoại `ON DELETE CASCADE` của V15.
+
+## Bình luận
+
+Mỗi Comment thuộc một DiscussionPost và một tác giả. Tất cả endpoint yêu cầu JWT và quyền Course qua owner Workspace, giống bài thảo luận. Chưa có thành viên Course dùng chung hoặc trả lời bình luận nhiều cấp. Đường dẫn dùng `/discussion-posts` thống nhất với API bài thảo luận.
+
+| Method | Endpoint | Thành công |
+| --- | --- | --- |
+| POST | `/api/discussion-posts/{postId}/comments` | 201 + bình luận đã tạo |
+| GET | `/api/discussion-posts/{postId}/comments` | 200 + trang bình luận |
+| GET | `/api/comments/{id}` | 200 + bình luận |
+| PUT | `/api/comments/{id}` | 200 + bình luận đã sửa |
+| DELETE | `/api/comments/{id}` | 204, không có body |
+
+POST và PUT nhận `{"content":"Nội dung bình luận"}`. `content` bắt buộc, không được rỗng/toàn khoảng trắng, tối đa 10.000 ký tự trước khi trim hai đầu. Giữ nguyên khoảng trắng và xuống dòng bên trong. Tác giả lấy từ JWT, bài lấy từ URL khi tạo; body không dùng để chọn tác giả hoặc bài. PUT chỉ đổi nội dung và `updatedAt`, giữ nguyên `postId`, `authorId`, `createdAt`.
+
+Response gồm `id`, `postId`, `authorId`, `content`, `createdAt`, `updatedAt`; không trả entity User/Post. Thời gian do server ghi. Danh sách nhận `page`, `size`, `sort`, mặc định `page=0`, `size=20`, `createdAt ASC, id ASC`. Ví dụ `/api/discussion-posts/1/comments?page=0&size=10&sort=id,desc`. Response là trang Spring Data với `content`, `totalElements`, `totalPages`, `number`, `size`. Bài hợp lệ chưa có bình luận trả trang rỗng; trang vượt cuối giữ tổng số bản ghi và trả `content: []`.
+
+Mọi thao tác kiểm tra quyền Course; sửa/xóa kiểm tra thêm tác giả bình luận. Quyền Course hoặc quyền tác giả bài thảo luận không thay thế quyền tác giả bình luận. JWT thiếu/sai trả 401; validation trả 400 với `fieldErrors.content`; tài nguyên không tồn tại, không có quyền Course hoặc không phải tác giả khi sửa/xóa trả 404 theo cấu trúc lỗi chung.
+
+Migration V16 tạo `comments`, index `(post_id, created_at, id)` và index `author_id`. Khóa ngoại `ON DELETE CASCADE` xóa bình luận khi xóa bài hoặc tác giả; xóa Course cũng xóa bình luận qua bài. Xóa bình luận không xóa bài hoặc bình luận khác.
 
 ## Tối ưu truy vấn
 
