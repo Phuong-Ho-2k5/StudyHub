@@ -1,6 +1,6 @@
 # StudyHub
 
-StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Backend hỗ trợ Question, nộp Quiz, tính điểm và lưu kết quả tổng hợp mỗi lần nộp vào QuizAttempt. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept, quản lý Quiz/câu hỏi, làm bài và xem kết quả sau đăng nhập. AI/RAG nằm trong kế hoạch phát triển.
+StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Backend hỗ trợ Question, nộp Quiz, tính điểm, lưu kết quả tổng hợp mỗi lần nộp vào QuizAttempt và quản lý bài thảo luận trong Course. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept, quản lý Quiz/câu hỏi, làm bài và xem kết quả sau đăng nhập. AI/RAG nằm trong kế hoạch phát triển.
 
 ## Cấu trúc dự án
 
@@ -58,7 +58,7 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Progress | `GET /api/courses/{courseId}/progress` | Tiến độ trung bình confidence và tỷ lệ Concept nắm vững; xem [quy tắc](backend/README.md#tiến-độ-course) |
 | Statistics | `GET /api/users/me/statistics` | Tổng thời gian học, số phiên đã kết thúc, số lần làm Quiz và điểm trung bình của user hiện tại; xem [quy tắc](backend/README.md#thống-kê-người-dùng) |
 | Quiz History | `GET /api/users/me/quiz-history` | Lịch sử làm Quiz của user hiện tại, phân trang và trả kết quả đã lưu; xem [quy tắc](backend/README.md#lịch-sử-quiz) |
-| DiscussionPost | `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}` | CRUD bài thảo luận, phân trang, kiểm tra quyền Course và tác giả; xem [quy tắc](backend/README.md#bài-thảo-luận-m5-t01) |
+| DiscussionPost | `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}` | CRUD bài thảo luận, phân trang, kiểm tra quyền Course và tác giả; xem [quy tắc](backend/README.md#bài-thảo-luận) |
 | Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |

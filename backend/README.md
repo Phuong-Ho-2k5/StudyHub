@@ -13,17 +13,16 @@ Profile `local` là mặc định. Khi chạy từ thư mục `backend/`, ứng 
 | `JWT_SECRET` | Khóa JWT dạng Base64, giải mã thành ít nhất 32 byte |
 | `JWT_EXPIRATION` | Thời hạn token tính bằng mili giây; mặc định `900000` |
 
-Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Test tích hợp dùng H2 trong bộ nhớ. Flyway áp dụng các migration trong `src/main/resources/db/migration/`; JPA dùng `ddl-auto: validate`.
+Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Flyway áp dụng các migration trong `src/main/resources/db/migration/`; JPA dùng `ddl-auto: validate`.
 
-Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. H2 chạy các migration chung V1–V13 và V15; cú pháp partial index của PostgreSQL được kiểm tra riêng trên PostgreSQL. Kết quả đo trước/sau nằm trong [báo cáo M4-T05](../docs/performance/m4-t05/report.md). V14 được áp dụng khi backend khởi động với PostgreSQL. V15 tạo bảng `discussion_posts` trên cả H2 và PostgreSQL.
+Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. V14 được áp dụng khi backend khởi động với PostgreSQL. V15 tạo bảng `discussion_posts`, các khóa ngoại và index phục vụ danh sách bài theo Course.
 
-## Chạy và kiểm tra
+## Chạy backend
 
 Tạo database PostgreSQL và cấu hình `.env` ở gốc repo trước khi chạy local:
 
 ```powershell
 .\mvnw.cmd spring-boot:run
-.\mvnw.cmd test
 ```
 
 Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 21 trở lên.
@@ -34,12 +33,12 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}`: CRUD Workspace theo owner.
 - `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
 - `GET /api/courses/{courseId}/progress`: tổng hợp tiến độ từ confidence hiện tại của các Concept, theo quyền owner Course; chi tiết bên dưới.
-- `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}`: CRUD bài thảo luận theo quyền Course và tác giả; xem [quy tắc](#bài-thảo-luận-m5-t01).
+- `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}`: CRUD bài thảo luận theo quyền Course và tác giả; xem [quy tắc](#bài-thảo-luận).
 - `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}`: CRUD metadata Quiz theo owner Course. Tạo Quiz với `{"title":"..."}`; cập nhật với `{"title":"...","status":"DRAFT|PUBLISHED|ARCHIVED"}`. Quiz tạo thủ công có `sourceType=MANUAL`.
 - `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"HTTP mặc định dùng cổng nào? Chỉ nhập số nguyên, không ghi đơn vị, không thêm khoảng trắng.","type":"SHORT_ANSWER","referenceAnswer":"80","options":[]}`. Đáp án mẫu phải có nội dung, tối đa 4000 ký tự và được lưu nguyên chuỗi. Người soạn ghi rõ định dạng trả lời trong `text`; chưa có trường hướng dẫn riêng. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
 - `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"80"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu. `SHORT_ANSWER` chỉ nhận `answerText` có nội dung, tối đa 4000 ký tự và chấm ngay bằng `referenceAnswer.equals(answerText)`, trả `isCorrect=true/false`, không gọi AI. Phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không trim hoặc chuẩn hóa chuỗi. Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Với các loại câu hiện tại, bài nộp mới có `gradedCount=totalQuestions`, `pendingCount=0`. Điểm bằng số câu đúng chia tổng số câu, nhân 100. Câu trả lời ngắn gắn Concept cũng cập nhật confidence theo kết quả đúng/sai như các loại câu khác.
 
-`QuizSubmitApiTest` kiểm tra khớp chính xác, sai hoa/thường/dấu/khoảng trắng/xuống dòng, lưu và sửa đáp án mẫu nguyên chuỗi, tính điểm, lưu Attempt và cập nhật confidence trong giới hạn 0–100. Frontend giữ nguyên `referenceAnswer` khi lưu và `answerText` khi nộp; chỉ kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn độ dài. Nên dùng câu trả lời ngắn cho số, từ khóa hoặc cụm từ có đáp án duy nhất.
+Frontend giữ nguyên `referenceAnswer` khi lưu và `answerText` khi nộp; chỉ kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn độ dài. Nên dùng câu trả lời ngắn cho số, từ khóa hoặc cụm từ có đáp án duy nhất.
 
 Mỗi lần submit thành công tạo một bản ghi mới trong `quiz_attempts`, lưu Quiz, người dùng đăng nhập, các số đếm, điểm và thời điểm `created_at`. Làm lại không ghi đè lần trước; thay đổi Question sau đó không tính lại điểm đã lưu. Luồng submit chạy trong một transaction; bài nộp không hợp lệ hoặc không có quyền không tạo Attempt, lỗi lưu không trả thành công. Attempt hiện lưu kết quả tổng hợp; xem API [lịch sử Quiz](#lịch-sử-quiz) bên dưới. Xóa Quiz hoặc User sẽ xóa các Attempt liên quan theo khóa ngoại `ON DELETE CASCADE`.
 
@@ -52,9 +51,7 @@ Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `G
 /api/courses?status=IN_PROGRESS&q=java&page=0&size=10&sort=name,asc
 ```
 
-Test tích hợp trong `src/test/java/com/studyhub/` kiểm tra quyền truy cập và các luồng API hiện có.
-
-## Bài thảo luận (M5-T01)
+## Bài thảo luận
 
 Mỗi `DiscussionPost` thuộc một Course và một tác giả. Tất cả endpoint yêu cầu JWT và quyền truy cập Course thông qua owner Workspace hiện tại. Chưa có cơ chế thành viên Course dùng chung; API chưa mở quyền đọc/đăng bài cho user khác.
 
@@ -79,24 +76,11 @@ POST và PUT nhận cùng body; PUT thay cả tiêu đề và nội dung:
 
 Response gồm `id`, `courseId`, `authorId`, `title`, `content`, `createdAt`, `updatedAt`. Thời gian do server ghi. Không trả entity User/Course hoặc mật khẩu. GET danh sách nhận `page`, `size`, `sort`; mặc định `page=0`, `size=20`, `createdAt DESC, id DESC`. Ví dụ `/api/courses/1/discussion-posts?page=0&size=10&sort=id,asc`. Response dùng trang Spring Data có `content`, `totalElements`, `totalPages`, `number`, `size`. Course rỗng trả trang rỗng; Course không tồn tại trả 404.
 
-Sửa/xóa kiểm tra thêm tác giả: quyền Course không thay thế quyền tác giả. JWT thiếu/sai trả 401; validation thất bại trả 400 với `fieldErrors`; Course/bài không tồn tại hoặc không có quyền trả 404 theo cấu trúc lỗi API chung. Xóa Course hoặc tác giả sẽ xóa bài liên quan theo khóa ngoại `ON DELETE CASCADE` của V15. Bình luận thuộc M5-T02.
+Sửa/xóa kiểm tra thêm tác giả: quyền Course không thay thế quyền tác giả. JWT thiếu/sai trả 401; validation thất bại trả 400 với `fieldErrors`; Course/bài không tồn tại hoặc không có quyền trả 404 theo cấu trúc lỗi API chung. Xóa Course hoặc tác giả sẽ xóa bài liên quan theo khóa ngoại `ON DELETE CASCADE` của V15. Chức năng bình luận chưa được triển khai.
 
-`DiscussionPostApiTest` kiểm tra CRUD qua HTTP và dữ liệu đã lưu, giả mạo author/Course trong body, JWT, validation và giới hạn, truy cập chéo, kiểm tra tác giả độc lập với quyền Course, phân trang/thứ tự khi trùng thời gian và cascade khi xóa Course hoặc tác giả.
-
-```powershell
-.\mvnw.cmd "-Dtest=DiscussionPostApiTest" test
-.\mvnw.cmd test
-```
-
-## Kiểm tra N+1
+## Tối ưu truy vấn
 
 Danh sách Question dùng EntityGraph để tải `options` cùng câu hỏi; cả luồng xem câu hỏi và nộp Quiz dùng query này. Danh sách prerequisite tải `prerequisiteConcept` cùng dependency. Khi nộp Quiz, các Concept cần cập nhật confidence được lấy bằng một query `IN` có điều kiện owner Workspace; toàn bộ Concept phải hợp lệ và cùng Course trước khi cập nhật. Các thay đổi vẫn nằm trong transaction của submit.
-
-`QueryEfficiencyTest` dùng Hibernate Statistics trên H2, xóa persistence context trước khi đo với 6 câu hỏi và 6 Concept. Test giới hạn số statement khi liệt kê câu hỏi/prerequisite và số query HQL khi submit, đồng thời kiểm tra không fetch collection riêng lúc submit, thứ tự đáp án, confidence đã lưu và từ chối liên kết Concept sai owner/Course. Test này kiểm tra số query; hiệu năng index và execution plan cần đo riêng trên PostgreSQL.
-
-```powershell
-.\mvnw.cmd "-Dtest=QueryEfficiencyTest" test
-```
 
 ## Tiến độ Course
 
@@ -121,7 +105,7 @@ Ví dụ Course có confidence `100, 80, 60, 40, 0`:
 }
 ```
 
-API chỉ đọc và tính từ dữ liệu hiện tại, không lưu bảng tiến độ hay đổi `Course.status`. Thêm Concept hoặc giảm confidence có thể khiến tiến độ giảm. Quiz đã cập nhật confidence nên không cộng điểm Quiz lần nữa. `CourseProgressApiTest` kiểm tra công thức, ngưỡng, làm tròn, dữ liệu rỗng, thay đổi dữ liệu, phạm vi Course và quyền truy cập.
+API chỉ đọc và tính từ dữ liệu hiện tại, không lưu bảng tiến độ hay đổi `Course.status`. Thêm Concept hoặc giảm confidence có thể khiến tiến độ giảm. Quiz đã cập nhật confidence nên không cộng điểm Quiz lần nữa.
 
 ## Phiên học
 
@@ -132,7 +116,7 @@ Hai API yêu cầu JWT và chỉ thao tác với dữ liệu của người dùn
 
 Response gồm `id`, `userId`, `courseId`, `startTime`, `endTime`, `duration`. Thời gian do server ghi theo UTC; `duration` là số giây hoàn chỉnh giữa hai thời điểm. Khi đang học, `endTime` và `duration` là `null`. Mỗi lần start tạo một phiên mới.
 
-Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transaction và khóa bản ghi để hai request đồng thời chỉ kết thúc thành công một lần. `StudySessionApiTest` kiểm tra lưu dữ liệu, thời lượng, validation, JWT, quyền sở hữu và finish trùng/đồng thời.
+Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transaction và khóa bản ghi để hai request đồng thời chỉ kết thúc thành công một lần.
 
 ## Thống kê người dùng
 
@@ -153,8 +137,6 @@ Migration V13 tạo bảng `study_sessions`. Luồng finish chạy trong transac
 - `averageQuizScore`: trung bình cộng `questionPercentage` đã lưu của tất cả Attempt (0–100), làm tròn 2 chữ số thập phân theo `HALF_UP`. Mỗi Attempt có trọng số bằng nhau, không phụ thuộc số câu. Attempt có câu chờ chấm vẫn được tính theo điểm đã lưu; sửa Question không tính lại điểm lịch sử.
 
 Khi không có phiên đã kết thúc hoặc không có Attempt, các chỉ số tương ứng bằng 0. Ví dụ trên dùng hai phiên 600/1200 giây và hai Attempt 50/100 điểm. API chỉ đọc, dùng hai query `COUNT/SUM` và `COUNT/AVG` riêng để tránh nhân bản dữ liệu khi join; không cần bảng hoặc migration mới.
-
-`UserStatisticsApiTest` kiểm tra tổng hợp trên nhiều Course, làm Quiz nhiều lần, làm tròn, câu chờ chấm, phiên đang học, dữ liệu rỗng, thời lượng lớn, JWT và tách dữ liệu giữa các user.
 
 ## Lịch sử Quiz
 
@@ -186,7 +168,7 @@ Ví dụ một phần tử trong `content`:
 
 Mỗi lần submit được liệt kê riêng, kể cả làm lại cùng Quiz. Các số đếm và điểm lấy nguyên từ Attempt đã lưu, không làm tròn thêm hoặc tính lại khi Question thay đổi; `createdAt` trả theo UTC. Attempt cũ có câu chờ chấm giữ nguyên `pendingCount` và điểm đã lưu; thay đổi cách chấm chỉ áp dụng cho lần nộp mới. Lịch sử chỉ có kết quả tổng hợp, chưa lưu hoặc trả đáp án từng câu nên không có đủ dữ liệu để tự chấm lại những lần nộp cũ. Attempt bị xóa theo Quiz/User không còn xuất hiện.
 
-API chỉ đọc, map entity sang DTO trong transaction và tải kèm Quiz bằng `EntityGraph`. Không cần bảng hoặc migration mới. `QuizHistoryApiTest` kiểm tra JWT, tách dữ liệu giữa user, nhiều Course/lần nộp, trang rỗng/vượt cuối, thứ tự mặc định/tùy chọn, thời gian UTC và kết quả sau khi thay đổi Question.
+API chỉ đọc, map entity sang DTO trong transaction và tải kèm Quiz bằng `EntityGraph`. Không cần bảng hoặc migration mới.
 
 ## Cấu trúc lỗi API
 
