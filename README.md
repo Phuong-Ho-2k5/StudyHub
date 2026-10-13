@@ -58,6 +58,7 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Progress | `GET /api/courses/{courseId}/progress` | Tiến độ trung bình confidence và tỷ lệ Concept nắm vững; xem [quy tắc](backend/README.md#tiến-độ-course) |
 | Statistics | `GET /api/users/me/statistics` | Tổng thời gian học, số phiên đã kết thúc, số lần làm Quiz và điểm trung bình của user hiện tại; xem [quy tắc](backend/README.md#thống-kê-người-dùng) |
 | Quiz History | `GET /api/users/me/quiz-history` | Lịch sử làm Quiz của user hiện tại, phân trang và trả kết quả đã lưu; xem [quy tắc](backend/README.md#lịch-sử-quiz) |
+| DiscussionPost | `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}` | CRUD bài thảo luận, phân trang, kiểm tra quyền Course và tác giả; xem [quy tắc](backend/README.md#bài-thảo-luận-m5-t01) |
 | Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |

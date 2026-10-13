@@ -1,6 +1,6 @@
 # StudyHub Backend
 
-Backend dùng Spring Boot 4.1.1, Java 21, Maven, PostgreSQL, Flyway và JWT. Các API hiện có gồm Auth, Workspace, Course, Document, Concept và Quiz. Xem [README gốc](../README.md) để chạy cả backend lẫn frontend.
+Backend dùng Spring Boot 4.1.1, Java 21, Maven, PostgreSQL, Flyway và JWT. Các API hiện có gồm Auth, Workspace, Course, Document, Concept, Quiz và DiscussionPost. Xem [README gốc](../README.md) để chạy cả backend lẫn frontend.
 
 ## Cấu hình
 
@@ -15,7 +15,7 @@ Profile `local` là mặc định. Khi chạy từ thư mục `backend/`, ứng 
 
 Profile `prod` yêu cầu các biến database được cung cấp qua môi trường và chọn bằng `SPRING_PROFILES_ACTIVE=prod`. Test tích hợp dùng H2 trong bộ nhớ. Flyway áp dụng các migration trong `src/main/resources/db/migration/`; JPA dùng `ddl-auto: validate`.
 
-Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. H2 chạy các migration chung V1–V13; cú pháp partial index của PostgreSQL được kiểm tra riêng trên PostgreSQL. Kết quả đo trước/sau nằm trong [báo cáo M4-T05](../docs/performance/m4-t05/report.md). V14 được áp dụng khi backend khởi động với PostgreSQL.
+Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. H2 chạy các migration chung V1–V13 và V15; cú pháp partial index của PostgreSQL được kiểm tra riêng trên PostgreSQL. Kết quả đo trước/sau nằm trong [báo cáo M4-T05](../docs/performance/m4-t05/report.md). V14 được áp dụng khi backend khởi động với PostgreSQL. V15 tạo bảng `discussion_posts` trên cả H2 và PostgreSQL.
 
 ## Chạy và kiểm tra
 
@@ -34,6 +34,7 @@ Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 
 - `GET/POST /api/workspaces`, `GET/PUT/DELETE /api/workspaces/{id}`: CRUD Workspace theo owner.
 - `POST /api/workspaces/{workspaceId}/courses`, `GET /api/courses`, `GET/PUT/DELETE /api/courses/{id}`: CRUD Course theo owner Workspace.
 - `GET /api/courses/{courseId}/progress`: tổng hợp tiến độ từ confidence hiện tại của các Concept, theo quyền owner Course; chi tiết bên dưới.
+- `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}`: CRUD bài thảo luận theo quyền Course và tác giả; xem [quy tắc](#bài-thảo-luận-m5-t01).
 - `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}`: CRUD metadata Quiz theo owner Course. Tạo Quiz với `{"title":"..."}`; cập nhật với `{"title":"...","status":"DRAFT|PUBLISHED|ARCHIVED"}`. Quiz tạo thủ công có `sourceType=MANUAL`.
 - `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}`: CRUD Question và AnswerOption theo owner Quiz. Tạo và cập nhật Question bằng `{"text":"...","type":"MULTIPLE_CHOICE","options":[{"text":"A","correct":false},...]}`; `PUT` thay toàn bộ danh sách đáp án. `MULTIPLE_CHOICE` cần ít nhất 4 đáp án và ít nhất 1 đáp án đúng; `TRUE_FALSE` cần đúng 2 đáp án, 1 đáp án đúng. `SHORT_ANSWER` dùng `{"text":"HTTP mặc định dùng cổng nào? Chỉ nhập số nguyên, không ghi đơn vị, không thêm khoảng trắng.","type":"SHORT_ANSWER","referenceAnswer":"80","options":[]}`. Đáp án mẫu phải có nội dung, tối đa 4000 ký tự và được lưu nguyên chuỗi. Người soạn ghi rõ định dạng trả lời trong `text`; chưa có trường hướng dẫn riêng. API quản lý Question dành cho owner trả về đáp án đúng và đáp án mẫu; không dùng response này làm đề thi cho người học.
 - `POST /api/quizzes/{quizId}/submit`: kiểm tra và chấm bài nộp của owner Quiz. Request: `{"answers":[{"questionId":1,"answerOptionIds":[2]},{"questionId":3,"answerText":"80"}]}`. Chỉ nhận Quiz `PUBLISHED`; mỗi câu phải được trả lời đúng một lần, option phải thuộc đúng câu. `SHORT_ANSWER` chỉ nhận `answerText` có nội dung, tối đa 4000 ký tự và chấm ngay bằng `referenceAnswer.equals(answerText)`, trả `isCorrect=true/false`, không gọi AI. Phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không trim hoặc chuẩn hóa chuỗi. Response `200` trả `QuizResult` với số câu đã chấm/đúng/sai/chờ chấm, điểm phần trăm và kết quả từng câu. Với các loại câu hiện tại, bài nộp mới có `gradedCount=totalQuestions`, `pendingCount=0`. Điểm bằng số câu đúng chia tổng số câu, nhân 100. Câu trả lời ngắn gắn Concept cũng cập nhật confidence theo kết quả đúng/sai như các loại câu khác.
@@ -52,6 +53,40 @@ Các endpoint nghiệp vụ yêu cầu `Authorization: Bearer <accessToken>`. `G
 ```
 
 Test tích hợp trong `src/test/java/com/studyhub/` kiểm tra quyền truy cập và các luồng API hiện có.
+
+## Bài thảo luận (M5-T01)
+
+Mỗi `DiscussionPost` thuộc một Course và một tác giả. Tất cả endpoint yêu cầu JWT và quyền truy cập Course thông qua owner Workspace hiện tại. Chưa có cơ chế thành viên Course dùng chung; API chưa mở quyền đọc/đăng bài cho user khác.
+
+| Method | Endpoint | Thành công |
+| --- | --- | --- |
+| POST | `/api/courses/{courseId}/discussion-posts` | 201 + bài đã tạo |
+| GET | `/api/courses/{courseId}/discussion-posts` | 200 + trang bài |
+| GET | `/api/discussion-posts/{id}` | 200 + bài |
+| PUT | `/api/discussion-posts/{id}` | 200 + bài đã sửa |
+| DELETE | `/api/discussion-posts/{id}` | 204, không có body |
+
+POST và PUT nhận cùng body; PUT thay cả tiêu đề và nội dung:
+
+```json
+{
+  "title": "Dependency Injection",
+  "content": "Constructor injection có lợi ích gì?"
+}
+```
+
+`title` phải có nội dung và tối đa 200 ký tự; `content` phải có nội dung và tối đa 10.000 ký tự. Validation kiểm tra chuỗi đầu vào trước khi trim khoảng trắng ở hai đầu khi lưu, giữ nguyên khoảng trắng và xuống dòng bên trong. Request không có trường chọn tác giả hoặc Course; tác giả lấy từ user trong JWT, Course lấy từ URL tạo bài. PUT không đổi tác giả, Course hoặc `createdAt`.
+
+Response gồm `id`, `courseId`, `authorId`, `title`, `content`, `createdAt`, `updatedAt`. Thời gian do server ghi. Không trả entity User/Course hoặc mật khẩu. GET danh sách nhận `page`, `size`, `sort`; mặc định `page=0`, `size=20`, `createdAt DESC, id DESC`. Ví dụ `/api/courses/1/discussion-posts?page=0&size=10&sort=id,asc`. Response dùng trang Spring Data có `content`, `totalElements`, `totalPages`, `number`, `size`. Course rỗng trả trang rỗng; Course không tồn tại trả 404.
+
+Sửa/xóa kiểm tra thêm tác giả: quyền Course không thay thế quyền tác giả. JWT thiếu/sai trả 401; validation thất bại trả 400 với `fieldErrors`; Course/bài không tồn tại hoặc không có quyền trả 404 theo cấu trúc lỗi API chung. Xóa Course hoặc tác giả sẽ xóa bài liên quan theo khóa ngoại `ON DELETE CASCADE` của V15. Bình luận thuộc M5-T02.
+
+`DiscussionPostApiTest` kiểm tra CRUD qua HTTP và dữ liệu đã lưu, giả mạo author/Course trong body, JWT, validation và giới hạn, truy cập chéo, kiểm tra tác giả độc lập với quyền Course, phân trang/thứ tự khi trùng thời gian và cascade khi xóa Course hoặc tác giả.
+
+```powershell
+.\mvnw.cmd "-Dtest=DiscussionPostApiTest" test
+.\mvnw.cmd test
+```
 
 ## Kiểm tra N+1
 
