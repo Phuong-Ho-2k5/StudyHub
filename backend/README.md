@@ -191,6 +191,34 @@ Mỗi lần submit được liệt kê riêng, kể cả làm lại cùng Quiz. 
 
 API chỉ đọc, map entity sang DTO trong transaction và tải kèm Quiz bằng `EntityGraph`. Không cần bảng hoặc migration mới.
 
+## Thông báo
+
+Các API yêu cầu `Authorization: Bearer <accessToken>` và chỉ thao tác thông báo của người dùng trong JWT.
+
+| Method | Endpoint | Kết quả |
+| --- | --- | --- |
+| GET | `/api/notifications?page=0&size=20` | `200`, danh sách phân trang |
+| GET | `/api/notifications/unread-count` | `200`, số thông báo chưa đọc |
+| PATCH | `/api/notifications/{id}/read` | `200`, thông báo sau khi đánh dấu đã đọc |
+
+Danh sách mặc định sắp xếp `createdAt DESC, id DESC`. Response phân trang có `content`, `totalElements`, `totalPages`, `number`, `size`. Khi chưa có thông báo hoặc trang vượt cuối, `content` là danh sách rỗng. Có thể truyền `sort` để chọn thứ tự.
+
+Ví dụ một phần tử trong `content`, cũng là response của thao tác đánh dấu đã đọc:
+
+```json
+{
+  "id": 1,
+  "type": "QUIZ_SUBMITTED",
+  "content": "Bạn đã hoàn thành quiz #12, đạt 80%.",
+  "read": true,
+  "createdAt": "2026-10-14T06:00:00Z"
+}
+```
+
+API đếm trả `{"unreadCount": 2}`. PATCH không cần body; gọi lại với thông báo đã đọc vẫn trả `200`. ID không tồn tại hoặc thuộc người khác trả `404`; JWT thiếu hoặc không hợp lệ trả `401`. User được xác định từ JWT, không nhận `userId` để chọn người nhận.
+
+Mỗi lần nộp Quiz thành công tạo một thông báo `QUIZ_SUBMITTED` chưa đọc. Nội dung hiển thị điểm làm tròn tối đa hai chữ số thập phân; điểm Attempt giữ nguyên độ chính xác. Thông báo được lưu cùng transaction với Attempt và cập nhật confidence: nếu một bước thất bại, toàn bộ thay đổi rollback. Khi xóa người nhận, thông báo được xóa theo. Nội dung thông báo đã lưu được giữ nguyên khi Quiz thay đổi hoặc bị xóa.
+
 ## Cấu trúc lỗi API
 
 Các lỗi dưới `/api/**` trả về JSON cùng cấu trúc. HTTP status nằm ở response; body có `code`, `message`, `path`, `timestamp` (UTC, ISO-8601). Lỗi Bean Validation có thêm `fieldErrors` theo tên trường. Frontend hiện tại hiển thị `message`.

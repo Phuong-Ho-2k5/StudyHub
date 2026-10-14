@@ -16,6 +16,7 @@ import com.studyhub.quiz.dto.QuizResult;
 import com.studyhub.quiz.dto.QuestionResult;
 import com.studyhub.security.ResourceAccessService;
 import com.studyhub.user.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +29,17 @@ public class QuizSubmissionService {
     private final QuizAttemptRepository quizAttemptRepository;
     private final UserRepository userRepository;
     private final ConceptService conceptService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public QuizSubmissionService(ResourceAccessService resourceAccessService, QuestionRepository questionRepository,
             QuizAttemptRepository quizAttemptRepository, UserRepository userRepository,
-            ConceptService conceptService) {
+            ConceptService conceptService, ApplicationEventPublisher eventPublisher) {
         this.resourceAccessService = resourceAccessService;
         this.questionRepository = questionRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.userRepository = userRepository;
         this.conceptService = conceptService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -91,6 +94,7 @@ public class QuizSubmissionService {
         conceptService.updateConceptConfidenceFromQuiz(quiz, questionsById, results, userId);
         quizAttemptRepository.save(new QuizAttempt(quiz, userRepository.getReferenceById(userId),
                 totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage));
+        eventPublisher.publishEvent(new QuizSubmittedEvent(userId, quizId, questionPercentage));
         return new QuizResult(quizId, totalQuestions, gradedCount, correctCount, incorrectCount, pendingCount, questionPercentage, List.copyOf(results));
     }
 
