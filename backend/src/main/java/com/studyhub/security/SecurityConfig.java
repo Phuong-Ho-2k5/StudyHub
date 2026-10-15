@@ -48,6 +48,7 @@ import jakarta.servlet.DispatcherType;
                             "/api/auth/login",
                             "/actuator/health")
                             .permitAll()
+                            .requestMatchers("/api/admin/**").hasRole("ADMIN")
                             .anyRequest()
                             .authenticated()
                     )

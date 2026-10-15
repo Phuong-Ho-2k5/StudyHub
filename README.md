@@ -67,6 +67,7 @@ Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 | Question | `GET/POST /api/quizzes/{quizId}/questions`, `GET/PUT/DELETE /api/questions/{id}` | Quản lý câu hỏi và đáp án |
 | Submit Quiz | `POST /api/quizzes/{quizId}/submit` | Validate, tính điểm và lưu kết quả tổng hợp mỗi lần nộp |
 | Health | `GET /actuator/health` | Kiểm tra trạng thái backend |
+| Admin | `GET /api/admin/users`, `GET /api/admin/users/{id}`, `PATCH /api/admin/users/{id}/role`, `GET /api/admin/statistics` | Quản lý role người dùng và thống kê toàn hệ thống; yêu cầu `ADMIN`, xem [quy tắc](backend/README.md#api-quản-trị) |
 
 Ngoài đăng ký, đăng nhập và health check, các API yêu cầu header `Authorization: Bearer <accessToken>`. Quyền Course được suy ra từ owner của Workspace; truy cập tài nguyên của người khác trả về 404.
 

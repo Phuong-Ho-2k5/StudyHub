@@ -80,4 +80,8 @@ public class User {
     public void rename(String name) {
         this.name = name;
     }
+
+    public void changeRole(UserRole role) {
+        this.role = java.util.Objects.requireNonNull(role);
+    }
 }

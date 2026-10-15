@@ -241,8 +241,53 @@ Các lỗi dưới `/api/**` trả về JSON cùng cấu trúc. HTTP status nằ
 | 403 | `FORBIDDEN` | Bị chặn ở tầng Spring Security |
 | 404 | `NOT_FOUND` | Endpoint/tài nguyên không tồn tại hoặc không thuộc owner |
 | 405 | `METHOD_NOT_ALLOWED` | HTTP method không được hỗ trợ |
-| 409 | `CONFLICT` | Email đã tồn tại |
+| 409 | `CONFLICT` | Email đã tồn tại hoặc admin tự hạ quyền |
 | 415 | `UNSUPPORTED_MEDIA_TYPE` | Content-Type không được hỗ trợ |
 | 5xx | `INTERNAL_ERROR` | Lỗi server ngoài dự kiến, `message` không lộ chi tiết nội bộ |
 
 Các HTTP status khác có mã `HTTP_<status>`. Response không trả token, stack trace hay giá trị input bị từ chối. `/actuator/health` tiếp tục dùng response của Actuator.
+
+## API quản trị
+
+Tất cả `/api/admin/**` yêu cầu JWT hợp lệ và role `ADMIN`. Thiếu/sai/hết hạn token trả `401 UNAUTHORIZED`; tài khoản `USER` trả `403 FORBIDDEN`, kể cả khi tài nguyên đích không tồn tại. API đăng ký luôn tạo `USER`, không nhận quyền quản trị từ body.
+
+| Method | Endpoint | Kết quả |
+| --- | --- | --- |
+| GET | `/api/admin/users?page=0&size=20` | Trang người dùng toàn hệ thống; mặc định `id ASC`, size 20 |
+| GET | `/api/admin/users/{id}` | Chi tiết người dùng, không tồn tại trả `404 NOT_FOUND` |
+| PATCH | `/api/admin/users/{id}/role` | Đổi role; trả DTO người dùng sau cập nhật |
+| GET | `/api/admin/statistics` | Tổng số người dùng, Workspace và Course toàn hệ thống |
+
+Các endpoint thành công trả `200`. DTO người dùng chỉ gồm `id`, `email`, `name`, `role`, không chứa password/hash hoặc entity liên quan. Danh sách có `content`, `totalElements`, `totalPages`, `size`, `number`; `page` bắt đầu từ 0 và trang vượt cuối có `content: []`.
+
+Body đổi role:
+
+```json
+{ "role": "ADMIN" }
+```
+
+Chỉ nhận chuỗi `USER` hoặc `ADMIN`, phân biệt hoa/thường; thiếu/null/sai role hoặc JSON lỗi trả `400`. Dùng chuỗi được validate để không chấp nhận số thứ tự enum. Đổi lại cùng role vẫn thành công. Admin tự đổi role thành `USER` trả `409 CONFLICT`; admin có thể đổi role của tài khoản khác. Không có user đích trả `404`.
+
+Ví dụ response người dùng:
+
+```json
+{ "id": 12, "email": "learner@example.com", "name": "Learner", "role": "ADMIN" }
+```
+
+Ví dụ thống kê:
+
+```json
+{ "totalUsers": 10, "totalWorkspaces": 15, "totalCourses": 32 }
+```
+
+JWT filter tải lại tài khoản từ database mỗi request: nâng/hạ quyền có hiệu lực với request kế tiếp ngay cả khi dùng token đã cấp trước đó. Role `ADMIN` cho phép các API quản trị trên; các API Workspace/Course hiện có vẫn kiểm tra ownership theo quy tắc của chúng.
+
+Để tạo admin đầu tiên trên database local, đăng ký tài khoản rồi chạy SQL với đúng email:
+
+```sql
+UPDATE users
+SET role = 'ADMIN', updated_at = CURRENT_TIMESTAMP
+WHERE email = 'admin@example.com';
+```
+
+Sau đó đăng nhập bằng tài khoản này. Không có endpoint đăng ký admin công khai, không có mật khẩu admin mặc định và không cần migration mới.

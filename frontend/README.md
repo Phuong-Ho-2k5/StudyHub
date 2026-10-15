@@ -60,17 +60,15 @@ Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: B
 | `src/pages/` | Trang xác thực, bảng học tập, chi tiết khóa học và Quiz. |
 | `src/components/` | Thành phần dùng chung; `quiz/` chứa form soạn đề và luồng làm bài. |
 | `src/auth/` | Lưu phiên, đọc JWT và bảo vệ route. |
-| `src/api/` | Gọi API xác thực và tài nguyên học tập, gồm Quiz/Question/Submit; kiểm thử query, payload và API. |
+| `src/api/` | Gọi API xác thực và tài nguyên học tập, gồm Quiz/Question/Submit. |
 | `src/styles.css` | Kiểu giao diện và responsive layout. |
 | `vite.config.js` | Cấu hình Vite và proxy `/api` khi phát triển. |
 
-## Kiểm tra và build
+## Build
 
-Chạy các lệnh sau trong thư mục `frontend/`:
+Chạy lệnh sau trong thư mục `frontend/`:
 
 ```powershell
-npm test       # Kiểm tra query, API Quiz và kiểm tra dữ liệu câu hỏi/bài nộp
-npm run lint   # Kiểm tra mã nguồn bằng ESLint
 npm run build  # Tạo bản production trong dist/
 ```
 
