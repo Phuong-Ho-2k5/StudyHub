@@ -1,5 +1,14 @@
 package com.studyhub.course;
 
+import com.studyhub.error.ApiErrorResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +36,14 @@ import org.springframework.data.domain.Page;
 
 import jakarta.validation.Valid;
 
+@Tag(name = "Course", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+@SecurityRequirement(name = "bearerAuth")
+@ApiResponses({
+    @ApiResponse(responseCode = "401", description = "Thiếu hoặc sai JWT, token hết hạn hoặc thông tin đăng nhập không đúng.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+    @ApiResponse(responseCode = "500", description = "Lỗi server; không trả chi tiết nội bộ.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+})
 @RestController
 @RequestMapping("/api")
 public class CourseController {
@@ -39,6 +56,14 @@ public class CourseController {
     }
 
     @PostMapping("/workspaces/{workspaceId}/courses")
+    @Operation(summary = "Tạo Course trong Workspace", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<CourseResponse> createCourse(
             @PathVariable Long workspaceId,
             @Valid @RequestBody CreateCourseRequest request,
@@ -48,6 +73,12 @@ public class CourseController {
     }
 
     @GetMapping("/courses/{id}")
+    @Operation(summary = "Chi tiết Course", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public CourseResponse getCourse(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -55,6 +86,12 @@ public class CourseController {
     }
 
     @GetMapping("/courses/{courseId}/progress")
+    @Operation(summary = "Tiến độ Course", description = "Tính trung bình confidence của mọi Concept. Nắm vững từ 80, đang phát triển từ 50 đến 79, cần ôn dưới 50. Course rỗng trả 0; không thay đổi trạng thái Course.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public CourseProgressResponse getProgress(
             @PathVariable Long courseId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -62,6 +99,14 @@ public class CourseController {
     }
 
     @PutMapping("/courses/{id}")
+    @Operation(summary = "Cập nhật Course", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public CourseResponse updateCourse(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCourseRequest request,
@@ -70,6 +115,12 @@ public class CourseController {
     }
 
     @DeleteMapping("/courses/{id}")
+    @Operation(summary = "Xóa Course", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Thành công", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<Void> deleteCourse(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -78,12 +129,18 @@ public class CourseController {
     }
 
     @GetMapping("/courses")
+    @Operation(summary = "Danh sách Course có phân trang", description = "Lọc theo workspaceId, status và q trong tên, không phân biệt hoa/thường. Chỉ trả Course của người dùng đăng nhập. Mặc định page=0, size=20.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public Page<CourseResponse> getAllCourses(
             @AuthenticationPrincipal CustomUserDetails currentUser,
             @RequestParam(required = false) Long workspaceId,
             @RequestParam(required = false) CourseStatus status,
             @RequestParam(required = false) String q,
-            Pageable pageable) {
+            @ParameterObject Pageable pageable) {
         return courseService.getAllCourses(currentUser.getId(), workspaceId, status, q, pageable);
     }
 }

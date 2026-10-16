@@ -46,6 +46,11 @@ import jakarta.servlet.DispatcherType;
                             .requestMatchers(
                             "/api/auth/register",
                             "/api/auth/login",
+                            "/swagger-ui.html",
+                            "/swagger-ui/**",
+                            "/v3/api-docs",
+                            "/v3/api-docs/**",
+                            "/v3/api-docs.yaml",
                             "/actuator/health")
                             .permitAll()
                             .requestMatchers("/api/admin/**").hasRole("ADMIN")

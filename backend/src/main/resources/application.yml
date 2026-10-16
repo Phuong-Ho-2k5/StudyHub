@@ -19,3 +19,11 @@ management:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:900000}
+
+springdoc:
+  paths-to-match: /api/**
+  override-with-generic-response: false
+  swagger-ui:
+    tags-sorter: alpha
+    operations-sorter: alpha
+    persist-authorization: false

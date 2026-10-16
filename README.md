@@ -47,6 +47,12 @@ Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22
 
 Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 
+## Tài liệu API
+
+Backend cung cấp [Swagger UI](http://localhost:8080/swagger-ui.html) và bản mô tả [OpenAPI JSON](http://localhost:8080/v3/api-docs) / [YAML](http://localhost:8080/v3/api-docs.yaml). Chỉ cần chạy backend để xem tài liệu và gọi API trực tiếp, không cần chạy frontend.
+
+Đăng nhập bằng `POST /api/auth/login`, sao chép `accessToken`, rồi bấm **Authorize** trong Swagger UI và dán token không kèm tiền tố `Bearer`. Xem [hướng dẫn sử dụng](backend/README.md#tài-liệu-api-tương-tác) để biết cách gọi API và quyền truy cập.
+
 ## API hiện có
 
 | Nhóm | Endpoint | Chức năng |

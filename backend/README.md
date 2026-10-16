@@ -27,6 +27,26 @@ Tạo database PostgreSQL và cấu hình `.env` ở gốc repo trước khi ch�
 
 Trên macOS/Linux, dùng `./mvnw`. `JAVA_HOME` cần trỏ tới thư mục JDK 21 trở lên.
 
+## Tài liệu API tương tác
+
+Sau khi backend chạy, mở [Swagger UI](http://localhost:8080/swagger-ui.html) để xem các nhóm API, request/response, quy tắc dữ liệu và mã lỗi. Swagger UI được phục vụ trực tiếp bởi backend, không cần chạy frontend.
+
+- [OpenAPI JSON](http://localhost:8080/v3/api-docs)
+- [OpenAPI YAML](http://localhost:8080/v3/api-docs.yaml)
+
+Nếu đổi cổng backend, thay `8080` trong các đường dẫn tương ứng. Tài liệu được sinh từ controller và DTO đang chạy; có thể nhập URL OpenAPI vào Postman để tạo collection.
+
+Để gọi API trên Swagger UI:
+
+1. Mở `POST /api/auth/register`, chọn **Try it out** và đăng ký tài khoản nếu chưa có.
+2. Gọi `POST /api/auth/login` với email và mật khẩu đã đăng ký.
+3. Sao chép `accessToken` từ response, bấm **Authorize** và dán chỉ token, không thêm tiền tố `Bearer`.
+4. Chọn API nghiệp vụ rồi bấm **Try it out → Execute**. Swagger UI tự thêm header `Authorization: Bearer <accessToken>`.
+
+Đăng ký và đăng nhập không cần JWT. API `/api/admin/**` cần tài khoản có role `ADMIN`; tài khoản `USER` trả `403`. Các API tài nguyên vẫn kiểm tra ownership theo Workspace/Course, kể cả khi người gọi là admin. Token hết hạn trả `401`; đăng nhập lại và cập nhật token trong **Authorize**. Token không được lưu qua lần tải lại trang.
+
+Danh sách phân trang dùng `page` bắt đầu từ 0, `size` và `sort=field,asc|desc`; có thể lặp `sort` để chọn nhiều trường. Giá trị mặc định của từng API được hiển thị trong tài liệu. Chức năng **Execute** gọi API thật và có thể tạo, sửa hoặc xóa dữ liệu.
+
 ## API
 
 - `POST /api/auth/register`, `POST /api/auth/login`: đăng ký và nhận JWT.

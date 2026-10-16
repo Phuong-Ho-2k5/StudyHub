@@ -1,5 +1,14 @@
 package com.studyhub.document;
 
+import com.studyhub.error.ApiErrorResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +35,14 @@ import org.springframework.data.domain.Page;
 
 import jakarta.validation.Valid;
 
+@Tag(name = "Document", description = "Quản lý metadata tài liệu, chưa tải lên hoặc đọc nội dung tệp. Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+@SecurityRequirement(name = "bearerAuth")
+@ApiResponses({
+    @ApiResponse(responseCode = "401", description = "Thiếu hoặc sai JWT, token hết hạn hoặc thông tin đăng nhập không đúng.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+    @ApiResponse(responseCode = "500", description = "Lỗi server; không trả chi tiết nội bộ.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+})
 @RestController
 @RequestMapping("/api")
 public class DocumentController {
@@ -36,6 +53,14 @@ public class DocumentController {
     }
 
     @PostMapping("/courses/{courseId}/documents")
+    @Operation(summary = "Tạo metadata tài liệu", description = "Lưu title, fileName, fileType, storagePath; không tải tệp. Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<DocumentResponse> createDocument(
             @PathVariable Long courseId,
             @Valid @RequestBody CreateDocumentRequest request,
@@ -45,6 +70,14 @@ public class DocumentController {
     }
 
     @PutMapping("/documents/{documentId}")
+    @Operation(summary = "Cập nhật metadata tài liệu", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<DocumentResponse> updateDocument(
             @PathVariable Long documentId,
             @Valid @RequestBody UpdateDocumentRequest request,
@@ -54,6 +87,12 @@ public class DocumentController {
     }
 
     @DeleteMapping("/documents/{documentId}")
+    @Operation(summary = "Xóa metadata tài liệu", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Thành công", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<Void> deleteDocument(
             @PathVariable Long documentId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -62,6 +101,12 @@ public class DocumentController {
     }
 
     @GetMapping("/documents/{documentId}")
+    @Operation(summary = "Chi tiết metadata tài liệu", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<DocumentResponse> getDocument(
             @PathVariable Long documentId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -70,13 +115,19 @@ public class DocumentController {
     }
 
     @GetMapping("/documents")
+    @Operation(summary = "Danh sách tài liệu có phân trang", description = "Lọc theo workspaceId, courseId, status và q. Chỉ trả tài liệu thuộc người dùng đăng nhập. Mặc định page=0, size=20.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
     public ResponseEntity<Page<DocumentResponse>> getAllDocument(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            Long workspaceId,
-            Long courseId,
-            DocumentStatus status,
-            String q,
-            Pageable pageable) {
+            @RequestParam(required = false) Long workspaceId,
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) DocumentStatus status,
+            @RequestParam(required = false) String q,
+            @ParameterObject Pageable pageable) {
         Page<DocumentResponse> response = documentService.getAllDocument(currentUser.getId(), workspaceId, courseId, status, q, pageable);
         return ResponseEntity.ok(response);
     }
