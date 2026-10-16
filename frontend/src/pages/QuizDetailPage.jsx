@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getCourse, listConcepts } from '../api/studyApi.js'
 import { deleteQuestion, deleteQuiz, getQuiz, listQuestions, updateQuiz } from '../api/quizApi.js'
+import { AppHeader } from '../components/AppHeader'
+import { useLearning } from '../context/LearningContext'
 import { useAuth } from '../auth/AuthContext'
 import { QuizAttempt } from '../components/quiz/QuizAttempt'
 import { QuizEditorDialog } from '../components/quiz/QuizEditorDialog'
@@ -11,6 +13,7 @@ import { quizError } from '../components/quiz/quizErrors.js'
 
 function QuizDetail({ courseId, quizId, token }) {
   const navigate = useNavigate()
+  const { invalidateLearning } = useLearning()
   const [quiz, setQuiz] = useState(null)
   const [course, setCourse] = useState(null)
   const [questions, setQuestions] = useState([])
@@ -86,10 +89,9 @@ function QuizDetail({ courseId, quizId, token }) {
   const disabled = busy || submitting
 
   return <main className="dashboard-page">
-    <header className="dashboard-header"><Link className="brand" to="/welcome"><span className="brand-mark" aria-hidden="true">S</span><span>StudyHub</span></Link>
-      <Link className="text-link" to={back}>← Khóa học</Link>
-    </header>
+    <AppHeader />
     <div className="detail-shell quiz-detail-shell">
+      <Link className="text-link" to={back}>← Khóa học</Link>
       {loading ? <p className="list-state" role="status">Đang tải bài kiểm tra…</p> : loadError ? <div className="form-message error" role="alert"><p>{loadError}</p>
         <button className="secondary-button" type="button" onClick={() => { setLoading(true); setRevision((value) => value + 1) }}>Thử lại</button>
       </div> : quiz && <>
@@ -118,7 +120,7 @@ function QuizDetail({ courseId, quizId, token }) {
             </article>)}</div> : <div className="empty-state"><h3>Chưa có câu hỏi</h3><p>Thêm câu hỏi trắc nghiệm, đúng/sai hoặc trả lời ngắn.</p></div>}
           </section>
           <section id="quiz-attempt-panel" role="tabpanel" aria-labelledby="quiz-attempt-tab" hidden={mode !== 'attempt'}>
-            <QuizAttempt key={questionRevision} quiz={quiz} questions={questions} token={token} onSubmitted={refreshConfidence} onBusyChange={setSubmitting} />
+            <QuizAttempt key={questionRevision} quiz={quiz} questions={questions} token={token} onSubmitted={() => { invalidateLearning(); refreshConfidence() }} onBusyChange={setSubmitting} />
             {confidenceState && <section className="quiz-confidence" aria-label="Mức độ hiểu sau khi nộp bài">
               <h3>Mức độ hiểu sau lần nộp</h3>
               {confidenceState.loading ? <p className="inline-help" role="status">Đang tải mức độ hiểu mới…</p> : confidenceState.error ? <>

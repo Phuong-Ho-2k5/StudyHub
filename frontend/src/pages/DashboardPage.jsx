@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/authApi'
 import { createCourse, createWorkspace, deleteCourse, deleteWorkspace, listCourses, listWorkspaces, updateCourse, updateWorkspace } from '../api/studyApi'
 import { useAuth } from '../auth/AuthContext'
+import { AppHeader } from '../components/AppHeader'
+import { StatisticsPanel } from '../components/learning/StatisticsPanel'
+import { QuizHistoryPanel } from '../components/learning/QuizHistoryPanel'
 
 const STATUSES = [['PLANNED', 'Dự định'], ['IN_PROGRESS', 'Đang học'], ['COMPLETED', 'Hoàn thành'], ['ARCHIVED', 'Lưu trữ']]
 const STATUS_LABELS = Object.fromEntries(STATUSES)
@@ -58,7 +61,7 @@ function Editor({ kind, item, workspaceId, token, onClose, onSaved }) {
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { user, token, logout } = useAuth()
+  const { token } = useAuth()
   const [workspaces, setWorkspaces] = useState([])
   const [workspaceId, setWorkspaceId] = useState('')
   const [workspaceLoading, setWorkspaceLoading] = useState(true)
@@ -119,10 +122,8 @@ export function DashboardPage() {
     finally { setDeletingId(null) }
   }
 
-  function signOut() { logout(); navigate('/login', { replace: true }) }
-
   return <main className="dashboard-page">
-    <header className="dashboard-header"><div className="brand"><span className="brand-mark" aria-hidden="true">S</span><span>StudyHub</span></div><div className="header-account"><span title={user.email}>{user.email}</span><button className="secondary-button" type="button" onClick={signOut}>Đăng xuất</button></div></header>
+    <AppHeader />
     <div className="dashboard-shell">
       <aside className="workspace-sidebar" aria-label="Không gian học tập">
         <div className="sidebar-heading"><div><p className="section-kicker">Tổ chức việc học</p><h2>Không gian</h2></div><button className="small-add" type="button" onClick={() => setEditor({ kind: 'workspace' })} aria-label="Thêm không gian">+</button></div>
@@ -137,6 +138,7 @@ export function DashboardPage() {
         {!workspaceLoading && !workspaceError && workspaces.length === 0 && <p className="sidebar-hint">Tạo không gian đầu tiên để nhóm các khóa học của bạn.</p>}
       </aside>
       <section className="dashboard-main">
+        <StatisticsPanel />
         <div className="page-heading"><div><p className="section-kicker">Bảng học tập</p><h1>{selectedWorkspace?.name ?? 'Khóa học của bạn'}</h1><p>{selectedWorkspace?.description ?? 'Theo dõi các khóa học trong mọi không gian.'}</p></div><button className="primary-button add-course" type="button" onClick={() => setEditor({ kind: 'course' })} disabled={!workspaceId}>+ Thêm khóa học</button></div>
         {!workspaceId && workspaces.length > 0 && <p className="inline-note">Chọn một không gian bên trái để thêm khóa học mới.</p>}
         {actionError && <p className="form-message error" role="alert">{actionError}</p>}
@@ -148,6 +150,7 @@ export function DashboardPage() {
           {!coursesLoading && !coursesError && courses.length > 0 && <div className="course-list">{courses.map((course) => <article className="course-card" key={course.id}><div className="course-mark" aria-hidden="true">{course.name.charAt(0).toUpperCase()}</div><div className="course-copy"><div className="course-title-line"><h3>{course.name}</h3><span className={`status-badge status-${course.status.toLowerCase()}`}>{STATUS_LABELS[course.status] ?? course.status}</span></div><p>{course.description}</p></div><div className="course-actions"><button type="button" onClick={() => navigate(`/courses/${course.id}`)}>Chi tiết</button><button type="button" onClick={() => setEditor({ kind: 'course', item: course })}>Sửa</button><button type="button" onClick={() => remove('course', course)} disabled={deletingId === `course-${course.id}`}>Xóa</button></div></article>)}</div>}
           {!coursesLoading && !coursesError && totalPages > 1 && <div className="pagination"><span>Trang {page + 1} / {totalPages}</span><div><button className="secondary-button" type="button" disabled={page === 0} onClick={() => { setPage((value) => value - 1); setCoursesLoading(true) }}>Trước</button><button className="secondary-button" type="button" disabled={page + 1 >= totalPages} onClick={() => { setPage((value) => value + 1); setCoursesLoading(true) }}>Sau</button></div></div>}
         </div>
+        <QuizHistoryPanel />
       </section>
     </div>
     {editor && <Editor key={`${editor.kind}-${editor.item?.id ?? 'new'}`} {...editor} workspaceId={workspaceId} token={token} onClose={() => setEditor(null)} onSaved={refresh} />}

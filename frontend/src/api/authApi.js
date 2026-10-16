@@ -45,6 +45,9 @@ export async function request(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && options.headers?.Authorization && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('studyhub:unauthorized', { detail: options.headers.Authorization }))
+    }
     if ([502, 503, 504].includes(response.status)) {
       throw new ApiError(CONNECTION_ERROR, response.status, body)
     }

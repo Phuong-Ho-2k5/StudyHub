@@ -36,6 +36,14 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    function unauthorized(event) {
+      if (event.detail === `Bearer ${session.token}`) logout()
+    }
+    window.addEventListener('studyhub:unauthorized', unauthorized)
+    return () => window.removeEventListener('studyhub:unauthorized', unauthorized)
+  }, [session.token])
+
+  useEffect(() => {
     if (!session.tokenData) {
       return undefined
     }

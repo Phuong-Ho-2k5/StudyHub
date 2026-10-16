@@ -42,6 +42,9 @@ VITE_API_URL=http://localhost:8080
 | `/welcome` | Bảng học tập yêu cầu đăng nhập. |
 | `/courses/:courseId` | Chi tiết khóa học: quản lý tài liệu, khái niệm và Quiz. |
 | `/courses/:courseId/quizzes/:quizId` | Soạn câu hỏi, xuất bản, làm bài và xem kết quả Quiz. |
+| `/courses/:courseId/discussions/:postId` | Chi tiết bài thảo luận, sửa/xóa bài và quản lý bình luận. |
+| `/notifications` | Thông báo có phân trang, trạng thái đã đọc và số chưa đọc. |
+| `/admin` | Thống kê hệ thống, danh sách/chi tiết người dùng và thay đổi role; yêu cầu ADMIN. |
 
 Trong bảng học tập, người dùng có thể tạo, chọn, sửa và xóa Workspace; tạo, sửa và xóa Course trong Workspace; tìm Course theo tên, lọc theo trạng thái và chuyển trang kết quả. Các trạng thái Course là `PLANNED`, `IN_PROGRESS`, `COMPLETED` và `ARCHIVED`. Khi xóa Workspace, backend cũng xóa các Course thuộc Workspace đó.
 
@@ -49,9 +52,15 @@ Trong chi tiết khóa học, người dùng có thể thêm, sửa, xóa và t�
 
 Tab Quiz hỗ trợ tạo, sửa, xóa bài kiểm tra và mở trang riêng để quản lý câu hỏi. Người dùng có thể soạn trắc nghiệm (ít nhất 4 lựa chọn, có thể nhiều đáp án đúng), đúng/sai (2 lựa chọn và 1 đáp án đúng), trả lời ngắn (có đáp án mẫu), và gắn từng câu hỏi với khái niệm trong khóa học. Với câu trả lời ngắn, người soạn ghi rõ định dạng trả lời trong nội dung đề, ví dụ chỉ nhập số nguyên, không ghi đơn vị hoặc thêm khoảng trắng; chưa có trường hướng dẫn riêng. Bài mới ở trạng thái bản nháp; xuất bản sau khi thêm câu hỏi để làm bài.
 
-Màn làm bài yêu cầu trả lời đủ câu hỏi, gửi bài một lần khi nhấn Nộp bài và hiển thị kết quả do backend trả về. Câu trả lời ngắn được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, bao gồm chữ hoa/thường, dấu, khoảng trắng và xuống dòng, không gọi AI. Frontend giữ nguyên đáp án mẫu khi lưu và câu trả lời khi nộp, kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn 4.000 ký tự. Đáp án mẫu được hiển thị trong kết quả sau khi nộp. Sau lần nộp thành công, giao diện tải lại mức độ hiểu của các khái niệm liên quan; người dùng có thể làm lại để tạo một lần nộp mới. Luồng nộp sử dụng API có transaction. Backend đã có API đọc lịch sử QuizAttempt, nhưng chưa có giao diện lịch sử; trang làm bài chỉ hiển thị kết quả lần nộp hiện tại và tải lại trang không khôi phục kết quả này. Các lần nộp cũ giữ nguyên điểm và số câu chờ chấm đã lưu. AI/RAG chưa có giao diện.
+Màn làm bài yêu cầu trả lời đủ câu hỏi, gửi bài một lần khi nhấn Nộp bài và hiển thị kết quả do backend trả về. Câu trả lời ngắn được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, bao gồm chữ hoa/thường, dấu, khoảng trắng và xuống dòng, không gọi AI. Frontend giữ nguyên đáp án mẫu khi lưu và câu trả lời khi nộp, kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn 4.000 ký tự. Đáp án mẫu được hiển thị trong kết quả sau khi nộp. Sau lần nộp thành công, giao diện tải lại mức độ hiểu của các khái niệm liên quan; người dùng có thể làm lại để tạo một lần nộp mới. Luồng nộp sử dụng API có transaction. Lịch sử QuizAttempt được hiển thị tại bảng học tập; trang làm bài hiển thị kết quả chi tiết của lần nộp hiện tại và không khôi phục chi tiết này khi tải lại trang. Các lần nộp cũ giữ nguyên điểm và số câu chờ chấm đã lưu. AI/RAG chưa có giao diện.
 
-Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: Bearer <token>` cho các API được bảo vệ và kết thúc phiên khi token hết hạn.
+Dashboard có thống kê tổng thời gian học, số phiên hoàn tất, lượt làm Quiz và điểm trung bình; lịch sử Quiz phân trang hiển thị kết quả tổng hợp đã lưu. Chi tiết khóa học có tiến độ dựa trên confidence của Concept, điều khiển phiên học và tab Thảo luận. Nội dung bài viết/bình luận hiển thị dưới dạng văn bản, không thực thi HTML.
+
+Phiên học được lưu trên trình duyệt theo email để khôi phục khi tải lại trang hoặc đăng nhập lại cùng tài khoản. Nút kết thúc ghi nhận thời gian vào thống kê. Đóng tab hoặc đăng xuất không tự kết thúc phiên. Backend chưa có API tìm phiên đang mở nên không khôi phục được sau khi xóa dữ liệu trình duyệt hoặc chuyển thiết bị. Web Locks phối hợp thao tác giữa các tab trên trình duyệt hỗ trợ; trình duyệt không có Web Locks chỉ có khóa trong cùng tab, nên dùng một tab khi điều khiển phiên học.
+
+JWT hiện không chứa role; frontend kiểm tra khả năng quản trị bằng API thống kê quản trị. Backend luôn xác thực quyền thật cho mỗi request. Tài khoản thiếu quyền nhận thông báo phù hợp, dữ liệu quản trị bị gỡ khỏi giao diện khi nhận 403. Tự hạ quyền admin bị khóa trên giao diện và backend tiếp tục kiểm tra quy tắc này.
+
+Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: Bearer <token>` cho các API được bảo vệ và kết thúc phiên khi token hết hạn hoặc API được bảo vệ trả 401.
 
 ## Cấu trúc mã nguồn
 
@@ -62,6 +71,7 @@ Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: B
 | `src/auth/` | Lưu phiên, đọc JWT và bảo vệ route. |
 | `src/api/` | Gọi API xác thực và tài nguyên học tập, gồm Quiz/Question/Submit. |
 | `src/styles.css` | Kiểu giao diện và responsive layout. |
+| `src/context/`, `src/hooks/` | Trạng thái học tập, thông báo, kiểm tra quyền, phiên học và tải dữ liệu có bảo vệ response lỗi thời. |
 | `vite.config.js` | Cấu hình Vite và proxy `/api` khi phát triển. |
 
 ## Build
@@ -73,3 +83,7 @@ npm run build  # Tạo bản production trong dist/
 ```
 
 Dùng `npm run preview` để xem thử bản build trên máy cá nhân. Khi triển khai bản production, cấu hình web server chuyển các route frontend về `index.html` và định tuyến `/api` tới backend, hoặc đặt `VITE_API_URL` lúc build nếu API nằm ở origin khác.
+
+## Kiểm tra
+
+Trong `frontend/`, chạy `npm run lint` và `npm run build` để kiểm tra mã nguồn và tạo bản production. Lệnh `npm test` tiếp tục chạy các test đã có trước đợt bổ sung giao diện này.

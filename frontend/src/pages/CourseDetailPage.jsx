@@ -8,6 +8,10 @@ import {
 } from '../api/studyApi'
 import { useAuth } from '../auth/AuthContext'
 import { QuizPanel } from '../components/quiz/QuizPanel'
+import { AppHeader } from '../components/AppHeader'
+import { CourseProgress } from '../components/learning/CourseProgress'
+import { StudySessionPanel } from '../components/learning/StudySessionPanel'
+import { DiscussionPanel } from '../components/discussion/DiscussionPanel'
 
 const CONCEPT_STATUSES = [
   ['NEW', 'Mới'], ['LEARNING', 'Đang học'], ['UNDERSTOOD', 'Đã hiểu'], ['MASTERED', 'Thành thạo'],
@@ -134,14 +138,14 @@ function PrerequisiteDialog({ concept, token, onClose, onSaved }) {
   </div>
 }
 
-export function CourseDetailPage() {
+function CourseDetail() {
   const { courseId } = useParams()
   const { token } = useAuth()
   const [course, setCourse] = useState(null)
   const [courseError, setCourseError] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedTab = searchParams.get('tab')
-  const tab = ['documents', 'concepts', 'quizzes'].includes(selectedTab) ? selectedTab : 'documents'
+  const tab = ['documents', 'concepts', 'quizzes', 'discussions'].includes(selectedTab) ? selectedTab : 'documents'
   const [documents, setDocuments] = useState([])
   const [documentPage, setDocumentPage] = useState(0)
   const [documentPages, setDocumentPages] = useState(0)
@@ -163,7 +167,7 @@ export function CourseDetailPage() {
   }, [token, courseId])
 
   useEffect(() => {
-    if (tab === 'quizzes') return undefined
+    if (tab === 'quizzes' || tab === 'discussions') return undefined
     let active = true
     const request = tab === 'documents'
       ? listDocuments(token, { courseId, q: search, page: documentPage })
@@ -200,14 +204,17 @@ export function CourseDetailPage() {
   }
 
   return <main className="dashboard-page">
-    <header className="dashboard-header"><Link className="brand" to="/welcome"><span className="brand-mark" aria-hidden="true">S</span><span>StudyHub</span></Link><Link className="text-link" to="/welcome">← Bảng học tập</Link></header>
+    <AppHeader />
     <div className="detail-shell">
+      <Link className="text-link" to="/welcome">← Bảng học tập</Link>
       <div className="page-heading"><div><p className="section-kicker">Chi tiết khóa học</p><h1>{course?.name ?? 'Khóa học'}</h1><p>{course?.description}</p></div></div>
       {courseError && <p className="form-message error" role="alert">{courseError}</p>}
+      {course && !courseError && <div className="course-learning-grid"><CourseProgress courseId={courseId} revision={revision} /><StudySessionPanel courseId={courseId} /></div>}
       {!courseError && <div className="course-panel">
-        <div className="detail-toolbar"><div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học"><button type="button" role="tab" aria-selected={tab === 'documents'} className={tab === 'documents' ? 'active' : ''} onClick={() => changeTab('documents')}>Tài liệu</button><button type="button" role="tab" aria-selected={tab === 'concepts'} className={tab === 'concepts' ? 'active' : ''} onClick={() => changeTab('concepts')}>Khái niệm</button><button type="button" role="tab" aria-selected={tab === 'quizzes'} className={tab === 'quizzes' ? 'active' : ''} onClick={() => changeTab('quizzes')}>Quiz</button></div>{tab !== 'quizzes' && <button className="primary-button detail-add" type="button" onClick={() => setDialog({ type: tab === 'documents' ? 'document' : 'concept' })}>+ Thêm {tab === 'documents' ? 'tài liệu' : 'khái niệm'}</button>}</div>
+        <div className="detail-toolbar"><div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học"><button type="button" role="tab" aria-selected={tab === 'documents'} className={tab === 'documents' ? 'active' : ''} onClick={() => changeTab('documents')}>Tài liệu</button><button type="button" role="tab" aria-selected={tab === 'concepts'} className={tab === 'concepts' ? 'active' : ''} onClick={() => changeTab('concepts')}>Khái niệm</button><button type="button" role="tab" aria-selected={tab === 'quizzes'} className={tab === 'quizzes' ? 'active' : ''} onClick={() => changeTab('quizzes')}>Quiz</button><button type="button" role="tab" aria-selected={tab === 'discussions'} className={tab === 'discussions' ? 'active' : ''} onClick={() => changeTab('discussions')}>Thảo luận</button></div>{tab !== 'quizzes' && tab !== 'discussions' && <button className="primary-button detail-add" type="button" onClick={() => setDialog({ type: tab === 'documents' ? 'document' : 'concept' })}>+ Thêm {tab === 'documents' ? 'tài liệu' : 'khái niệm'}</button>}</div>
+        {tab === 'discussions' && <DiscussionPanel key={courseId} courseId={courseId} />}
         {tab === 'quizzes' && <QuizPanel key={courseId} courseId={courseId} token={token} />}
-        {tab !== 'quizzes' && <>
+        {tab !== 'quizzes' && tab !== 'discussions' && <>
         {tab === 'documents' ? <>
           <p className="inline-help">Tài liệu ở giai đoạn này chỉ là thông tin tệp và đường dẫn lưu trữ.</p>
           <form className="search-form detail-search" role="search" onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); setDocumentPage(0); setLoading(true) }}><label className="sr-only" htmlFor="document-search">Tìm tài liệu</label><input id="document-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Tìm theo tiêu đề…" /><button className="secondary-button" type="submit">Tìm</button></form>
@@ -223,4 +230,9 @@ export function CourseDetailPage() {
     {dialog?.type === 'prerequisite' && <PrerequisiteDialog concept={dialog.item} token={token} onClose={() => setDialog(null)} onSaved={() => setRevision((value) => value + 1)} />}
     {dialog && dialog.type !== 'prerequisite' && <ResourceDialog key={`${dialog.type}-${dialog.item?.id ?? 'new'}`} {...dialog} courseId={courseId} token={token} onClose={() => setDialog(null)} onSaved={refresh} />}
   </main>
+}
+
+export function CourseDetailPage() {
+  const { courseId } = useParams()
+  return <CourseDetail key={courseId} />
 }
