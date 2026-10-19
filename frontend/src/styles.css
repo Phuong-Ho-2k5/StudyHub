@@ -69,6 +69,19 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .primary-button:disabled, .secondary-button:disabled, .field input:disabled, .password-toggle:disabled { cursor: not-allowed; opacity: .62; }
 .form-switch { margin: 26px 0 0; color: var(--ink-soft); font-size: 14px; text-align: center; }
 .text-link { color: var(--accent-dark); font-weight: 700; text-underline-offset: 3px; }
+.login-page .auth-panel { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.login-page .form-card { width: min(520px, 100%); min-width: 0; }
+.login-page .form-eyebrow { font-size: 13px; }
+.login-page .form-card h2 { font-size: clamp(40px, 3.4vw, 48px); line-height: 1.15; }
+.login-page .form-intro { margin: 16px 0 36px; font-size: 17px; }
+.login-page .auth-form { gap: 24px; }
+.login-page .field { gap: 10px; }
+.login-page .field-label { font-size: 16px; }
+.login-page .field input { height: 56px; padding-inline: 16px; font-size: 17px; }
+.login-page .password-wrap input { padding-right: 76px; }
+.login-page .password-toggle { right: 12px; min-height: 44px; padding-inline: 8px; font-size: 14px; }
+.login-page .primary-button { height: 56px; margin-top: 4px; font-size: 17px; }
+.login-page .form-switch { margin-top: 32px; font-size: 16px; line-height: 1.6; }
 .welcome-page { min-height: 100vh; padding: 34px 56px 56px; background: var(--cream); }
 .welcome-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 28px; border-bottom: 1px solid rgba(23, 37, 61, .12); }
 .secondary-button { border: 1px solid #b9b3a9; background: transparent; color: var(--ink); padding: 0 20px; }

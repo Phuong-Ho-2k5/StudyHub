@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 
-export function AuthLayout({ eyebrow, title, description, children }) {
+export function AuthLayout({ eyebrow, title, description, children, className = '' }) {
   return (
-    <main className="auth-page">
+    <main className={`auth-page ${className}`.trim()}>
       <section className="auth-story" aria-label="Giới thiệu StudyHub">
         <Link className="brand" to="/login" aria-label="StudyHub - trang đăng nhập">
           <span className="brand-mark" aria-hidden="true">S</span>

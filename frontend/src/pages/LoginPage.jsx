@@ -94,6 +94,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout
+      className="login-page"
       eyebrow="Chào bạn quay lại"
       title="Đăng nhập"
       description="Tiếp tục từ nơi bạn đã dừng lại."
