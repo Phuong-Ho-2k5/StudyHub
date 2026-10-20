@@ -47,6 +47,33 @@ Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22
 
 Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
 
+## Kiểm thử backend
+
+Bộ kiểm thử dùng **JUnit và Mockito** cho unit test, cùng **Spring Boot và H2** cho integration test. Các integration test API tự khởi động backend trên cổng ngẫu nhiên, chạy Flyway và kiểm tra dữ liệu trên database in-memory riêng; không cần chạy PostgreSQL, backend hay frontend trước.
+
+Chạy toàn bộ bộ test từ thư mục gốc:
+
+```powershell
+cd backend
+.\mvnw.cmd clean test
+```
+
+Chạy riêng nhóm kiểm thử đăng ký và đăng nhập:
+
+```powershell
+.\mvnw.cmd "-Dtest=AuthServiceTest,AuthApiTest" test
+```
+
+Phạm vi kiểm thử hiện có:
+
+- Đăng ký, đăng nhập, chuẩn hóa email, mã hóa mật khẩu, role mặc định và JWT.
+- CRUD tài nguyên học tập, validation, phân trang và quyền sở hữu Workspace/Course.
+- Câu hỏi, chấm Quiz, lịch sử làm bài, cập nhật confidence và rollback transaction khi có lỗi.
+- Tiến độ, thống kê học tập, phiên học, thảo luận, bình luận và thông báo.
+- Phân quyền Admin, định dạng lỗi, tài liệu OpenAPI và số lượng truy vấn ở các luồng quan trọng.
+
+Kiểm chứng chạy thành công **139 test**, không có failure, error hoặc test bị bỏ qua; trong đó nhóm Auth có 13 test. Báo cáo từng lớp được tạo tại `backend/target/surefire-reports/`. Kết quả integration test này được xác minh trên H2 ở chế độ PostgreSQL; chưa thay thế việc kiểm thử trên PostgreSQL thật.
+
 ## Tài liệu API
 
 Backend cung cấp [Swagger UI](http://localhost:8080/swagger-ui.html) và bản mô tả [OpenAPI JSON](http://localhost:8080/v3/api-docs) / [YAML](http://localhost:8080/v3/api-docs.yaml). Chỉ cần chạy backend để xem tài liệu và gọi API trực tiếp, không cần chạy frontend.
