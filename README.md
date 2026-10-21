@@ -9,11 +9,11 @@ StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phi�
 | `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
 | `frontend/` | React/Vite cho xác thực, tài nguyên học tập, Quiz, thống kê/tiến độ, phiên học, thảo luận, thông báo và quản trị |
 | `ai-service/` | Bộ khung cho dịch vụ AI/RAG trong tương lai |
-| `infra/` | Vị trí dành cho cấu hình hạ tầng trong tương lai |
+| `infra/` | Tài liệu hạ tầng; Docker Compose hiện nằm ở thư mục gốc |
 
 ## Chạy local
 
-Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Repo chưa có Docker Compose để khởi tạo database tự động.
+Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Có thể dùng [Docker Compose](#chạy-bằng-docker) để chạy backend và database thay cho cài Java/PostgreSQL trực tiếp.
 
 1. Sao chép `.env.example` thành `.env` tại thư mục gốc và điền tối thiểu:
 
@@ -46,6 +46,52 @@ Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22
    Mở `http://localhost:5173`. Vite chuyển tiếp `/api` tới backend ở cổng 8080. Khi frontend và backend dùng hai origin khác nhau, đặt `VITE_API_URL` trong `frontend/.env.local`; xem [hướng dẫn frontend](frontend/README.md).
 
 Trên macOS/Linux, dùng `./mvnw` thay cho `.\mvnw.cmd`.
+
+## Chạy bằng Docker
+
+Yêu cầu Docker Desktop đang chạy Linux containers và Docker Compose. Thực hiện từ thư mục gốc dự án.
+
+1. Nếu chưa có `.env`, sao chép `.env.example` thành `.env`. Điền `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` và `JWT_SECRET`. Tạo JWT secret Base64 từ 32 byte ngẫu nhiên bằng PowerShell:
+
+   ```powershell
+   $jwtBytes = New-Object byte[] 32
+   $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+   $rng.GetBytes($jwtBytes)
+   [Convert]::ToBase64String($jwtBytes)
+   $rng.Dispose()
+   ```
+
+   Dán kết quả vào `JWT_SECRET`. Không commit `.env`. Compose tự đặt `DATABASE_URL` trỏ tới service `db`; giá trị `DATABASE_URL` trong `.env` vẫn dành cho chạy local.
+
+2. Dừng backend đang dùng cổng 8080 rồi chạy:
+
+   ```powershell
+   docker compose config --quiet
+   docker compose up -d --build
+   docker compose ps
+   docker compose logs --tail=100 backend
+   ```
+
+   Có thể đặt `BACKEND_PORT` trong `.env` nếu cổng 8080 đã được dùng. Dockerfile build bằng Java 21, chạy `mvn clean verify`, rồi đưa JAR vào image JRE chạy bằng user không phải root. Lần build đầu cần tải image và Maven dependencies.
+
+3. Kiểm tra API (thay cổng nếu đã đổi `BACKEND_PORT`):
+
+   ```powershell
+   Invoke-RestMethod http://localhost:8080/actuator/health
+   ```
+
+   Kết quả mong đợi là `status: UP`. Mở `http://localhost:8080/swagger-ui.html` để thử đăng ký, đăng nhập và CRUD Workspace. Backend dùng profile `prod`, chờ PostgreSQL healthy và tự chạy Flyway; không cần tạo database hoặc chạy SQL bằng tay.
+
+4. Dừng và khởi động lại để kiểm tra dữ liệu được giữ:
+
+   ```powershell
+   docker compose down
+   docker compose up -d
+   ```
+
+   Named volume giữ dữ liệu PostgreSQL. `docker compose down -v` xóa volume và toàn bộ dữ liệu database của stack. Biến `POSTGRES_*` khởi tạo database khi volume trống; sửa mật khẩu trong `.env` không tự đổi mật khẩu của database đã có.
+
+Frontend tiếp tục chạy bằng `npm ci` và `npm run dev` trong `frontend/`; Vite proxy `/api` tới cổng 8080. Nếu đổi cổng backend, chỉnh proxy trong `frontend/vite.config.js` cho tương ứng. Compose hiện gồm backend và PostgreSQL; AI Service sẽ được bổ sung ở M6.
 
 ## Kiểm thử backend
 
