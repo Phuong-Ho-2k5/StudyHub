@@ -8,7 +8,7 @@ StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phi�
 | --- | --- |
 | `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
 | `frontend/` | React/Vite cho xác thực, tài nguyên học tập, Quiz, thống kê/tiến độ, phiên học, thảo luận, thông báo và quản trị |
-| `ai-service/` | Bộ khung cho dịch vụ AI/RAG trong tương lai |
+| `ai-service/` | FastAPI chạy độc lập, health check và OpenAPI; nền tảng cho AI/RAG |
 | `infra/` | Tài liệu hạ tầng; Docker Compose hiện nằm ở thư mục gốc |
 
 ## Chạy local
@@ -91,7 +91,7 @@ Yêu cầu Docker Desktop đang chạy Linux containers và Docker Compose. Th�
 
    Named volume giữ dữ liệu PostgreSQL. `docker compose down -v` xóa volume và toàn bộ dữ liệu database của stack. Biến `POSTGRES_*` khởi tạo database khi volume trống; sửa mật khẩu trong `.env` không tự đổi mật khẩu của database đã có.
 
-Frontend tiếp tục chạy bằng `npm ci` và `npm run dev` trong `frontend/`; Vite proxy `/api` tới cổng 8080. Nếu đổi cổng backend, chỉnh proxy trong `frontend/vite.config.js` cho tương ứng. Compose hiện gồm backend và PostgreSQL; AI Service sẽ được bổ sung ở M6.
+Frontend tiếp tục chạy bằng `npm ci` và `npm run dev` trong `frontend/`; Vite proxy `/api` tới cổng 8080. Nếu đổi cổng backend, chỉnh proxy trong `frontend/vite.config.js` cho tương ứng. Compose gồm backend, PostgreSQL và AI Service FastAPI tại cổng 8000. Có thể chạy riêng AI Service bằng `docker compose up -d --build ai-service`; xem [hướng dẫn AI Service](ai-service/README.md).
 
 ## Kiểm thử backend
 
@@ -160,4 +160,4 @@ Kết quả là một trang dữ liệu có `content`, `totalElements`, `totalPa
 
 ## Hướng phát triển
 
-`ai-service/` hiện là bộ khung, chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction. Câu trả lời ngắn (`SHORT_ANSWER`) được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không gọi AI. Frontend giữ nguyên đáp án mẫu và câu trả lời khi gửi, hướng dẫn người soạn ghi định dạng trả lời trong đề; chưa có trường hướng dẫn riêng. Lịch sử cũ giữ nguyên kết quả đã lưu. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Frontend đã bổ sung lịch sử Quiz, thống kê học tập, tiến độ Course, phiên học, thảo luận/bình luận, thông báo và quản trị. AI/RAG chưa có giao diện. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` đã có FastAPI chạy độc lập, health check `GET /health` và Swagger UI `/docs`; chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction. Câu trả lời ngắn (`SHORT_ANSWER`) được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không gọi AI. Frontend giữ nguyên đáp án mẫu và câu trả lời khi gửi, hướng dẫn người soạn ghi định dạng trả lời trong đề; chưa có trường hướng dẫn riêng. Lịch sử cũ giữ nguyên kết quả đã lưu. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Frontend đã bổ sung lịch sử Quiz, thống kê học tập, tiến độ Course, phiên học, thảo luận/bình luận, thông báo và quản trị. AI/RAG chưa có giao diện. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
