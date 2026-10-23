@@ -89,8 +89,8 @@ function QuizDetail({ courseId, quizId, token }) {
   const disabled = busy || submitting
 
   return <main className="dashboard-page">
-    <AppHeader />
-    <div className="detail-shell quiz-detail-shell">
+    <AppHeader currentCourse={course} />
+    <div className="detail-shell quiz-detail-shell" id="main-content" tabIndex={-1}>
       <Link className="text-link" to={back}>← Khóa học</Link>
       {loading ? <p className="list-state" role="status">Đang tải bài kiểm tra…</p> : loadError ? <div className="form-message error" role="alert"><p>{loadError}</p>
         <button className="secondary-button" type="button" onClick={() => { setLoading(true); setRevision((value) => value + 1) }}>Thử lại</button>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ApiError } from '../api/authApi'
 import { createCourse, createWorkspace, deleteCourse, deleteWorkspace, listCourses, listWorkspaces, updateCourse, updateWorkspace } from '../api/studyApi'
 import { useAuth } from '../auth/AuthContext'
 import { AppHeader } from '../components/AppHeader'
+import { Icon } from '../components/Icon'
 import { StatisticsPanel } from '../components/learning/StatisticsPanel'
 import { QuizHistoryPanel } from '../components/learning/QuizHistoryPanel'
 
@@ -60,7 +61,6 @@ function Editor({ kind, item, workspaceId, token, onClose, onSaved }) {
 }
 
 export function DashboardPage() {
-  const navigate = useNavigate()
   const { token } = useAuth()
   const [workspaces, setWorkspaces] = useState([])
   const [workspaceId, setWorkspaceId] = useState('')
@@ -123,34 +123,45 @@ export function DashboardPage() {
   }
 
   return <main className="dashboard-page">
-    <AppHeader />
-    <div className="dashboard-shell">
-      <aside className="workspace-sidebar" aria-label="Không gian học tập">
-        <div className="sidebar-heading"><div><p className="section-kicker">Tổ chức việc học</p><h2>Không gian</h2></div><button className="small-add" type="button" onClick={() => setEditor({ kind: 'workspace' })} aria-label="Thêm không gian">+</button></div>
-        {workspaceLoading && <p className="muted">Đang tải không gian…</p>}
-        {workspaceError && <p className="form-message error" role="alert">{workspaceError}</p>}
-        {!workspaceLoading && !workspaceError && <nav className="workspace-list" aria-label="Chọn không gian">
-          <button className={`workspace-item ${workspaceId === '' ? 'active' : ''}`} type="button" onClick={() => selectWorkspace('')}>Tất cả khóa học</button>
-          {workspaces.map((space) => <div className={`workspace-row ${workspaceId === String(space.id) ? 'active' : ''}`} key={space.id}>
-            <button className="workspace-item" type="button" onClick={() => selectWorkspace(String(space.id))} title={space.description}>{space.name}</button>
-            <div className="row-actions"><button type="button" onClick={() => setEditor({ kind: 'workspace', item: space })} aria-label={`Sửa ${space.name}`}>Sửa</button><button type="button" onClick={() => remove('workspace', space)} aria-label={`Xóa ${space.name}`} disabled={deletingId === `workspace-${space.id}`}>Xóa</button></div>
-          </div>)}</nav>}
-        {!workspaceLoading && !workspaceError && workspaces.length === 0 && <p className="sidebar-hint">Tạo không gian đầu tiên để nhóm các khóa học của bạn.</p>}
-      </aside>
+    <AppHeader courses={courses} />
+    <div className="dashboard-shell" id="main-content" tabIndex={-1}>
       <section className="dashboard-main">
+        <div className="page-heading dashboard-greeting"><div><h1>Hôm nay, học một chút nhé.</h1><p>Một nền tảng vững bắt đầu từ những điều nhỏ.</p></div><button className="secondary-button" type="button" onClick={() => setEditor({ kind: 'workspace' })}><Icon name="plus" size={16} /> Tạo không gian</button></div>
         <StatisticsPanel />
-        <div className="page-heading"><div><p className="section-kicker">Bảng học tập</p><h1>{selectedWorkspace?.name ?? 'Khóa học của bạn'}</h1><p>{selectedWorkspace?.description ?? 'Theo dõi các khóa học trong mọi không gian.'}</p></div><button className="primary-button add-course" type="button" onClick={() => setEditor({ kind: 'course' })} disabled={!workspaceId}>+ Thêm khóa học</button></div>
-        {!workspaceId && workspaces.length > 0 && <p className="inline-note">Chọn một không gian bên trái để thêm khóa học mới.</p>}
-        {actionError && <p className="form-message error" role="alert">{actionError}</p>}
-        <div className="course-panel"><div className="course-panel-top"><div><p className="section-kicker">Danh sách</p><h2>Khóa học <span className="count-pill">{totalElements}</span></h2></div></div>
-          <div className="course-filters"><form onSubmit={search} className="search-form" role="search"><label className="sr-only" htmlFor="course-search">Tìm khóa học</label><input id="course-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Tìm theo tên khóa học…" /><button className="secondary-button" type="submit">Tìm</button></form><label className="status-filter"><span className="sr-only">Lọc theo trạng thái</span><select value={status} onChange={(event) => selectStatus(event.target.value)}><option value="">Mọi trạng thái</option>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-          {coursesError && <p className="form-message error" role="alert">{coursesError}</p>}
-          {coursesLoading && <p className="list-state">Đang tải khóa học…</p>}
-          {!coursesLoading && !coursesError && courses.length === 0 && <div className="empty-state"><div className="empty-icon" aria-hidden="true">✦</div><h3>Chưa có khóa học nào</h3><p>{query || status ? 'Thử thay đổi từ khóa hoặc bộ lọc.' : workspaces.length === 0 ? 'Tạo không gian đầu tiên để bắt đầu.' : 'Chọn một không gian và thêm khóa học đầu tiên.'}</p></div>}
-          {!coursesLoading && !coursesError && courses.length > 0 && <div className="course-list">{courses.map((course) => <article className="course-card" key={course.id}><div className="course-mark" aria-hidden="true">{course.name.charAt(0).toUpperCase()}</div><div className="course-copy"><div className="course-title-line"><h3>{course.name}</h3><span className={`status-badge status-${course.status.toLowerCase()}`}>{STATUS_LABELS[course.status] ?? course.status}</span></div><p>{course.description}</p></div><div className="course-actions"><button type="button" onClick={() => navigate(`/courses/${course.id}`)}>Chi tiết</button><button type="button" onClick={() => setEditor({ kind: 'course', item: course })}>Sửa</button><button type="button" onClick={() => remove('course', course)} disabled={deletingId === `course-${course.id}`}>Xóa</button></div></article>)}</div>}
-          {!coursesLoading && !coursesError && totalPages > 1 && <div className="pagination"><span>Trang {page + 1} / {totalPages}</span><div><button className="secondary-button" type="button" disabled={page === 0} onClick={() => { setPage((value) => value - 1); setCoursesLoading(true) }}>Trước</button><button className="secondary-button" type="button" disabled={page + 1 >= totalPages} onClick={() => { setPage((value) => value + 1); setCoursesLoading(true) }}>Sau</button></div></div>}
+        <div className="dashboard-content-grid">
+          <section className="course-panel dashboard-course-panel" id="courses">
+            <div className="section-heading"><div><p className="section-kicker">TỔ CHỨC VIỆC HỌC</p><h2>Không gian học tập</h2></div><span className="count-pill">{totalElements} khóa học</span></div>
+            <div className="workspace-picker">
+              <span className="space-icon"><Icon name="folder" size={20} /></span>
+              <div><label className="field-label" htmlFor="workspace-select">Không gian của bạn</label><select id="workspace-select" value={workspaceId} onChange={(event) => selectWorkspace(event.target.value)} disabled={workspaceLoading}><option value="">Tất cả khóa học</option>{workspaces.map((space) => <option key={space.id} value={String(space.id)}>{space.name}</option>)}</select></div>
+              {selectedWorkspace && <div className="workspace-manage"><button type="button" onClick={() => setEditor({ kind: 'workspace', item: selectedWorkspace })}>Sửa</button><button type="button" onClick={() => remove('workspace', selectedWorkspace)} disabled={deletingId === `workspace-${selectedWorkspace.id}`}>Xóa</button></div>}
+            </div>
+            {workspaceLoading && <p className="inline-help" role="status">Đang tải không gian…</p>}
+            {workspaceError && <p className="form-message error" role="alert">{workspaceError}</p>}
+            {selectedWorkspace && <p className="workspace-description">{selectedWorkspace.description}</p>}
+            {!workspaceLoading && !workspaceError && workspaces.length === 0 && <div className="getting-started"><Icon name="folder" size={22} /><div><strong>Một không gian cho những điều muốn học</strong><p>Tạo không gian đầu tiên, sau đó thêm khóa học của bạn.</p></div><button className="secondary-button" type="button" onClick={() => setEditor({ kind: 'workspace' })}>Tạo không gian</button></div>}
+            <div className="course-list-heading"><h3>{selectedWorkspace?.name ?? 'Khóa học của bạn'}</h3>{selectedWorkspace && <button className="primary-button detail-add" type="button" onClick={() => setEditor({ kind: 'course' })}><Icon name="plus" size={16} /> Thêm khóa học</button>}</div>
+            {!workspaceId && workspaces.length > 0 && <p className="inline-help">Chọn một không gian ở trên để thêm khóa học mới.</p>}
+            {actionError && <p className="form-message error" role="alert">{actionError}</p>}
+            <div className="course-filters"><form onSubmit={search} className="search-form" role="search"><label className="sr-only" htmlFor="course-search">Tìm khóa học</label><div className="search-input-wrap"><Icon name="search" size={17} /><input id="course-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Tìm theo tên khóa học…" /></div><button className="secondary-button" type="submit">Tìm</button></form><label className="status-filter"><span className="sr-only">Lọc theo trạng thái</span><select value={status} onChange={(event) => selectStatus(event.target.value)}><option value="">Mọi trạng thái</option>{STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+            {coursesError && <p className="form-message error" role="alert">{coursesError}</p>}
+            {coursesLoading && <p className="list-state" role="status">Đang tải khóa học…</p>}
+            {!coursesLoading && !coursesError && courses.length === 0 && <div className="empty-state"><span className="empty-icon"><Icon name="book" size={26} /></span><h3>Hành trình bắt đầu từ đây</h3><p>{query || status ? 'Chưa tìm thấy khóa học phù hợp. Thử thay đổi từ khóa hoặc bộ lọc.' : workspaces.length === 0 ? 'Tạo không gian đầu tiên để bắt đầu.' : 'Thêm một khóa học và dành chỗ cho những kiến thức mới.'}</p></div>}
+            {!coursesLoading && !coursesError && courses.length > 0 && <div className="course-list">{courses.map((course, index) => <article className="course-card" key={course.id}>
+              <div className="course-card-top"><span className={`course-mark course-color-${index % 3}`}><Icon name="book" size={22} /></span><span className={`status-badge status-${course.status.toLowerCase()}`}>{STATUS_LABELS[course.status] ?? course.status}</span></div>
+              <div className="course-copy"><h3><Link to={`/courses/${course.id}`}>{course.name}</Link></h3><p>{course.description}</p></div>
+              <div className="course-card-footer"><Link className="course-open" to={`/courses/${course.id}`}>Mở khóa học <Icon name="arrow" size={16} /></Link><div className="course-actions"><button type="button" onClick={() => setEditor({ kind: 'course', item: course })} aria-label={`Sửa ${course.name}`}>Sửa</button><button type="button" onClick={() => remove('course', course)} disabled={deletingId === `course-${course.id}`} aria-label={`Xóa ${course.name}`}>Xóa</button></div></div>
+            </article>)}</div>}
+            {!coursesLoading && !coursesError && totalPages > 1 && <div className="pagination"><span>Trang {page + 1} / {totalPages}</span><div><button className="secondary-button" type="button" disabled={page === 0} onClick={() => { setPage((value) => value - 1); setCoursesLoading(true) }}>Trước</button><button className="secondary-button" type="button" disabled={page + 1 >= totalPages} onClick={() => { setPage((value) => value + 1); setCoursesLoading(true) }}>Sau</button></div></div>}
+          </section>
+          <aside className="dashboard-aside" aria-label="Góc học tập">
+            <section className="learning-note"><p className="section-kicker"><Icon name="spark" size={16} /> MỖI NGÀY MỘT CHÚT</p><h2>Học chắc nền tảng.<br />Tiến xa từng bước.</h2><p>Một khái niệm đã hiểu rõ hôm nay sẽ mở đường cho điều bạn muốn học ngày mai.</p><div className="note-divider" /><span className="note-caption"><Icon name="leaf" size={17} /> Một phiên học nhỏ cũng là tiến bộ.</span></section>
+            <section className="course-panel learning-roadmap"><p className="section-kicker">MẠCH HỌC CỦA BẠN</p><h2>Từ sắp xếp đến hiểu sâu</h2><ol><li><span>01</span><div><strong>Tập hợp tài liệu</strong><p>Giữ nội dung theo từng khóa học.</p></div></li><li><span>02</span><div><strong>Kết nối khái niệm</strong><p>Hiểu điều cần học trước và sau.</p></div></li><li><span>03</span><div><strong>Luyện tập & nhìn lại</strong><p>Kiểm tra kiến thức, củng cố nền tảng.</p></div></li></ol></section>
+          </aside>
         </div>
-        <QuizHistoryPanel />
+        <div className="encouragement"><Icon name="leaf" size={19} /><p>Giữ nhịp đều đặn. Một khoảng thời gian tập trung hôm nay sẽ giúp việc học ngày mai nhẹ nhàng hơn.</p></div>
+        <div id="learning-history"><QuizHistoryPanel /></div>
+        <footer className="app-footer"><span>StudyHub · Không gian học tập có chủ đích</span><span>Học theo nhịp của bạn.</span></footer>
       </section>
     </div>
     {editor && <Editor key={`${editor.kind}-${editor.item?.id ?? 'new'}`} {...editor} workspaceId={workspaceId} token={token} onClose={() => setEditor(null)} onSaved={refresh} />}

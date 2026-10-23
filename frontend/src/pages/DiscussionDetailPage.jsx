@@ -37,7 +37,7 @@ function DiscussionDetail({ courseId, postId }) {
     catch (caught) { setError(errorMessage(caught)) }
     finally { lock.current = false; setBusy(false) }
   }
-  return <main className="dashboard-page"><AppHeader /><div className="detail-shell">
+  return <main className="dashboard-page"><AppHeader /><div className="detail-shell" id="main-content" tabIndex={-1}>
     <Link className="text-link" to={back}>← Thảo luận khóa học</Link>
     <RemoteState {...state} onRetry={state.reload}>{state.data && <>
       <article className="course-panel learning-section post-detail"><p className="section-kicker">Thảo luận</p><h1>{state.data.title}</h1><p className="muted">Người dùng #{state.data.authorId} · {formatDate(state.data.createdAt)}</p>

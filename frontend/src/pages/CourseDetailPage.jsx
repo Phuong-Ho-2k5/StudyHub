@@ -204,8 +204,8 @@ function CourseDetail() {
   }
 
   return <main className="dashboard-page">
-    <AppHeader />
-    <div className="detail-shell">
+    <AppHeader currentCourse={course} />
+    <div className="detail-shell" id="main-content" tabIndex={-1}>
       <Link className="text-link" to="/welcome">← Bảng học tập</Link>
       <div className="page-heading"><div><p className="section-kicker">Chi tiết khóa học</p><h1>{course?.name ?? 'Khóa học'}</h1><p>{course?.description}</p></div></div>
       {courseError && <p className="form-message error" role="alert">{courseError}</p>}

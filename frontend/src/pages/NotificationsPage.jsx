@@ -25,7 +25,7 @@ export function NotificationsPage() {
     finally { lock.current = false; setBusyId(null) }
   }
   function reload() { state.reload(); refreshNotifications() }
-  return <main className="dashboard-page"><AppHeader /><div className="detail-shell">
+  return <main className="dashboard-page"><AppHeader /><div className="detail-shell" id="main-content" tabIndex={-1}>
     <div className="page-heading"><div><p className="section-kicker">Cập nhật học tập</p><h1>Thông báo</h1><p>Theo dõi kết quả và những cập nhật mới của bạn.</p></div><button className="secondary-button" type="button" onClick={reload} disabled={state.loading}>Làm mới</button></div>
     <section className="course-panel">
       {error && <p className="form-message error" role="alert">{error}</p>}

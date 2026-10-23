@@ -95,9 +95,9 @@ export function LoginPage() {
   return (
     <AuthLayout
       className="login-page"
-      eyebrow="Chào bạn quay lại"
-      title="Đăng nhập"
-      description="Tiếp tục từ nơi bạn đã dừng lại."
+      eyebrow="Chào mừng bạn trở lại"
+      title="Tiếp nối việc học của bạn"
+      description="Đăng nhập để trở về không gian học tập cá nhân."
     >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         {successMessage && (

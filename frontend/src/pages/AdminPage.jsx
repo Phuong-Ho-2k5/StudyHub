@@ -41,7 +41,7 @@ function AdminContent() {
     catch (caught) { if (caught.status === 403) denyAdmin(); setError(errorMessage(caught)) }
     finally { lock.current = false; setBusy(false) }
   }
-  return <main className="dashboard-page"><AppHeader /><div className="detail-shell">
+  return <main className="dashboard-page admin-page"><AppHeader /><div className="detail-shell" id="main-content" tabIndex={-1}>
     <div className="page-heading"><div><p className="section-kicker">Quản trị hệ thống</p><h1>Người dùng và thống kê</h1><p>Quản lý quyền truy cập StudyHub.</p></div>{!denied && <button className="secondary-button" type="button" onClick={state.reload} disabled={state.loading || busy} aria-label="Làm mới dữ liệu quản trị">Làm mới</button>}</div>
     {denied ? <p className="form-message error" role="alert">Bạn không có quyền quản trị.</p> : <RemoteState {...state} onRetry={state.reload}>{state.data && <>
       <div className="stat-grid admin-stat-grid">{[['Người dùng', state.data.statistics.totalUsers], ['Không gian', state.data.statistics.totalWorkspaces], ['Khóa học', state.data.statistics.totalCourses]].map(([label, value]) => <article className="stat-card" key={label}><span>{label}</span><strong>{value}</strong></article>)}</div>
