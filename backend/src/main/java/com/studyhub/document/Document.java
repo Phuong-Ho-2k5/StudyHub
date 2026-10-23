@@ -41,6 +41,12 @@ public class Document {
     @Enumerated(EnumType.STRING)
     private DocumentStatus status;
 
+    @Column(nullable = false)
+    private boolean managedFile;
+
+    public boolean isManagedFile() { return managedFile; }
+    public void setManagedFile(boolean managedFile) { this.managedFile = managedFile; }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;

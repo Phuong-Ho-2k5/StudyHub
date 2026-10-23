@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api/authApi'
 import {
-  addPrerequisite, createConcept, createDocument, deleteConcept, deleteDocument,
+  addPrerequisite, createConcept, deleteConcept, deleteDocument,
   getCourse, listConcepts, listDocuments, listLowConfidenceConcepts,
   listPrerequisites, removePrerequisite, updateConcept, updateDocument,
 } from '../api/studyApi'
@@ -12,6 +12,7 @@ import { AppHeader } from '../components/AppHeader'
 import { CourseProgress } from '../components/learning/CourseProgress'
 import { StudySessionPanel } from '../components/learning/StudySessionPanel'
 import { DiscussionPanel } from '../components/discussion/DiscussionPanel'
+import { DocumentUploadDialog } from '../components/DocumentUploadDialog'
 
 const CONCEPT_STATUSES = [
   ['NEW', 'Mới'], ['LEARNING', 'Đang học'], ['UNDERSTOOD', 'Đã hiểu'], ['MASTERED', 'Thành thạo'],
@@ -32,9 +33,6 @@ function ResourceDialog({ type, item, courseId, token, onClose, onSaved }) {
   const document = type === 'document'
   const [name, setName] = useState(document ? item?.title ?? '' : item?.name ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
-  const [fileName, setFileName] = useState(item?.fileName ?? '')
-  const [fileType, setFileType] = useState(item?.fileType ?? '')
-  const [storagePath, setStoragePath] = useState(item?.storagePath ?? '')
   const [confidence, setConfidence] = useState(item?.confidence ?? 0)
   const [status, setStatus] = useState(item?.status ?? 'NEW')
   const [error, setError] = useState('')
@@ -46,9 +44,8 @@ function ResourceDialog({ type, item, courseId, token, onClose, onSaved }) {
     setError('')
     try {
       if (document) {
-        const data = { title: name.trim(), fileName: fileName.trim(), fileType: fileType.trim(), storagePath: storagePath.trim() }
-        if (item) await updateDocument(token, item.id, data)
-        else await createDocument(token, courseId, data)
+        const data = { title: name.trim(), fileName: item.fileName, fileType: item.fileType, storagePath: item.storagePath }
+        await updateDocument(token, item.id, data)
       } else {
         const data = { name: name.trim(), description: description.trim(), confidence: Number(confidence), status }
         if (item) await updateConcept(token, item.id, data)
@@ -69,10 +66,7 @@ function ResourceDialog({ type, item, courseId, token, onClose, onSaved }) {
         {error && <p className="form-message error" role="alert">{error}</p>}
         <label className="field"><span className="field-label">{document ? 'Tiêu đề' : 'Tên khái niệm'}</span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={document ? 200 : 150} required autoFocus disabled={saving} /></label>
         {document ? <>
-          <p className="inline-help">Backend hiện lưu thông tin tệp, chưa hỗ trợ tải tệp lên. Nhập đường dẫn đã được lưu từ nguồn của bạn.</p>
-          <label className="field"><span className="field-label">Tên tệp</span><input value={fileName} onChange={(event) => setFileName(event.target.value)} maxLength={255} required disabled={saving} /></label>
-          <label className="field"><span className="field-label">Loại tệp</span><input value={fileType} onChange={(event) => setFileType(event.target.value)} maxLength={50} placeholder="application/pdf" required disabled={saving} /></label>
-          <label className="field"><span className="field-label">Đường dẫn lưu trữ</span><input value={storagePath} onChange={(event) => setStoragePath(event.target.value)} maxLength={500} required disabled={saving} /></label>
+          <p className="inline-help">Tệp: {item.fileName}. Bạn có thể đổi tiêu đề tài liệu.</p>
         </> : <>
           <label className="field"><span className="field-label">Mô tả</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1000} rows={3} disabled={saving} /></label>
           <label className="field"><span className="field-label">Mức độ hiểu: {confidence}%</span><input type="range" min="0" max="100" value={confidence} onChange={(event) => setConfidence(event.target.value)} disabled={saving} /></label>
@@ -158,7 +152,6 @@ function CourseDetail() {
   const [revision, setRevision] = useState(0)
   const [dialog, setDialog] = useState(null)
   const [deleting, setDeleting] = useState(null)
-
   useEffect(() => {
     let active = true
     getCourse(token, courseId).then((data) => { if (active) setCourse(data) })
@@ -216,19 +209,27 @@ function CourseDetail() {
         {tab === 'quizzes' && <QuizPanel key={courseId} courseId={courseId} token={token} />}
         {tab !== 'quizzes' && tab !== 'discussions' && <>
         {tab === 'documents' ? <>
-          <p className="inline-help">Tài liệu ở giai đoạn này chỉ là thông tin tệp và đường dẫn lưu trữ.</p>
+          <p className="inline-help">Tải PDF lên để lưu và quản lý tài liệu của khóa học.</p>
           <form className="search-form detail-search" role="search" onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); setDocumentPage(0); setLoading(true) }}><label className="sr-only" htmlFor="document-search">Tìm tài liệu</label><input id="document-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Tìm theo tiêu đề…" /><button className="secondary-button" type="submit">Tìm</button></form>
         </> : <label className="status-filter detail-filter"><span className="field-label">Lọc mức độ hiểu</span><select value={threshold} onChange={(event) => { setThreshold(event.target.value); setLoading(true) }}><option value="">Tất cả khái niệm</option><option value="25">Dưới 25%</option><option value="50">Dưới 50%</option><option value="75">Dưới 75%</option></select></label>}
         {error && <p className="form-message error" role="alert">{error}</p>}
         {loading && <p className="list-state">Đang tải…</p>}
-        {!loading && !error && tab === 'documents' && (documents.length ? <div className="resource-list">{documents.map((item) => <article className="resource-card" key={item.id}><div className="resource-copy"><h3>{item.title}</h3><p>{item.fileName} · {item.fileType}</p><p className="resource-path">{item.storagePath}</p></div><span className="status-badge">{DOCUMENT_LABELS[item.status] ?? item.status}</span><div className="course-actions"><button type="button" onClick={() => setDialog({ type: 'document', item })}>Sửa</button><button type="button" onClick={() => remove('document', item)} disabled={deleting === `document-${item.id}`}>Xóa</button></div></article>)}</div> : <div className="empty-state"><h3>Chưa có tài liệu</h3><p>Thêm thông tin tệp để quản lý tài liệu của khóa học.</p></div>)}
+        {!loading && !error && tab === 'documents' && (documents.length ? <div className="resource-list">{documents.map((item) => <article className="resource-card" key={item.id}>
+          <div className="resource-copy"><h3>{item.title}</h3><p>{item.fileName} · {item.fileType}</p><p className="resource-path">{item.managedFile ? 'PDF đã lưu' : 'Chỉ có thông tin tệp'}</p></div>
+          <span className="status-badge">{DOCUMENT_LABELS[item.status] ?? item.status}</span>
+          <div className="course-actions">
+            <button type="button" onClick={() => setDialog({ type: 'document', item })}>Sửa</button>
+            <button type="button" onClick={() => remove('document', item)} disabled={deleting === `document-${item.id}`}>Xóa</button>
+          </div>
+        </article>)}</div> : <div className="empty-state"><h3>Chưa có tài liệu</h3><p>Tải PDF đầu tiên lên khóa học của bạn.</p></div>)}
         {!loading && !error && tab === 'documents' && documentPages > 1 && <div className="pagination"><span>Trang {documentPage + 1} / {documentPages}</span><div><button className="secondary-button" type="button" disabled={documentPage === 0} onClick={() => { setDocumentPage((page) => page - 1); setLoading(true) }}>Trước</button><button className="secondary-button" type="button" disabled={documentPage + 1 >= documentPages} onClick={() => { setDocumentPage((page) => page + 1); setLoading(true) }}>Sau</button></div></div>}
         {!loading && !error && tab === 'concepts' && (concepts.length ? <div className="resource-list">{concepts.map((item) => <article className="resource-card" key={item.id}><div className="resource-copy"><h3>{item.name}</h3><p>{item.description || 'Chưa có mô tả'}</p><div className="confidence-track" aria-label={`Mức độ hiểu ${item.confidence}%`}><span style={{ width: `${item.confidence}%` }} /></div></div><div className="concept-meta"><strong>{item.confidence}%</strong><span className="status-badge">{CONCEPT_LABELS[item.status] ?? item.status}</span></div><div className="course-actions"><button type="button" onClick={() => setDialog({ type: 'prerequisite', item })}>Tiên quyết</button><button type="button" onClick={() => setDialog({ type: 'concept', item })}>Sửa</button><button type="button" onClick={() => remove('concept', item)} disabled={deleting === `concept-${item.id}`}>Xóa</button></div></article>)}</div> : <div className="empty-state"><h3>Chưa có khái niệm phù hợp</h3><p>Thêm khái niệm hoặc thay đổi mức lọc.</p></div>)}
         </>}
       </div>}
     </div>
     {dialog?.type === 'prerequisite' && <PrerequisiteDialog concept={dialog.item} token={token} onClose={() => setDialog(null)} onSaved={() => setRevision((value) => value + 1)} />}
-    {dialog && dialog.type !== 'prerequisite' && <ResourceDialog key={`${dialog.type}-${dialog.item?.id ?? 'new'}`} {...dialog} courseId={courseId} token={token} onClose={() => setDialog(null)} onSaved={refresh} />}
+    {dialog?.type === 'document' && !dialog.item && <DocumentUploadDialog token={token} courseId={courseId} onClose={() => setDialog(null)} onSaved={() => { setDocumentPage(0); setSearch(''); setSearchInput(''); refresh() }} />}
+    {dialog && dialog.type !== 'prerequisite' && !(dialog.type === 'document' && !dialog.item) && <ResourceDialog key={`${dialog.type}-${dialog.item?.id ?? 'new'}`} {...dialog} courseId={courseId} token={token} onClose={() => setDialog(null)} onSaved={refresh} />}
   </main>
 }
 

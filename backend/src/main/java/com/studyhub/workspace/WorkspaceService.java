@@ -11,18 +11,21 @@ import com.studyhub.user.UserRepository;
 import com.studyhub.workspace.dto.CreateWorkspaceRequest;
 import com.studyhub.workspace.dto.UpdateWorkspaceRequest;
 import com.studyhub.workspace.dto.WorkspaceResponse;
+import com.studyhub.document.storage.DocumentFileLifecycle;
 
 @Service
 public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
     private final ResourceAccessService resourceAccessService;
+    private final DocumentFileLifecycle files;
 
     public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository,
-            ResourceAccessService resourceAccessService) {
+            ResourceAccessService resourceAccessService, DocumentFileLifecycle files) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
         this.resourceAccessService = resourceAccessService;
+        this.files = files;
     }
 
     @Transactional
@@ -53,7 +56,9 @@ public class WorkspaceService {
 
     @Transactional
     public void deleteWorkspace(Long workspaceId, Long currentUserId) {
-        workspaceRepository.delete(resourceAccessService.requireWorkspace(workspaceId, currentUserId));
+        Workspace workspace = resourceAccessService.requireWorkspace(workspaceId, currentUserId);
+        files.deleteWorkspace(workspaceId);
+        workspaceRepository.delete(workspace);
     }
 
 

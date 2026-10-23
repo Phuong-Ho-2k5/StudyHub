@@ -48,7 +48,7 @@ VITE_API_URL=http://localhost:8080
 
 Trong bảng học tập, người dùng có thể tạo, chọn, sửa và xóa Workspace; tạo, sửa và xóa Course trong Workspace; tìm Course theo tên, lọc theo trạng thái và chuyển trang kết quả. Các trạng thái Course là `PLANNED`, `IN_PROGRESS`, `COMPLETED` và `ARCHIVED`. Khi xóa Workspace, backend cũng xóa các Course thuộc Workspace đó.
 
-Trong chi tiết khóa học, người dùng có thể thêm, sửa, xóa và tìm tài liệu theo tiêu đề; thêm, sửa, xóa khái niệm, lọc theo mức độ hiểu và quản lý kiến thức tiên quyết trong cùng khóa học. API Document hiện chỉ lưu metadata gồm tiêu đề, tên/loại tệp và đường dẫn lưu trữ; chưa có API tải tệp lên hoặc tải tệp xuống.
+Trong chi tiết khóa học, người dùng có thể tải PDF lên bằng nút Thêm tài liệu, theo dõi tiến độ, đổi tiêu đề, tìm kiếm và xóa. Upload nhận PDF không có mật khẩu; mặc định giới hạn 20 MB mỗi tệp (backend có thể cấu hình khác). Lỗi được hiển thị trong biểu mẫu và giữ tệp đã chọn để thử lại. Người dùng cũng có thể quản lý khái niệm, mức độ hiểu và kiến thức tiên quyết trong cùng khóa học.
 
 Tab Quiz hỗ trợ tạo, sửa, xóa bài kiểm tra và mở trang riêng để quản lý câu hỏi. Người dùng có thể soạn trắc nghiệm (ít nhất 4 lựa chọn, có thể nhiều đáp án đúng), đúng/sai (2 lựa chọn và 1 đáp án đúng), trả lời ngắn (có đáp án mẫu), và gắn từng câu hỏi với khái niệm trong khóa học. Với câu trả lời ngắn, người soạn ghi rõ định dạng trả lời trong nội dung đề, ví dụ chỉ nhập số nguyên, không ghi đơn vị hoặc thêm khoảng trắng; chưa có trường hướng dẫn riêng. Bài mới ở trạng thái bản nháp; xuất bản sau khi thêm câu hỏi để làm bài.
 

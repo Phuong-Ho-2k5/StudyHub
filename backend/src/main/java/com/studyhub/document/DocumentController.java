@@ -35,7 +35,7 @@ import org.springframework.data.domain.Page;
 
 import jakarta.validation.Valid;
 
-@Tag(name = "Document", description = "Quản lý metadata tài liệu, chưa tải lên hoặc đọc nội dung tệp. Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+@Tag(name = "Document", description = "Quản lý tài liệu và tệp PDF theo owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
 @SecurityRequirement(name = "bearerAuth")
 @ApiResponses({
     @ApiResponse(responseCode = "401", description = "Thiếu hoặc sai JWT, token hết hạn hoặc thông tin đăng nhập không đúng.",
@@ -50,6 +50,21 @@ public class DocumentController {
 
     public DocumentController(DocumentService documentService) {
         this.documentService = documentService;
+    }
+
+    @PostMapping(value = "/courses/{courseId}/documents/upload", consumes = "multipart/form-data")
+    @Operation(summary = "Tải tài liệu PDF lên Course", description = "Nhận title và file PDF. Kiểm tra quyền Course, nội dung PDF và dung lượng cấu hình. Tên lưu do server tạo.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Đã lưu tệp và metadata"),
+        @ApiResponse(responseCode = "400", description = "Thiếu tệp hoặc tiêu đề không hợp lệ"),
+        @ApiResponse(responseCode = "404", description = "Course không tồn tại hoặc không có quyền"),
+        @ApiResponse(responseCode = "413", description = "Tệp vượt giới hạn dung lượng"),
+        @ApiResponse(responseCode = "415", description = "Tệp không phải PDF hợp lệ")
+    })
+    public ResponseEntity<DocumentResponse> upload(@PathVariable Long courseId, @RequestParam String title,
+            @RequestParam org.springframework.web.multipart.MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(documentService.upload(courseId, title, file, currentUser.getId()));
     }
 
     @PostMapping("/courses/{courseId}/documents")

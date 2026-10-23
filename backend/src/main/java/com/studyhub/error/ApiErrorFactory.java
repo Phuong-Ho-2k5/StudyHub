@@ -25,6 +25,7 @@ public class ApiErrorFactory {
             case 404 -> "NOT_FOUND";
             case 405 -> "METHOD_NOT_ALLOWED";
             case 409 -> "CONFLICT";
+            case 413 -> "PAYLOAD_TOO_LARGE";
             case 415 -> "UNSUPPORTED_MEDIA_TYPE";
             default -> status.is5xxServerError() ? "INTERNAL_ERROR" : "HTTP_" + status.value();
         };

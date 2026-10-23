@@ -9,6 +9,14 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: ${DOCUMENT_MAX_FILE_SIZE:20MB}
+      max-request-size: ${DOCUMENT_MAX_REQUEST_SIZE:21MB}
+
+studyhub:
+  storage:
+    root: ${DOCUMENT_STORAGE_ROOT:uploads/documents}
 
 management:
   endpoints:

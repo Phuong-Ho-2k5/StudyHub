@@ -13,7 +13,7 @@ StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phi�
 
 ## Chạy local
 
-Yêu cầu: **JDK 21 trở lên**, **PostgreSQL** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Có thể dùng [Docker Compose](#chạy-bằng-docker) để chạy backend và database thay cho cài Java/PostgreSQL trực tiếp.
+Yêu cầu: **JDK 21 trở lên**, **PostgreSQL có pgvector** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Có thể dùng [Docker Compose](#chạy-bằng-docker) để chạy backend và database thay cho cài Java/PostgreSQL trực tiếp. Compose đã dùng PostgreSQL 17 có pgvector; xem [migration và kiểm thử vector](infra/README.md#m6-t02-pgvector-và-documentchunk).
 
 1. Sao chép `.env.example` thành `.env` tại thư mục gốc và điền tối thiểu:
 
@@ -139,7 +139,7 @@ Backend cung cấp [Swagger UI](http://localhost:8080/swagger-ui.html) và bản
 | Quiz History | `GET /api/users/me/quiz-history` | Lịch sử làm Quiz của user hiện tại, phân trang và trả kết quả đã lưu; xem [quy tắc](backend/README.md#lịch-sử-quiz) |
 | DiscussionPost | `GET/POST /api/courses/{courseId}/discussion-posts`, `GET/PUT/DELETE /api/discussion-posts/{id}` | CRUD bài thảo luận, phân trang, kiểm tra quyền Course và tác giả; xem [quy tắc](backend/README.md#bài-thảo-luận) |
 | Comment | `GET/POST /api/discussion-posts/{postId}/comments`, `GET/PUT/DELETE /api/comments/{id}` | CRUD bình luận, phân trang theo thời gian, kiểm tra quyền Course và tác giả; xem [quy tắc](backend/README.md#bình-luận) |
-| Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Quản lý metadata tài liệu theo Course |
+| Document | `POST /api/courses/{courseId}/documents`, `GET /api/documents`, `GET/PUT/DELETE /api/documents/{id}` | Metadata, upload PDF và dọn tệp theo Course |
 | Concept | `GET/POST /api/courses/{courseId}/concepts`, `GET /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` | Quản lý khái niệm và lọc theo mức độ hiểu |
 | Prerequisite | `GET/POST /api/concepts/{id}/prerequisites`, `DELETE /api/concepts/{id}/prerequisites/{prerequisiteId}` | Quản lý kiến thức tiên quyết |
 | Quiz | `GET/POST /api/courses/{courseId}/quizzes`, `GET/PUT/DELETE /api/quizzes/{id}` | Quản lý Quiz thuộc Course |
@@ -160,4 +160,4 @@ Kết quả là một trang dữ liệu có `content`, `totalElements`, `totalPa
 
 ## Hướng phát triển
 
-`ai-service/` đã có FastAPI chạy độc lập, health check `GET /health` và Swagger UI `/docs`; chưa xử lý tài liệu hay gọi LLM. Document hiện chỉ lưu metadata, chưa hỗ trợ tải tệp. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction. Câu trả lời ngắn (`SHORT_ANSWER`) được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không gọi AI. Frontend giữ nguyên đáp án mẫu và câu trả lời khi gửi, hướng dẫn người soạn ghi định dạng trả lời trong đề; chưa có trường hướng dẫn riêng. Lịch sử cũ giữ nguyên kết quả đã lưu. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Frontend đã bổ sung lịch sử Quiz, thống kê học tập, tiến độ Course, phiên học, thảo luận/bình luận, thông báo và quản trị. AI/RAG chưa có giao diện. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` đã có FastAPI chạy độc lập, health check `GET /health` và Swagger UI `/docs`; chưa xử lý tài liệu hay gọi LLM. Document đã hỗ trợ upload PDF theo quyền Course, lưu trên volume và dọn tệp khi xóa tài nguyên. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction. Câu trả lời ngắn (`SHORT_ANSWER`) được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không gọi AI. Frontend giữ nguyên đáp án mẫu và câu trả lời khi gửi, hướng dẫn người soạn ghi định dạng trả lời trong đề; chưa có trường hướng dẫn riêng. Lịch sử cũ giữ nguyên kết quả đã lưu. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Frontend đã bổ sung lịch sử Quiz, thống kê học tập, tiến độ Course, phiên học, thảo luận/bình luận, thông báo và quản trị. AI/RAG chưa có giao diện. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.

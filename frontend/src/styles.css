@@ -588,3 +588,6 @@ progress.course-progress { appearance: none; overflow: hidden; border: 0; border
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+/* Course document upload */
+.upload-progress { display: grid; gap: 8px; font-size: 14px; }
+.upload-progress progress { width: 100%; accent-color: #536b50; }

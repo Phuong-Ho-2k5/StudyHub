@@ -18,14 +18,18 @@ import java.util.ArrayList;
 import java.util.Locale;
 import jakarta.persistence.criteria.Predicate;
 
+import com.studyhub.document.storage.DocumentFileLifecycle;
+
 @Service
 public class CourseService {
     private final CourseRepository courseRepository;
     private final ResourceAccessService resourceAccessService;
+    private final DocumentFileLifecycle files;
 
-    public CourseService(CourseRepository courseRepository, ResourceAccessService resourceAccessService) {
+    public CourseService(CourseRepository courseRepository, ResourceAccessService resourceAccessService, DocumentFileLifecycle files) {
         this.courseRepository = courseRepository;
         this.resourceAccessService = resourceAccessService;
+        this.files = files;
     }
 
     @Transactional
@@ -74,6 +78,7 @@ public class CourseService {
     @Transactional
     public void deleteCourse(Long courseId, Long currentUserId) {
         Course course = resourceAccessService.requireCourse(courseId, currentUserId);
+        files.deleteCourse(courseId);
         courseRepository.delete(course);
     }
 

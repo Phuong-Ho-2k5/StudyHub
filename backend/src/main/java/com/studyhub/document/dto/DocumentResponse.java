@@ -9,5 +9,6 @@ public record DocumentResponse(
     String fileName,
     String fileType,
     String storagePath,
-    DocumentStatus status
+    DocumentStatus status,
+    boolean managedFile
 ) {}

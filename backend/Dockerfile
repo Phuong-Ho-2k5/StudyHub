@@ -9,7 +9,9 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 RUN groupadd --system studyhub \
-    && useradd --system --gid studyhub studyhub
+    && useradd --system --gid studyhub studyhub \
+    && mkdir -p /app/uploads/documents \
+    && chown -R studyhub:studyhub /app/uploads
 
 COPY --from=build --chown=studyhub:studyhub \
     /app/target/backend-0.0.1-SNAPSHOT.jar app.jar

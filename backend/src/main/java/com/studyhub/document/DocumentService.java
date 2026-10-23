@@ -17,15 +17,36 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.Locale;
 import jakarta.persistence.criteria.Predicate;
+import com.studyhub.document.storage.DocumentStorage;
+import com.studyhub.document.storage.DocumentFileLifecycle;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 public class DocumentService {
     private final DocumentRepository documentRepository;
     private final ResourceAccessService resourceAccessService;
+    private final DocumentStorage storage;
+    private final DocumentFileLifecycle files;
 
-    public DocumentService(DocumentRepository documentRepository, ResourceAccessService resourceAccessService) {
+    public DocumentService(DocumentRepository documentRepository, ResourceAccessService resourceAccessService, DocumentStorage storage, DocumentFileLifecycle files) {
         this.documentRepository = documentRepository;
         this.resourceAccessService = resourceAccessService;
+        this.storage = storage;
+        this.files = files;
+    }
+
+    @Transactional
+    public DocumentResponse upload(Long courseId, String title, MultipartFile file, Long userId) {
+        Course course = resourceAccessService.requireCourse(courseId, userId);
+        if (title == null || title.isBlank() || title.length() > 200)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tiêu đề phải có từ 1 đến 200 ký tự.");
+        var stored = storage.store(file);
+        files.uploaded(stored.key());
+        Document document = new Document(title.trim(), stored.fileName(), "application/pdf", stored.key(), DocumentStatus.READY, course);
+        document.setManagedFile(true);
+        return toResponse(documentRepository.saveAndFlush(document));
     }
 
     @Transactional
@@ -39,6 +60,10 @@ public class DocumentService {
     @Transactional
     public DocumentResponse updateDocument(Long documentId, UpdateDocumentRequest request, Long currentUserId) {
         Document document = resourceAccessService.requireDocument(documentId, currentUserId);
+        if (document.isManagedFile() && (!java.util.Objects.equals(document.getStoragePath(), request.storagePath())
+                || !java.util.Objects.equals(document.getFileName(), request.fileName())
+                || !java.util.Objects.equals(document.getFileType(), request.fileType())))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chỉ có thể đổi tiêu đề của tài liệu đã tải lên.");
         document.setTitle(request.title());
         document.setFileName(request.fileName());
         document.setFileType(request.fileType());
@@ -50,6 +75,7 @@ public class DocumentService {
     public void deleteDocument(Long documentId, Long currentUserId) {
         Document document = resourceAccessService.requireDocument(documentId, currentUserId);
         documentRepository.delete(document);
+        files.deleteDocument(document);
     }
 
     @Transactional (readOnly = true)
@@ -87,6 +113,6 @@ public class DocumentService {
 
     private DocumentResponse toResponse(Document document) {
         return new DocumentResponse(document.getId(), document.getCourse().getId(), document.getTitle(), document.getFileName(),
-                document.getFileType(), document.getStoragePath(), document.getStatus());
+                document.getFileType(), document.getStoragePath(), document.getStatus(), document.isManagedFile());
     }
 }

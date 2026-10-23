@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17
+    image: pgvector/pgvector:0.8.7-pg17
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-studyhub}
       POSTGRES_USER: ${POSTGRES_USER:-studyhub}
@@ -27,6 +27,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Can dien POSTGRES_PASSWORD trong .env}
       JWT_SECRET: ${JWT_SECRET:?Can dien JWT_SECRET trong .env}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-900000}
+      DOCUMENT_STORAGE_ROOT: /app/uploads/documents
+      DOCUMENT_MAX_FILE_SIZE: ${DOCUMENT_MAX_FILE_SIZE:-20MB}
+      DOCUMENT_MAX_REQUEST_SIZE: ${DOCUMENT_MAX_REQUEST_SIZE:-21MB}
+    volumes:
+      - document_files:/app/uploads/documents
     depends_on:
       db:
         condition: service_healthy
@@ -50,3 +55,4 @@ services:
 
 volumes:
   postgres_data:
+  document_files:

@@ -39,7 +39,8 @@ class WorkspaceServiceTest {
         ResourceAccessService resourceAccessService = new ResourceAccessService(workspaceRepository,
                 mock(CourseRepository.class), mock(DocumentRepository.class), mock(ConceptRepository.class),
                 mock(QuizRepository.class));
-        service = new WorkspaceService(workspaceRepository, userRepository, resourceAccessService);
+        service = new WorkspaceService(workspaceRepository, userRepository, resourceAccessService,
+                mock(com.studyhub.document.storage.DocumentFileLifecycle.class));
     }
 
     @Test
