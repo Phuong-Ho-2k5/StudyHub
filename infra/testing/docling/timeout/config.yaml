@@ -1,0 +1,8 @@
+version: 1
+name: extraction-timeout
+protocol: http
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ../mock/default.js
+    default: true

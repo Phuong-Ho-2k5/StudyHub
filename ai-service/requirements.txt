@@ -1,1 +1,2 @@
 fastapi[standard]==0.159.1
+docling[easyocr,vlm]==2.142.1

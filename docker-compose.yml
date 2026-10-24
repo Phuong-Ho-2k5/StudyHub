@@ -30,6 +30,9 @@ services:
       DOCUMENT_STORAGE_ROOT: /app/uploads/documents
       DOCUMENT_MAX_FILE_SIZE: ${DOCUMENT_MAX_FILE_SIZE:-20MB}
       DOCUMENT_MAX_REQUEST_SIZE: ${DOCUMENT_MAX_REQUEST_SIZE:-21MB}
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      AI_SERVICE_TIMEOUT_SECONDS: ${AI_SERVICE_TIMEOUT_SECONDS:-240}
     volumes:
       - document_files:/app/uploads/documents
     depends_on:
@@ -42,6 +45,15 @@ services:
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:8000:8000"
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      AI_MAX_FILE_BYTES: ${AI_MAX_FILE_BYTES:-20971520}
+      AI_MAX_PAGES: ${AI_MAX_PAGES:-200}
+      AI_EXTRACTION_TIMEOUT_SECONDS: ${AI_EXTRACTION_TIMEOUT_SECONDS:-180}
+      AI_PICTURE_DESCRIPTIONS: ${AI_PICTURE_DESCRIPTIONS:-false}
+      AI_PICTURE_MODEL: ${AI_PICTURE_MODEL:-HuggingFaceTB/SmolVLM-256M-Instruct}
+    volumes:
+      - ai_model_cache:/home/appuser/.cache
     healthcheck:
       test:
         - CMD
@@ -56,3 +68,4 @@ services:
 volumes:
   postgres_data:
   document_files:
+  ai_model_cache:

@@ -8,12 +8,12 @@ StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phi�
 | --- | --- |
 | `backend/` | Spring Boot API, xác thực JWT, kiểm tra quyền sở hữu và Flyway migrations |
 | `frontend/` | React/Vite cho xác thực, tài nguyên học tập, Quiz, thống kê/tiến độ, phiên học, thảo luận, thông báo và quản trị |
-| `ai-service/` | FastAPI chạy độc lập, health check và OpenAPI; nền tảng cho AI/RAG |
+| `ai-service/` | FastAPI, Docling PDF/OCR theo trang, mô tả hình tùy chọn và OpenAPI |
 | `infra/` | Tài liệu hạ tầng; Docker Compose hiện nằm ở thư mục gốc |
 
 ## Chạy local
 
-Yêu cầu: **JDK 21 trở lên**, **PostgreSQL có pgvector** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Có thể dùng [Docker Compose](#chạy-bằng-docker) để chạy backend và database thay cho cài Java/PostgreSQL trực tiếp. Compose đã dùng PostgreSQL 17 có pgvector; xem [migration và kiểm thử vector](infra/README.md#m6-t02-pgvector-và-documentchunk).
+Yêu cầu: **JDK 21 trở lên**, **PostgreSQL có pgvector** và **Node.js 20.19+ hoặc 22.12+**. Tạo database `studyhub` trước khi chạy backend. Có thể dùng [Docker Compose](#chạy-bằng-docker) để chạy backend và database thay cho cài Java/PostgreSQL trực tiếp. Compose đã dùng PostgreSQL 17 có pgvector; xem [migration và kiểm thử vector](infra/README.md#pgvector-và-documentchunk).
 
 1. Sao chép `.env.example` thành `.env` tại thư mục gốc và điền tối thiểu:
 
@@ -160,4 +160,4 @@ Kết quả là một trang dữ liệu có `content`, `totalElements`, `totalPa
 
 ## Hướng phát triển
 
-`ai-service/` đã có FastAPI chạy độc lập, health check `GET /health` và Swagger UI `/docs`; chưa xử lý tài liệu hay gọi LLM. Document đã hỗ trợ upload PDF theo quyền Course, lưu trên volume và dọn tệp khi xóa tài nguyên. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction. Câu trả lời ngắn (`SHORT_ANSWER`) được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không gọi AI. Frontend giữ nguyên đáp án mẫu và câu trả lời khi gửi, hướng dẫn người soạn ghi định dạng trả lời trong đề; chưa có trường hướng dẫn riêng. Lịch sử cũ giữ nguyên kết quả đã lưu. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Frontend đã bổ sung lịch sử Quiz, thống kê học tập, tiến độ Course, phiên học, thảo luận/bình luận, thông báo và quản trị. AI/RAG chưa có giao diện. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.
+`ai-service/` đã có FastAPI, health check `GET /health`, Swagger UI `/docs` và pipeline Docling trích xuất PDF/OCR theo trang, bảng và mô tả hình tùy chọn qua `POST /api/documents/{id}/extract`. Chunking, embedding và retrieval chưa được triển khai. Document đã hỗ trợ upload PDF theo quyền Course, lưu trên volume và dọn tệp khi xóa tài nguyên. Backend và frontend Quiz đã hỗ trợ CRUD Question, nộp bài, tính điểm, lưu QuizAttempt và cập nhật confidence của Concept trong cùng transaction. Câu trả lời ngắn (`SHORT_ANSWER`) được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, phân biệt chữ hoa/thường, dấu, khoảng trắng và xuống dòng; không gọi AI. Frontend giữ nguyên đáp án mẫu và câu trả lời khi gửi, hướng dẫn người soạn ghi định dạng trả lời trong đề; chưa có trường hướng dẫn riêng. Lịch sử cũ giữ nguyên kết quả đã lưu. Backend đã có API tổng hợp tiến độ Course theo confidence của Concept và API xem lịch sử Quiz của user hiện tại. Frontend đã bổ sung lịch sử Quiz, thống kê học tập, tiến độ Course, phiên học, thảo luận/bình luận, thông báo và quản trị. AI/RAG chưa có giao diện. Backend phải kiểm tra quyền Course trước khi cho các tính năng theo Course đọc dữ liệu; secret, token và tệp tải lên không được đưa vào Git.

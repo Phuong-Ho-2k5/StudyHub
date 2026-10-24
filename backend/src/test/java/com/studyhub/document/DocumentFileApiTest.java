@@ -26,6 +26,8 @@ class DocumentFileApiTest {
     static { try { ROOT = Files.createTempDirectory("studyhub-files-test-"); } catch (Exception e) { throw new RuntimeException(e); } }
     @DynamicPropertySource static void storage(org.springframework.test.context.DynamicPropertyRegistry registry) {
         registry.add("studyhub.storage.root", ROOT::toString);
+        // Explicitly exclude developer .env credentials from tests.
+        registry.add("studyhub.ai.token", () -> "");
     }
     @Value("${local.server.port}") int port;
     final HttpClient client = HttpClient.newHttpClient();
@@ -67,6 +69,29 @@ class DocumentFileApiTest {
         assertEquals(404, download.statusCode());
         assertEquals(404, request("GET", path, login(), null).statusCode());
         assertEquals(401, request("GET", path, null, null).statusCode());
+    }
+
+    @Test void extractionChecksOwnershipAndNeverReadsLegacyPaths() throws Exception {
+        var doc = tree(upload(token, "test.pdf", "application/pdf", pdf(), "PDF"));
+        String path = "/api/documents/" + doc.path("id").asLong() + "/extract";
+        assertEquals(401, request("POST", path, null, null).statusCode());
+        assertEquals(404, request("POST", path, login(), null).statusCode());
+        var legacy = tree(request("POST", "/api/courses/" + courseId + "/documents", token,
+                Map.of("title", "Legacy", "fileName", "secret.pdf", "fileType", "application/pdf", "storagePath", "C:/private/secret.pdf")));
+        assertEquals(409, request("POST", "/api/documents/" + legacy.path("id").asLong() + "/extract", token, null).statusCode());
+    }
+
+    @Test void extractionFailsClosedWithoutAiCredentials() throws Exception {
+        var doc = tree(upload(token, "test.pdf", "application/pdf", pdf(), "PDF"));
+        var response = request("POST", "/api/documents/" + doc.path("id").asLong() + "/extract", token, null);
+        assertEquals(503, response.statusCode(), response.body());
+    }
+
+    @Test void extractionRejectsMissingManagedFile() throws Exception {
+        var doc = tree(upload(token, "test.pdf", "application/pdf", pdf(), "PDF"));
+        Files.delete(ROOT.resolve(doc.path("storagePath").asText()));
+        var response = request("POST", "/api/documents/" + doc.path("id").asLong() + "/extract", token, null);
+        assertEquals(409, response.statusCode(), response.body());
     }
 
     @Test void rejectsInvalidPdfEmptyFileAndInvalidTitleWithoutLeavingFiles() throws Exception {

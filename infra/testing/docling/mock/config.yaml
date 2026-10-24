@@ -1,0 +1,11 @@
+version: 1
+id: 8d7b22b4-74e3-4137-81f1-f273d476ffec
+name: studyhub-ai-extraction
+slug: studyhub-ai-extraction
+protocol: http
+port: 4900
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

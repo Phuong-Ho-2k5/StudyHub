@@ -1,0 +1,283 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "StudyHub AI Service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/internal/documents/extract": {
+      "post": {
+        "tags": [
+          "Internal extraction"
+        ],
+        "summary": "Extract Document",
+        "operationId": "extract_document_internal_documents_extract_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_extract_document_internal_documents_extract_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid internal service token"
+          },
+          "413": {
+            "description": "File or page limit exceeded"
+          },
+          "415": {
+            "description": "Invalid or protected PDF"
+          },
+          "422": {
+            "description": "Invalid fields or incomplete conversion"
+          },
+          "503": {
+            "description": "Model, OCR or extraction worker unavailable"
+          },
+          "504": {
+            "description": "Conversion timed out"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_extract_document_internal_documents_extract_post": {
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Documentid"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentId",
+          "file"
+        ],
+        "title": "Body_extract_document_internal_documents_extract_post"
+      },
+      "BoundingBox": {
+        "properties": {
+          "l": {
+            "type": "number",
+            "title": "L"
+          },
+          "t": {
+            "type": "number",
+            "title": "T"
+          },
+          "r": {
+            "type": "number",
+            "title": "R"
+          },
+          "b": {
+            "type": "number",
+            "title": "B"
+          },
+          "coordOrigin": {
+            "type": "string",
+            "title": "Coordorigin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "l",
+          "t",
+          "r",
+          "b",
+          "coordOrigin"
+        ],
+        "title": "BoundingBox"
+      },
+      "ContentBlock": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "bbox": {
+            "$ref": "#/components/schemas/BoundingBox"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "descriptionMethod": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "vision_model"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descriptionmethod"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "text",
+          "bbox"
+        ],
+        "title": "ContentBlock"
+      },
+      "ExtractedPage": {
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "title": "Pagenumber"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            },
+            "type": "array",
+            "title": "Blocks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pageNumber",
+          "text",
+          "blocks"
+        ],
+        "title": "ExtractedPage"
+      },
+      "ExtractionResponse": {
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "title": "Documentid"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedPage"
+            },
+            "type": "array",
+            "title": "Pages"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentId",
+          "source",
+          "pageCount",
+          "pages",
+          "warnings"
+        ],
+        "title": "ExtractionResponse"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "UP",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "const": "studyhub-ai",
+            "title": "Service"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "HealthResponse"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-AI-Service-Token"
+      }
+    }
+  }
+}

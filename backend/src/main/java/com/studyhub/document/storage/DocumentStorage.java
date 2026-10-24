@@ -68,6 +68,21 @@ public class DocumentStorage {
         catch (IOException error) { throw new UncheckedIOException(error); }
     }
 
+    public byte[] read(String key) {
+        // Never follow a link outside managed storage, even if its name is a valid UUID.
+        try (var channel = Files.newByteChannel(resolve(key), Set.of(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS));
+                var input = java.nio.channels.Channels.newInputStream(channel)) {
+            if (channel.size() > maxBytes || channel.size() > Integer.MAX_VALUE - 1)
+                throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Tệp vượt quá dung lượng cho phép.");
+            byte[] bytes = input.readNBytes((int) Math.min(maxBytes, Integer.MAX_VALUE - 1) + 1);
+            if (bytes.length > maxBytes)
+                throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Tệp vượt quá dung lượng cho phép.");
+            return bytes;
+        } catch (IOException | IllegalArgumentException unavailable) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tệp tài liệu không còn khả dụng. Hãy tải lên lại.");
+        }
+    }
+
     private Path resolve(String key) {
         if (key == null || !key.matches("[a-f0-9-]{36}\\.pdf")) throw new IllegalArgumentException("Invalid storage key");
         Path resolved = root.resolve(key).normalize();

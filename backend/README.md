@@ -19,7 +19,7 @@ Profile `prod` yêu cầu các biến database được cung cấp qua môi trư
 
 Flyway cũng đọc `db/vendor/{vendor}` theo database đang chạy. V14 nằm trong `db/vendor/postgresql/`, thêm index lịch sử Quiz `(user_id, created_at DESC, id DESC)` và partial index phiên học đã kết thúc `(user_id) WHERE end_time IS NOT NULL`. V14 được áp dụng khi backend khởi động với PostgreSQL. V15 tạo bảng `discussion_posts`, các khóa ngoại và index phục vụ danh sách bài theo Course. V16 tạo bảng `comments`, các khóa ngoại cascade và index phục vụ danh sách bình luận theo bài.
 
-V18 trong `db/vendor/postgresql/` bật pgvector và tạo `document_chunks` để lưu nội dung, trang nguồn, model và embedding có kiểm tra số chiều. PostgreSQL phải cài pgvector trước khi chạy migration; Docker Compose đã có sẵn extension trong image. Xem [cấu hình và kiểm thử PostgreSQL thật](../infra/README.md#m6-t02-pgvector-và-documentchunk). Test H2 mặc định không chạy V18; dùng `.\infra\test-pgvector.ps1` từ gốc repo để chạy cả bộ backend và test vector.
+V18 trong `db/vendor/postgresql/` bật pgvector và tạo `document_chunks` để lưu nội dung, trang nguồn, model và embedding có kiểm tra số chiều. PostgreSQL phải cài pgvector trước khi chạy migration; Docker Compose đã có sẵn extension trong image. Xem [cấu hình và kiểm thử PostgreSQL thật](../infra/README.md#pgvector-và-documentchunk). Test H2 mặc định không chạy V18; dùng `.\infra\test-pgvector.ps1` từ gốc repo để chạy cả bộ backend và test vector.
 
 ## Chạy backend
 

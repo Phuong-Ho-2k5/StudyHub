@@ -1,0 +1,21 @@
+simulation: studyhub-document-extraction
+routing: path
+mocks:
+  - routeKey: success
+    path: ./mock/config.yaml
+  - routeKey: invalid
+    path: ./invalid.js
+  - routeKey: html-error
+    path: ./error.js
+  - routeKey: unavailable
+    path: ./unavailable/config.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            error: {status_code: 503}
+  - routeKey: timeout
+    path: ./timeout/config.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            latency: {delay_ms: 2000}

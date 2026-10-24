@@ -1,6 +1,6 @@
 # Hạ tầng
 
-M6-T02A–E bổ sung volume `document_files` cho backend và [CI ba thành phần](../.github/workflows/ci.yml).
+Backend lưu tài liệu trong volume `document_files`; [CI ba thành phần](../.github/workflows/ci.yml) kiểm tra và build dự án.
 
 Docker Compose hiện nằm tại `docker-compose.yml` ở thư mục gốc; Dockerfile backend nằm tại `backend/Dockerfile`. Chạy các lệnh Compose từ thư mục gốc để dùng đúng file `.env` và build context.
 
@@ -8,7 +8,7 @@ Compose khởi động backend Spring Boot, PostgreSQL 17 có pgvector (`pgvecto
 
 Xem [hướng dẫn Docker](../README.md#chạy-bằng-docker) để cấu hình và kiểm tra. Không lưu dữ liệu runtime hoặc secret trong repository.
 
-## M6-T02: pgvector và DocumentChunk
+## pgvector và DocumentChunk
 
 Migration PostgreSQL `V18__create_document_chunks.sql` bật extension `vector` và tạo bảng `document_chunks`. Flyway đã đọc `db/vendor/{vendor}` nên migration này không chạy trên H2. Không sửa migration cũ; Hibernate tiếp tục dùng `ddl-auto: validate`.
 
@@ -31,9 +31,9 @@ docker compose exec db psql -U studyhub -d studyhub -c '\d document_chunks'
 
 Mỗi chunk có nội dung, thứ tự từ 0, trang nguồn từ 1 (hoặc cả hai trang NULL), model, số chiều và vector. Khóa `(document_id, chunk_index)` chống trùng; xóa Document/Course/Workspace dọn chunk qua cascade. Course và owner được suy ra qua quan hệ hiện có, không sao chép vào chunk.
 
-M6-T01B chưa chốt model/dimension. Vì vậy `embedding` dùng kiểu `vector` không cố định số chiều, với CHECK `vector_dims(embedding) = embedding_dimensions`. Mỗi bản ghi bắt buộc có model và số chiều dương. Ràng buộc này kiểm tra từng bản ghi, không bảo đảm các bản ghi cùng model có cùng số chiều. M6-T05/M6-T06 phải validate contract provider và lọc đúng model/dimension trước khi tính khoảng cách, đồng thời kiểm tra quyền Course. Không so sánh embedding khác model dù số chiều giống nhau.
+Model và số chiều embedding chưa được chốt. Vì vậy `embedding` dùng kiểu `vector` không cố định số chiều, với CHECK `vector_dims(embedding) = embedding_dimensions`. Mỗi bản ghi bắt buộc có model và số chiều dương. Ràng buộc này kiểm tra từng bản ghi, không bảo đảm các bản ghi cùng model có cùng số chiều. Pipeline sinh embedding và tìm kiếm phải kiểm tra contract provider và lọc đúng model/dimension trước khi tính khoảng cách, đồng thời kiểm tra quyền Course. Không so sánh embedding khác model dù số chiều giống nhau.
 
-Chưa tạo ANN index: cột vector có thể dùng exact search; sau khi chốt model/dimension mới thêm expression/partial index phù hợp. Sinh embedding, ingestion/versioning và API search thuộc các task tiếp theo.
+Chưa tạo ANN index: cột vector có thể dùng exact search; sau khi chốt model/dimension mới thêm expression/partial index phù hợp. Sinh embedding, ingestion/versioning và API search sẽ được triển khai sau.
 
 ## Kiểm thử PostgreSQL thật
 

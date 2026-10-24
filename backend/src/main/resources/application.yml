@@ -15,6 +15,10 @@ spring:
       max-request-size: ${DOCUMENT_MAX_REQUEST_SIZE:21MB}
 
 studyhub:
+  ai:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    token: ${AI_SERVICE_TOKEN:}
+    timeout-seconds: ${AI_SERVICE_TIMEOUT_SECONDS:240}
   storage:
     root: ${DOCUMENT_STORAGE_ROOT:uploads/documents}
 

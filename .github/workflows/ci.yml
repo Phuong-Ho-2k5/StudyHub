@@ -28,6 +28,7 @@ jobs:
       PGVECTOR_TEST_URL: jdbc:postgresql://localhost:5432/studyhub_test
       PGVECTOR_TEST_USER: studyhub_test
       PGVECTOR_TEST_PASSWORD: ci_test_only
+      AI_SIMULATION_URL: http://127.0.0.1:4900
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -36,6 +37,22 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Postman CLI for local dependency simulation
+        run: npm install --global postman-cli@1.73.0
+      - name: Start AI extraction simulation
+        run: |
+          postman simulation run infra/testing/docling/extraction.sim.yaml --port 4900 --output ndjson > "$RUNNER_TEMP/docling-simulation.ndjson" 2> "$RUNNER_TEMP/docling-simulation.err" &
+          for attempt in $(seq 1 30); do
+            if node -e "require('net').connect(4900, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/docling-simulation.err"
+          exit 1
       - name: Backend tests, PostgreSQL migrations and build
         working-directory: backend
         run: bash mvnw -B -Ppgvector-it verify
@@ -74,7 +91,7 @@ jobs:
 
   ai-service:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: ai-service
@@ -85,6 +102,7 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: ai-service/requirements*.txt
+      - run: python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q --junitxml=test-results.xml
       - name: Build AI service image
