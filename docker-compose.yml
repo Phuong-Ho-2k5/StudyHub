@@ -52,6 +52,9 @@ services:
       AI_EXTRACTION_TIMEOUT_SECONDS: ${AI_EXTRACTION_TIMEOUT_SECONDS:-180}
       AI_PICTURE_DESCRIPTIONS: ${AI_PICTURE_DESCRIPTIONS:-false}
       AI_PICTURE_MODEL: ${AI_PICTURE_MODEL:-HuggingFaceTB/SmolVLM-256M-Instruct}
+      AI_CHUNK_TOKENIZER_MODEL: ${AI_CHUNK_TOKENIZER_MODEL:-intfloat/multilingual-e5-small}
+      AI_CHUNK_MAX_TOKENS: ${AI_CHUNK_MAX_TOKENS:-384}
+      AI_CHUNK_OVERLAP_TOKENS: ${AI_CHUNK_OVERLAP_TOKENS:-48}
     volumes:
       - ai_model_cache:/home/appuser/.cache
     healthcheck:

@@ -6,11 +6,12 @@ import pytest
 from fastapi import HTTPException
 
 
-def slow_worker(settings, payload, document_id, source, connection):
+def slow_worker(settings, payload, document_id, source, connection, include_chunks=False):
     time.sleep(10)
 
 
-def test_overall_deadline_includes_slow_model_work(monkeypatch):
+@pytest.mark.parametrize("include_chunks", [False, True])
+def test_overall_deadline_includes_slow_model_work(monkeypatch, include_chunks):
     from app.ingestion import docling_parser
     from app.ingestion.settings import ExtractionSettings
     from docling_core.types.doc import DoclingDocument, Size
@@ -29,6 +30,6 @@ def test_overall_deadline_includes_slow_model_work(monkeypatch):
     monkeypatch.setattr(extractor, "_load_converter", lambda: SlowConverter())
     started = time.monotonic()
     with pytest.raises(HTTPException) as error:
-        extractor.extract(b"%PDF-", 42, "slow.pdf")
+        extractor.extract(b"%PDF-", 42, "slow.pdf", include_chunks=include_chunks)
     assert error.value.status_code == 504
     assert time.monotonic() - started < 5

@@ -84,7 +84,7 @@ Backend kiểm tra owner, chỉ đọc tệp managed đã upload và gửi multi
 
 Lần trích xuất đầu tải model công khai từ Hugging Face và model OCR; nội dung PDF được xử lý local. Cần mạng để tải lần đầu và đủ RAM cho PyTorch/Docling. Container dùng CPU PyTorch và cache ở named volume `ai_model_cache`; không tải model khi `/health` được gọi. Nếu lần đầu vượt deadline, có thể tải lại yêu cầu sau khi chuẩn bị cache. `docker compose down -v` xóa cache cùng các volume khác.
 
-OCR/bố cục không bảo đảm đọc đúng mọi tài liệu. Hình chưa được mô tả có cảnh báo `PAGE_n_PICTURE_DESCRIPTION_UNAVAILABLE`; trang không có chữ có `PAGE_n_NO_TEXT`. Mô tả hình nằm riêng ở `description`, đánh dấu `descriptionMethod=vision_model`, không trộn vào `page.text`. Pipeline giữ tham chiếu hình và tọa độ trong PDF; không cung cấp ảnh crop hay API download PDF. Chưa chunk, embedding hoặc lưu kết quả ingestion.
+OCR/bố cục không bảo đảm đọc đúng mọi tài liệu. Hình chưa được mô tả có cảnh báo `PAGE_n_PICTURE_DESCRIPTION_UNAVAILABLE`; trang không có chữ có `PAGE_n_NO_TEXT`. Mô tả hình nằm riêng ở `description`, đánh dấu `descriptionMethod=vision_model`, không trộn vào `page.text`. Pipeline giữ tham chiếu hình và tọa độ trong PDF; không cung cấp ảnh crop hay API download PDF. Mặc định chỉ extract; bật chunking như mục M6-T04 bên dưới. Chưa embedding hoặc lưu kết quả ingestion.
 
 Chạy kiểm thử có model thật (cần tải model; CPU chậm hơn unit test):
 
@@ -97,6 +97,14 @@ Remove-Item Env:RUN_DOCLING_VLM_TESTS
 ```
 
 Linux dùng `TEST_FONT_PATH` nếu không có DejaVuSans tại đường dẫn mặc định trong smoke test.
+
+## Chunking (M6-T04)
+
+Gọi `POST /api/documents/{documentId}/extract?includeChunks=true` qua backend để nhận thêm `chunks`. API nội bộ dùng form `includeChunks=true`. Docling HybridChunker chạy trên cấu trúc tài liệu gốc, giữ heading context, nguồn trang/block/bbox và overlap có giới hạn token. Text OCR và mô tả hình sinh từ model vẫn được phân biệt.
+
+Cấu hình AI: `AI_CHUNK_TOKENIZER_MODEL=intfloat/multilingual-e5-small`, `AI_CHUNK_MAX_TOKENS=384`, `AI_CHUNK_OVERLAP_TOKENS=48`. Tokenizer chỉ tải khi yêu cầu chunk; health và extraction-only không cần tokenizer. Đây là lựa chọn tokenizer ban đầu, cần khớp embedding model khi triển khai M6-T05.
+
+Chưa embedding, lưu chunk vào DB hoặc đổi trạng thái Document.
 
 ## Kết nối backend
 

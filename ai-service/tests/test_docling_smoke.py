@@ -27,7 +27,8 @@ def test_real_docling_ocr_reads_scanned_pdf(monkeypatch):
     with TestClient(app) as client:
         response = client.post(
             "/internal/documents/extract", headers={"X-AI-Service-Token": "smoke-only-token"},
-            data={"documentId": "42"}, files={"file": ("../../scan.pdf", output.getvalue(), "application/pdf")},
+            data={"documentId": "42", "includeChunks": "true"},
+            files={"file": ("../../scan.pdf", output.getvalue(), "application/pdf")},
         )
     assert response.status_code == 200, response.text
     result = ExtractionResponse.model_validate(response.json())
@@ -36,6 +37,11 @@ def test_real_docling_ocr_reads_scanned_pdf(monkeypatch):
     assert "StudyHub" in result.pages[0].text
     assert "tiếng Việt" in result.pages[0].text
     assert result.pages[0].blocks[0].bbox.r > 0
+    assert result.chunks
+    assert any("tiếng Việt" in chunk.content for chunk in result.chunks)
+    assert all(chunk.documentId == 42 and chunk.source == "scan.pdf" for chunk in result.chunks)
+    assert all(chunk.sourceRefs and chunk.pageStart == chunk.pageEnd == 1 for chunk in result.chunks)
+    assert all(chunk.tokenCount <= 384 for chunk in result.chunks)
 
 
 @pytest.mark.skipif(os.getenv("RUN_DOCLING_VLM_TESTS") != "1", reason="Set RUN_DOCLING_VLM_TESTS=1 for local VLM")

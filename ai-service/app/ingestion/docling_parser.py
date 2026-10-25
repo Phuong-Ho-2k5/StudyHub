@@ -113,7 +113,7 @@ class DoclingExtractor:
             format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)},
         )
 
-    def extract(self, payload: bytes, document_id: int, source: str) -> ExtractionResponse:
+    def extract(self, payload: bytes, document_id: int, source: str, include_chunks: bool = False) -> ExtractionResponse:
         if not self._lock.acquire(blocking=False):
             raise HTTPException(503, "Extraction is busy; retry later.")
         receiver = sender = worker = None
@@ -122,7 +122,7 @@ class DoclingExtractor:
             receiver, sender = context.Pipe(duplex=False)
             worker = context.Process(
                 target=_extract_in_worker,
-                args=(self.settings, payload, document_id, source, sender),
+                args=(self.settings, payload, document_id, source, sender) + ((True,) if include_chunks else ()),
                 daemon=True,
             )
             # A process boundary makes model loading and VLM work cancellable too.
@@ -150,7 +150,7 @@ class DoclingExtractor:
                 sender.close()
             self._lock.release()
 
-    def _convert(self, payload: bytes, document_id: int, source: str) -> ExtractionResponse:
+    def _convert(self, payload: bytes, document_id: int, source: str, include_chunks: bool = False) -> ExtractionResponse:
         try:
             from docling.datamodel.base_models import ConversionStatus, DocumentStream
 
@@ -166,7 +166,14 @@ class DoclingExtractor:
                 raise HTTPException(504, "Document extraction timed out.")
             if result.status != ConversionStatus.SUCCESS:
                 raise HTTPException(422, "Document could not be fully extracted.")
-            return map_document(result.document, document_id, source)
+            response = map_document(result.document, document_id, source)
+            if include_chunks:
+                from .chunking import ChunkingError, ChunkingSettings, chunk_document
+                try:
+                    response.chunks = chunk_document(result.document, document_id, source, ChunkingSettings.from_env())
+                except ChunkingError:
+                    raise HTTPException(422, "Document cannot be chunked with valid sources and token limits.") from None
+            return response
         except HTTPException:
             raise
         except Exception:
@@ -176,9 +183,9 @@ class DoclingExtractor:
             raise HTTPException(503, "Document extraction is unavailable; check model and OCR setup.") from None
 
 
-def _extract_in_worker(settings, payload, document_id, source, connection):
+def _extract_in_worker(settings, payload, document_id, source, connection, include_chunks=False):
     try:
-        result = DoclingExtractor(settings)._convert(payload, document_id, source)
+        result = DoclingExtractor(settings)._convert(payload, document_id, source, include_chunks=include_chunks)
         connection.send((200, result.model_dump()))
     except HTTPException as error:
         connection.send((error.status_code, error.detail))

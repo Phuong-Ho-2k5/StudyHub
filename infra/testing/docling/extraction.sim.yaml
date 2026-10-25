@@ -5,6 +5,8 @@ mocks:
     path: ./mock/config.yaml
   - routeKey: invalid
     path: ./invalid.js
+  - routeKey: no-chunks
+    path: ./no-chunks.js
   - routeKey: html-error
     path: ./error.js
   - routeKey: unavailable

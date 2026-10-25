@@ -2,6 +2,8 @@
 
 StudyHub là dự án quản lý học tập theo **Workspace → Course**. Phiên bản hiện tại có đăng ký, đăng nhập bằng JWT, CRUD Workspace và Course, cùng quản lý metadata Document, Concept và Quiz trong từng Course. Backend hỗ trợ Question, nộp Quiz, tính điểm, lưu kết quả tổng hợp mỗi lần nộp vào QuizAttempt và quản lý bài thảo luận cùng bình luận trong Course. Giao diện React hỗ trợ các luồng Workspace/Course/Document/Concept, quản lý Quiz/câu hỏi, làm bài và xem kết quả sau đăng nhập. AI/RAG nằm trong kế hoạch phát triển.
 
+M6-T04 hỗ trợ Docling HybridChunker với heading context và nguồn qua `POST /api/documents/{id}/extract?includeChunks=true`.
+
 ## Cấu trúc dự án
 
 | Thư mục | Vai trò hiện tại |

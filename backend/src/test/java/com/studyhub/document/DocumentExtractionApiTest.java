@@ -53,6 +53,16 @@ class DocumentExtractionApiTest {
         assertEquals(document.id().longValue(), result.path("documentId").asLong());
         assertEquals("Bài học.pdf", result.path("source").asText());
         assertEquals("StudyHub extracted text", result.path("pages").get(0).path("text").asText());
+        var chunked = call("/api/documents/" + document.id() + "/extract?includeChunks=true", token, null, 200);
+        assertEquals("Bài học.pdf", chunked.path("chunks").get(0).path("source").asText());
+        assertEquals("StudyHub", chunked.path("chunks").get(0).path("headings").get(0).asText());
+        call("/api/documents/" + document.id() + "/extract?includeChunks=true", null, null, 401);
+
+        String otherEmail = UUID.randomUUID() + "@example.com";
+        call("/api/auth/register", null, Map.of("name", "Other", "email", otherEmail, "password", "Secret123!"), 201);
+        String otherToken = call("/api/auth/login", null, Map.of("email", otherEmail, "password", "Secret123!"), 200)
+                .path("accessToken").asText();
+        call("/api/documents/" + document.id() + "/extract?includeChunks=true", otherToken, null, 404);
         assertEquals(DocumentStatus.READY, documents.getDocument(document.id(), userId).status());
     }
 

@@ -27,6 +27,7 @@ public class DocumentExtractionController {
     @Operation(summary = "Trích xuất PDF bằng Docling",
         description = "Kiểm tra owner rồi đọc PDF đã upload. Trả text, bảng và hình theo trang, vị trí và cảnh báo. "
             + "OCR tiếng Việt/Anh; mô tả hình do mô hình sinh được đánh dấu riêng nếu đã bật. "
+            + "includeChunks=true chia nội dung bằng Docling HybridChunker, kèm heading context và nguồn. "
             + "Xử lý đồng bộ; không lưu chunk/vector và không đổi trạng thái Document.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Đã trích xuất nội dung theo trang"),
@@ -41,9 +42,10 @@ public class DocumentExtractionController {
         @ApiResponse(responseCode = "504", description = "Trích xuất quá thời gian cho phép")
     })
     public DocumentExtractionResponse extract(@PathVariable Long documentId,
+            @RequestParam(defaultValue = "false") boolean includeChunks,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         // The short database transaction ends before model/network work begins.
         var source = documents.readForExtraction(documentId, currentUser.getId());
-        return ai.extract(source.id(), source.fileName(), source.bytes());
+        return ai.extract(source.id(), source.fileName(), source.bytes(), includeChunks);
     }
 }

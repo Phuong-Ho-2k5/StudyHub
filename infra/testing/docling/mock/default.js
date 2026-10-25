@@ -16,6 +16,7 @@ const server = http.createServer(async (req, res) => {
   const raw = typeof body === 'string' ? body : JSON.stringify(body);
   const match = raw.match(/name="documentId"\r\n\r\n(\d+)/);
   const documentId = match ? Number(match[1]) : Number(body.documentId);
+  const includeChunks = /name="includeChunks"\r\n\r\ntrue/.test(raw) || body.includeChunks === 'true';
   if (!documentId || !raw.includes('%PDF-') || !req.headers['content-type']?.startsWith('multipart/form-data; boundary=')) {
     res.writeHead(422); return res.end(JSON.stringify({ detail: 'Invalid multipart PDF' }));
   }
@@ -27,6 +28,14 @@ const server = http.createServer(async (req, res) => {
       bbox: { l: 10, t: 20, r: 200, b: 80, coordOrigin: 'TOPLEFT' },
       description: null, descriptionMethod: null,
     }] }], warnings: [],
+    ...(includeChunks ? { chunks: [{
+      documentId, source: 'document.pdf', chunkIndex: 0,
+      content: 'StudyHub extracted text', embeddingText: 'StudyHub\nStudyHub extracted text',
+      headings: ['StudyHub'], pageStart: 1, pageEnd: 1, blockIds: ['#/texts/0'],
+      sourceRefs: [{blockId: '#/texts/0', pageNumber: 1,
+        bbox: {l: 10, t: 20, r: 200, b: 80, coordOrigin: 'TOPLEFT'}}],
+      overlapContent: '', overlapSourceRefs: [], tokenCount: 8, tokenizerModel: 'simulation-tokenizer',
+    }] } : {}),
   }));
 });
 server.listen(process.env.PORT || 4900);

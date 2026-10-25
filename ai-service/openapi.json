@@ -94,6 +94,11 @@
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "File"
+          },
+          "includeChunks": {
+            "type": "boolean",
+            "title": "Includechunks",
+            "default": false
           }
         },
         "type": "object",
@@ -135,6 +140,28 @@
           "coordOrigin"
         ],
         "title": "BoundingBox"
+      },
+      "ChunkSourceReference": {
+        "properties": {
+          "blockId": {
+            "type": "string",
+            "title": "Blockid"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "title": "Pagenumber"
+          },
+          "bbox": {
+            "$ref": "#/components/schemas/BoundingBox"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blockId",
+          "pageNumber",
+          "bbox"
+        ],
+        "title": "ChunkSourceReference"
       },
       "ContentBlock": {
         "properties": {
@@ -185,6 +212,95 @@
           "bbox"
         ],
         "title": "ContentBlock"
+      },
+      "DocumentChunk": {
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "title": "Documentid"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "chunkIndex": {
+            "type": "integer",
+            "title": "Chunkindex"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "embeddingText": {
+            "type": "string",
+            "title": "Embeddingtext"
+          },
+          "headings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Headings"
+          },
+          "pageStart": {
+            "type": "integer",
+            "title": "Pagestart"
+          },
+          "pageEnd": {
+            "type": "integer",
+            "title": "Pageend"
+          },
+          "blockIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blockids"
+          },
+          "sourceRefs": {
+            "items": {
+              "$ref": "#/components/schemas/ChunkSourceReference"
+            },
+            "type": "array",
+            "title": "Sourcerefs"
+          },
+          "overlapContent": {
+            "type": "string",
+            "title": "Overlapcontent",
+            "default": ""
+          },
+          "overlapSourceRefs": {
+            "items": {
+              "$ref": "#/components/schemas/ChunkSourceReference"
+            },
+            "type": "array",
+            "title": "Overlapsourcerefs"
+          },
+          "tokenCount": {
+            "type": "integer",
+            "title": "Tokencount"
+          },
+          "tokenizerModel": {
+            "type": "string",
+            "title": "Tokenizermodel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentId",
+          "source",
+          "chunkIndex",
+          "content",
+          "embeddingText",
+          "headings",
+          "pageStart",
+          "pageEnd",
+          "blockIds",
+          "sourceRefs",
+          "tokenCount",
+          "tokenizerModel"
+        ],
+        "title": "DocumentChunk"
       },
       "ExtractedPage": {
         "properties": {
@@ -239,6 +355,20 @@
             },
             "type": "array",
             "title": "Warnings"
+          },
+          "chunks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentChunk"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunks"
           }
         },
         "type": "object",

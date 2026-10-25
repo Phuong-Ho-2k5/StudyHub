@@ -27,6 +27,25 @@ class DocumentExtractionClientTest {
         assertEquals(10, result.pages().getFirst().blocks().getFirst().bbox().l());
     }
 
+    @Test void requestsChunksAndPreservesContextAndTrustedSource() {
+        var result = client("success", 10).extract(42L, "Bài học.pdf", pdf, true);
+        assertEquals(1, result.chunks().size());
+        var chunk = result.chunks().getFirst();
+        assertEquals("Bài học.pdf", chunk.source());
+        assertEquals(42L, chunk.documentId());
+        assertEquals("StudyHub extracted text", chunk.content());
+        assertEquals("StudyHub\nStudyHub extracted text", chunk.embeddingText());
+        assertEquals(java.util.List.of("StudyHub"), chunk.headings());
+        assertEquals(1, chunk.sourceRefs().getFirst().pageNumber());
+        assertEquals("#/texts/0", chunk.blockIds().getFirst());
+    }
+
+    @Test void rejectsMissingRequestedChunks() {
+        var error = assertThrows(ResponseStatusException.class,
+                () -> client("no-chunks", 10).extract(42L, "lecture.pdf", pdf, true));
+        assertEquals(502, error.getStatusCode().value());
+    }
+
     @ParameterizedTest
     @CsvSource({"invalid,502", "html-error,502", "unavailable,503", "timeout,504"})
     void translatesUpstreamFailuresWithoutLeakingDetails(String route, int status) {

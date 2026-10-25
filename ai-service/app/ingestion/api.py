@@ -55,7 +55,8 @@ def get_extractor(settings: ExtractionSettings) -> DoclingExtractor:
     return DoclingExtractor(settings)
 
 
-@router.post("/extract", response_model=ExtractionResponse, dependencies=[Security(service_key)], responses={
+@router.post("/extract", response_model=ExtractionResponse,
+             dependencies=[Security(service_key)], responses={
     401: {"description": "Invalid internal service token"},
     413: {"description": "File or page limit exceeded"},
     415: {"description": "Invalid or protected PDF"},
@@ -63,7 +64,8 @@ def get_extractor(settings: ExtractionSettings) -> DoclingExtractor:
     503: {"description": "Model, OCR or extraction worker unavailable"},
     504: {"description": "Conversion timed out"},
 })
-def extract_document(documentId: int = Form(gt=0), file: UploadFile = File()) -> ExtractionResponse:
+def extract_document(documentId: int = Form(gt=0), file: UploadFile = File(),
+                     includeChunks: bool = Form(False)) -> ExtractionResponse:
     settings = ExtractionSettings.from_env()
     payload = file.file.read(settings.max_file_bytes + 1)
     if len(payload) > settings.max_file_bytes:
@@ -83,4 +85,5 @@ def extract_document(documentId: int = Form(gt=0), file: UploadFile = File()) ->
     except pdfium.PdfiumError:
         raise HTTPException(415, "Invalid or password-protected PDF.") from None
     source = (file.filename or "document.pdf").replace("\\", "/").rsplit("/", 1)[-1]
-    return get_extractor(settings).extract(payload, documentId, source)
+    extractor = get_extractor(settings)
+    return extractor.extract(payload, documentId, source, include_chunks=True) if includeChunks else extractor.extract(payload, documentId, source)
