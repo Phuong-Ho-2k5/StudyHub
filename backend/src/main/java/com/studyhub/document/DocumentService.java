@@ -111,14 +111,14 @@ public class DocumentService {
         return documentRepository.findAll(filter, pageable).map(this::toResponse);
     }
 
-    public record ExtractionSource(Long id, String fileName, byte[] bytes) {}
+    public record ExtractionSource(Long id, String fileName, String storagePath, byte[] bytes) {}
 
     @Transactional(readOnly = true)
     public ExtractionSource readForExtraction(Long documentId, Long userId) {
         Document document = resourceAccessService.requireDocument(documentId, userId);
         if (!document.isManagedFile())
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Tài liệu chỉ có metadata. Hãy tải PDF lên trước.");
-        return new ExtractionSource(document.getId(), document.getFileName(), storage.read(document.getStoragePath()));
+        return new ExtractionSource(document.getId(), document.getFileName(), document.getStoragePath(), storage.read(document.getStoragePath()));
     }
 
     private DocumentResponse toResponse(Document document) {

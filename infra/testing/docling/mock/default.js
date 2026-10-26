@@ -1,6 +1,31 @@
 // Based on ai-service/openapi.json. Validates the multipart contract used by Spring.
 const http = require('http');
 const server = http.createServer(async (req, res) => {
+  if (req.method === 'POST' && req.url === '/internal/embeddings') {
+    if (req.headers['x-ai-service-token'] !== 'simulation-token') {
+      res.writeHead(401); return res.end();
+    }
+    let data = req.body;
+    if (data === undefined) {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      data = Buffer.concat(chunks).toString('utf8');
+    }
+    try { if (typeof data === 'string') data = JSON.parse(data); } catch {
+      res.writeHead(422); return res.end();
+    }
+    if (!req.headers['content-type']?.startsWith('application/json') ||
+        !Array.isArray(data.texts) || !data.texts.length || data.texts.length > 32 ||
+        data.texts.some(text => typeof text !== 'string' || !text.trim() || text.length > 16384)) {
+      res.writeHead(422); return res.end();
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+      model: 'intfloat/multilingual-e5-small@614241f622f53c4eeff9890bdc4f31cfecc418b3',
+      dimensions: 384,
+      vectors: data.texts.map(() => [1, ...Array(383).fill(0)]),
+    }));
+  }
   if (req.method !== 'POST' || req.url !== '/internal/documents/extract') {
     res.writeHead(501); return res.end();
   }
@@ -34,7 +59,7 @@ const server = http.createServer(async (req, res) => {
       headings: ['StudyHub'], pageStart: 1, pageEnd: 1, blockIds: ['#/texts/0'],
       sourceRefs: [{blockId: '#/texts/0', pageNumber: 1,
         bbox: {l: 10, t: 20, r: 200, b: 80, coordOrigin: 'TOPLEFT'}}],
-      overlapContent: '', overlapSourceRefs: [], tokenCount: 8, tokenizerModel: 'simulation-tokenizer',
+      overlapContent: '', overlapSourceRefs: [], tokenCount: 8, tokenizerModel: 'intfloat/multilingual-e5-small',
     }] } : {}),
   }));
 });

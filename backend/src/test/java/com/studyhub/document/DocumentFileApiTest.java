@@ -81,6 +81,17 @@ class DocumentFileApiTest {
         assertEquals(409, request("POST", "/api/documents/" + legacy.path("id").asLong() + "/extract", token, null).statusCode());
     }
 
+    @Test void ingestionRequiresAuthenticationOwnershipAndManagedFile() throws Exception {
+        var doc = tree(upload(token, "test.pdf", "application/pdf", pdf(), "PDF"));
+        String path = "/api/documents/" + doc.path("id").asLong() + "/ingest";
+        assertEquals(401, request("POST", path, null, null).statusCode());
+        assertEquals(404, request("POST", path, login(), null).statusCode());
+        assertEquals(503, request("POST", path, token, null).statusCode());
+        var legacy = tree(request("POST", "/api/courses/" + courseId + "/documents", token,
+                Map.of("title", "Legacy", "fileName", "secret.pdf", "fileType", "application/pdf", "storagePath", "C:/private/secret.pdf")));
+        assertEquals(409, request("POST", "/api/documents/" + legacy.path("id").asLong() + "/ingest", token, null).statusCode());
+    }
+
     @Test void extractionFailsClosedWithoutAiCredentials() throws Exception {
         var doc = tree(upload(token, "test.pdf", "application/pdf", pdf(), "PDF"));
         var response = request("POST", "/api/documents/" + doc.path("id").asLong() + "/extract", token, null);

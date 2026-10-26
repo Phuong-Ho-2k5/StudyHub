@@ -33,6 +33,9 @@ services:
       AI_SERVICE_URL: http://ai-service:8000
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
       AI_SERVICE_TIMEOUT_SECONDS: ${AI_SERVICE_TIMEOUT_SECONDS:-240}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-intfloat/multilingual-e5-small}
+      AI_EMBEDDING_REVISION: ${AI_EMBEDDING_REVISION:-614241f622f53c4eeff9890bdc4f31cfecc418b3}
+      AI_EMBEDDING_DIMENSIONS: ${AI_EMBEDDING_DIMENSIONS:-384}
     volumes:
       - document_files:/app/uploads/documents
     depends_on:
@@ -55,6 +58,10 @@ services:
       AI_CHUNK_TOKENIZER_MODEL: ${AI_CHUNK_TOKENIZER_MODEL:-intfloat/multilingual-e5-small}
       AI_CHUNK_MAX_TOKENS: ${AI_CHUNK_MAX_TOKENS:-384}
       AI_CHUNK_OVERLAP_TOKENS: ${AI_CHUNK_OVERLAP_TOKENS:-48}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-intfloat/multilingual-e5-small}
+      AI_EMBEDDING_REVISION: ${AI_EMBEDDING_REVISION:-614241f622f53c4eeff9890bdc4f31cfecc418b3}
+      AI_EMBEDDING_DIMENSIONS: ${AI_EMBEDDING_DIMENSIONS:-384}
+      AI_EMBEDDING_TIMEOUT_SECONDS: ${AI_EMBEDDING_TIMEOUT_SECONDS:-120}
     volumes:
       - ai_model_cache:/home/appuser/.cache
     healthcheck:

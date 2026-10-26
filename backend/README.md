@@ -315,3 +315,65 @@ WHERE email = 'admin@example.com';
 ```
 
 Sau đó đăng nhập bằng tài khoản này. Không có endpoint đăng ký admin công khai, không có mật khẩu admin mặc định và không cần migration mới.
+
+## Ingestion tài liệu
+
+`POST /api/documents/{documentId}/ingest` không cần body, yêu cầu JWT của owner và PDF đã upload qua API managed. Luồng đồng bộ: đọc tệp → extraction/chunking → embedding theo batch → lưu cả tài liệu vào PostgreSQL/pgvector. Response `200` chỉ trả tóm tắt:
+
+```json
+{
+  "documentId": 12,
+  "chunkCount": 24,
+  "embeddingModel": "intfloat/multilingual-e5-small@614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "embeddingDimensions": 384,
+  "warnings": []
+}
+```
+
+| HTTP | Trường hợp |
+| --- | --- |
+| 401 | Thiếu/sai JWT |
+| 404 | Document không tồn tại hoặc không thuộc owner |
+| 409 | Tệp chưa được upload, nguồn thay đổi trong lúc xử lý hoặc đã có chunk |
+| 413/415/422 | PDF vượt giới hạn, không hợp lệ, không trích xuất được hoặc không có chunk |
+| 502 | AI trả sai model/dimension/số lượng/vector hoặc tokenizer không khớp |
+| 503/504 | AI thiếu cấu hình, bận, không sẵn sàng hoặc quá hạn |
+
+Không có transaction DB nào giữ trong lúc gọi model/network. Khi lưu, backend khóa và kiểm tra lại document/owner/nguồn, rồi insert tất cả chunk trong một transaction ngắn. Một lỗi sẽ rollback cả batch; hai yêu cầu đồng thời không tạo dữ liệu trùng. Lần gọi lại sau khi đã ingest thành công trả 409 tại bước lưu, không thay thế chunk cũ. Phiên bản này vẫn thực hiện công việc AI trước kiểm tra trùng; ingest lại và quản lý phiên bản chỉ mục sẽ được triển khai sau. `Document.status` hiện có giữ nguyên ý nghĩa quản lý tài liệu.
+
+Migration PostgreSQL V20 bổ sung `embedding_text` và `metadata` JSONB vào `document_chunks`; metadata giữ headings, blockIds, sourceRefs và overlapSourceRefs kèm bbox/coordOrigin. `embedding_text` là nội dung đã thêm heading/overlap gửi sang adapter; tiền tố E5 `passage: ` được adapter thêm khi chạy model. Các row cũ được giữ nguyên, `embedding_text` có thể null với row cũ. Xóa Document/Course/Workspace tiếp tục dọn vector qua foreign key cascade.
+
+Đặt `AI_SERVICE_TOKEN` giống nhau giữa backend/AI; model/revision/dimension cũng phải khớp. Mặc định dùng E5 local đã pin revision; cấu hình ở `.env.example` và [AI README](../ai-service/README.md). Endpoint extraction vẫn chỉ trả kết quả, không tự lưu.
+
+Kiểm tra bằng SQL, thay `12` bằng documentId:
+
+```sql
+SELECT chunk_index, embedding_model, embedding_dimensions,
+       vector_dims(embedding) AS actual_dimensions,
+       page_start, page_end, metadata->'sourceRefs' AS source_refs
+FROM document_chunks
+WHERE document_id = 12
+ORDER BY chunk_index;
+```
+
+Test pgvector trên database tạm (Docker cần chạy), từ thư mục gốc:
+
+```powershell
+.\infra\test-pgvector.ps1
+```
+
+Để chạy thêm kiểm thử HTTP qua Postman simulation, mở terminal riêng từ thư mục gốc:
+
+```powershell
+postman simulation run infra/testing/docling/extraction.sim.yaml --port 4917 --no-history
+```
+
+Trong terminal chạy test:
+
+```powershell
+$env:AI_SIMULATION_URL = 'http://localhost:4917'
+.\infra\test-pgvector.ps1
+Remove-Item Env:AI_SIMULATION_URL
+```
+
+Simulation kiểm tra backend HTTP/transaction với AI giả lập theo contract. Smoke test AI dùng model thật chạy riêng; không cần credential provider tính phí.

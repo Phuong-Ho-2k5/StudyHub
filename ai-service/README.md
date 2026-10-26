@@ -84,7 +84,7 @@ Backend kiểm tra owner, chỉ đọc tệp managed đã upload và gửi multi
 
 Lần trích xuất đầu tải model công khai từ Hugging Face và model OCR; nội dung PDF được xử lý local. Cần mạng để tải lần đầu và đủ RAM cho PyTorch/Docling. Container dùng CPU PyTorch và cache ở named volume `ai_model_cache`; không tải model khi `/health` được gọi. Nếu lần đầu vượt deadline, có thể tải lại yêu cầu sau khi chuẩn bị cache. `docker compose down -v` xóa cache cùng các volume khác.
 
-OCR/bố cục không bảo đảm đọc đúng mọi tài liệu. Hình chưa được mô tả có cảnh báo `PAGE_n_PICTURE_DESCRIPTION_UNAVAILABLE`; trang không có chữ có `PAGE_n_NO_TEXT`. Mô tả hình nằm riêng ở `description`, đánh dấu `descriptionMethod=vision_model`, không trộn vào `page.text`. Pipeline giữ tham chiếu hình và tọa độ trong PDF; không cung cấp ảnh crop hay API download PDF. Mặc định chỉ extract; bật chunking như mục M6-T04 bên dưới. Chưa embedding hoặc lưu kết quả ingestion.
+OCR/bố cục không bảo đảm đọc đúng mọi tài liệu. Hình chưa được mô tả có cảnh báo `PAGE_n_PICTURE_DESCRIPTION_UNAVAILABLE`; trang không có chữ có `PAGE_n_NO_TEXT`. Mô tả hình nằm riêng ở `description`, đánh dấu `descriptionMethod=vision_model`, không trộn vào `page.text`. Pipeline giữ tham chiếu hình và tọa độ trong PDF; không cung cấp ảnh crop hay API download PDF. Mặc định chỉ extract; bật chunking như mục Chunking bên dưới. Endpoint extraction không sinh embedding hoặc lưu kết quả; dùng ingestion ở mục Embedding và lưu chunk.
 
 Chạy kiểm thử có model thật (cần tải model; CPU chậm hơn unit test):
 
@@ -98,13 +98,13 @@ Remove-Item Env:RUN_DOCLING_VLM_TESTS
 
 Linux dùng `TEST_FONT_PATH` nếu không có DejaVuSans tại đường dẫn mặc định trong smoke test.
 
-## Chunking (M6-T04)
+## Chunking
 
 Gọi `POST /api/documents/{documentId}/extract?includeChunks=true` qua backend để nhận thêm `chunks`. API nội bộ dùng form `includeChunks=true`. Docling HybridChunker chạy trên cấu trúc tài liệu gốc, giữ heading context, nguồn trang/block/bbox và overlap có giới hạn token. Text OCR và mô tả hình sinh từ model vẫn được phân biệt.
 
-Cấu hình AI: `AI_CHUNK_TOKENIZER_MODEL=intfloat/multilingual-e5-small`, `AI_CHUNK_MAX_TOKENS=384`, `AI_CHUNK_OVERLAP_TOKENS=48`. Tokenizer chỉ tải khi yêu cầu chunk; health và extraction-only không cần tokenizer. Đây là lựa chọn tokenizer ban đầu, cần khớp embedding model khi triển khai M6-T05.
+Cấu hình AI: `AI_CHUNK_TOKENIZER_MODEL=intfloat/multilingual-e5-small`, `AI_CHUNK_MAX_TOKENS=384`, `AI_CHUNK_OVERLAP_TOKENS=48`. Tokenizer chỉ tải khi yêu cầu chunk; health và extraction-only không cần tokenizer. Tokenizer cần khớp embedding model.
 
-Chưa embedding, lưu chunk vào DB hoặc đổi trạng thái Document.
+Endpoint extraction không embedding, lưu chunk vào DB hoặc đổi trạng thái Document.
 
 ## Kết nối backend
 
@@ -116,3 +116,37 @@ Backend là cổng xác thực và kiểm tra quyền trước khi gọi AI Serv
 | Cùng Docker Compose | `http://ai-service:8000` |
 
 Compose đã truyền URL nội bộ và token cho backend. Khi chạy local, profile `local` đọc `.env` gốc. Không commit `.env` hoặc giá trị token.
+
+## Embedding và lưu chunk
+
+Client gọi `POST /api/documents/{documentId}/ingest` với JWT qua backend. Backend đọc PDF managed sau khi kiểm tra owner, gọi extraction với chunking, rồi gửi các `embeddingText` theo batch tối đa 32 tới AI Service. Backend kiểm tra tất cả vector trước khi lưu atomically vào PostgreSQL/pgvector. AI Service không có credential database.
+
+API nội bộ `POST /internal/embeddings` nhận header `X-AI-Service-Token` và JSON:
+
+```json
+{"texts": ["Chương 1\nNội dung đoạn tài liệu"]}
+```
+
+Kết quả gồm `model` (định danh `model@revision`), `dimensions` và `vectors` theo đúng thứ tự input. Tối đa 32 text, mỗi text không rỗng và tối đa 16.384 ký tự; text vượt 512 token sau khi thêm tiền tố bị từ chối bằng 422, không tự cắt. Adapter hiện hỗ trợ local `intfloat/multilingual-e5-small`: tự thêm `passage: `, masked mean pooling và L2 normalization. Khi thêm retrieval, câu hỏi phải dùng adapter query với `query: ` và cùng model/revision.
+
+| Biến | Mặc định | Ý nghĩa |
+| --- | --- | --- |
+| `AI_EMBEDDING_MODEL` | `intfloat/multilingual-e5-small` | Model local; cần khớp `AI_CHUNK_TOKENIZER_MODEL` |
+| `AI_EMBEDDING_REVISION` | `614241f622f53c4eeff9890bdc4f31cfecc418b3` | Commit SHA bất biến, dùng cho model và tokenizer của adapter |
+| `AI_EMBEDDING_DIMENSIONS` | `384` | Kiểm tra dimension thực của model và từng vector |
+| `AI_EMBEDDING_TIMEOUT_SECONDS` | `120` | Deadline mỗi batch, gồm cả lần tải/load model đầu tiên |
+
+Backend cũng đọc model/revision/dimension để xác minh response. Thay cấu hình cần restart hai service; một lần ingestion không được trộn model hoặc dimension. Không cần API key cho model local. `EMBEDDING_MODEL` cũ chưa từng được sử dụng; dùng `AI_EMBEDDING_MODEL`.
+
+Model chỉ tải khi gọi embedding lần đầu, được giữ trong một worker CPU và tái sử dụng giữa các batch. Worker bận trả 503, quá deadline trả 504 và bị dừng; lần gọi sau tạo worker mới. Model tải từ Hugging Face và cache cùng volume hiện có. Nếu lần tải đầu vượt deadline, chuẩn bị cache bằng smoke test hoặc tăng deadline phù hợp; `AI_SERVICE_TIMEOUT_SECONDS` của backend cần lớn hơn deadline AI. `/health` tiếp tục là liveness, không xác nhận model đã sẵn sàng.
+
+Chạy test thường và smoke test có model thật, từ `ai-service/`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+$env:RUN_EMBEDDING_TESTS = '1'
+.\.venv\Scripts\python.exe -m pytest tests/test_embeddings.py -q
+Remove-Item Env:RUN_EMBEDDING_TESTS
+```
+
+Smoke test cần mạng lần đầu và RAM cho model CPU. Xem [README backend](../backend/README.md) để kiểm tra dữ liệu pgvector và quy tắc ingest trùng.

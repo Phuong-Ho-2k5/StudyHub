@@ -31,9 +31,9 @@ docker compose exec db psql -U studyhub -d studyhub -c '\d document_chunks'
 
 Mỗi chunk có nội dung, thứ tự từ 0, trang nguồn từ 1 (hoặc cả hai trang NULL), model, số chiều và vector. Khóa `(document_id, chunk_index)` chống trùng; xóa Document/Course/Workspace dọn chunk qua cascade. Course và owner được suy ra qua quan hệ hiện có, không sao chép vào chunk.
 
-Model và số chiều embedding chưa được chốt. Vì vậy `embedding` dùng kiểu `vector` không cố định số chiều, với CHECK `vector_dims(embedding) = embedding_dimensions`. Mỗi bản ghi bắt buộc có model và số chiều dương. Ràng buộc này kiểm tra từng bản ghi, không bảo đảm các bản ghi cùng model có cùng số chiều. Pipeline sinh embedding và tìm kiếm phải kiểm tra contract provider và lọc đúng model/dimension trước khi tính khoảng cách, đồng thời kiểm tra quyền Course. Không so sánh embedding khác model dù số chiều giống nhau.
+Embedding mặc định dùng `intfloat/multilingual-e5-small`, 384 chiều, với revision bất biến trong `.env.example`. Cột `embedding` vẫn dùng kiểu `vector` không cố định số chiều, với CHECK `vector_dims(embedding) = embedding_dimensions`. Mỗi bản ghi bắt buộc có model và số chiều dương. Ràng buộc này kiểm tra từng bản ghi, không bảo đảm các bản ghi cùng model có cùng số chiều. Backend kiểm tra contract model/dimension trước khi lưu; tìm kiếm sau này phải lọc đúng model/dimension và kiểm tra quyền Course. Không so sánh embedding khác model dù số chiều giống nhau.
 
-Chưa tạo ANN index: cột vector có thể dùng exact search; sau khi chốt model/dimension mới thêm expression/partial index phù hợp. Sinh embedding, ingestion/versioning và API search sẽ được triển khai sau.
+Chưa tạo ANN index: cột vector có thể dùng exact search; thêm expression/partial index phù hợp khi triển khai search. Ingestion đã có; quản lý phiên bản/ingest lại và API search là các bước tiếp theo. Migration V20 thêm contextualized `embedding_text` và `metadata` JSONB để giữ nguồn trang/block/bbox và overlap.
 
 ## Kiểm thử PostgreSQL thật
 
@@ -43,9 +43,9 @@ Yêu cầu Docker đang chạy và JDK 21 trở lên. Từ thư mục gốc:
 .\infra\test-pgvector.ps1
 ```
 
-Script tạo container riêng với cổng loopback ngẫu nhiên, chạy toàn bộ test backend và nhóm `PgvectorMigrationIT`, rồi dọn container cùng volume tạm kể cả khi test lỗi. Không dùng `.env` hoặc database ứng dụng. Báo cáo nằm trong `backend/target/surefire-reports` và `backend/target/failsafe-reports`.
+Script tạo container riêng với cổng loopback ngẫu nhiên, chạy toàn bộ test backend và nhóm integration pgvector, rồi dọn container cùng volume tạm kể cả khi test lỗi. Không dùng `.env` hoặc database ứng dụng. Báo cáo nằm trong `backend/target/surefire-reports` và `backend/target/failsafe-reports`.
 
-Nhóm PostgreSQL kiểm tra upgrade V17 → V18 giữ dữ liệu cũ, chạy lại migration, lưu/đọc và tìm vector gần nhất, sai dimension/metadata, chunk trùng, khóa ngoại và xóa cascade. Bộ H2 mặc định không kiểm tra tính năng vector.
+Nhóm PostgreSQL kiểm tra upgrade từ V17 qua các migration mới giữ dữ liệu cũ, chạy lại migration, lưu/đọc và tìm vector gần nhất, sai dimension/metadata, chunk trùng, khóa ngoại và xóa cascade. Repository ingestion còn kiểm tra metadata roundtrip, rollback, nguồn thay đổi và hai yêu cầu đồng thời. Khi đặt `AI_SIMULATION_URL`, thêm kiểm thử ingestion HTTP qua Spring + pgvector với AI giả lập trong Postman; xem [README backend](../backend/README.md#ingestion-tài-liệu). Bộ H2 mặc định không kiểm tra tính năng vector.
 
 Có thể chạy trực tiếp với database PostgreSQL dùng riêng cho test:
 

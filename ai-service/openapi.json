@@ -59,6 +59,58 @@
         ]
       }
     },
+    "/internal/embeddings": {
+      "post": {
+        "tags": [
+          "Internal embeddings"
+        ],
+        "summary": "Embed Documents",
+        "description": "Embed 1–32 contextualized document texts in order. E5 passage prefix is added internally.",
+        "operationId": "embed_documents_internal_embeddings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid internal service token"
+          },
+          "413": {
+            "description": "Request size limit exceeded"
+          },
+          "422": {
+            "description": "Invalid batch or input exceeds the token budget"
+          },
+          "503": {
+            "description": "Missing configuration, busy or unavailable model"
+          },
+          "504": {
+            "description": "Embedding deadline exceeded"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -301,6 +353,55 @@
           "tokenizerModel"
         ],
         "title": "DocumentChunk"
+      },
+      "EmbeddingRequest": {
+        "properties": {
+          "texts": {
+            "items": {
+              "type": "string",
+              "maxLength": 16384,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Texts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "texts"
+        ],
+        "title": "EmbeddingRequest"
+      },
+      "EmbeddingResponse": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "dimensions": {
+            "type": "integer",
+            "title": "Dimensions"
+          },
+          "vectors": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Vectors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "dimensions",
+          "vectors"
+        ],
+        "title": "EmbeddingResponse"
       },
       "ExtractedPage": {
         "properties": {
