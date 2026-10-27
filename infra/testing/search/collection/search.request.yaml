@@ -1,0 +1,28 @@
+$kind: http-request
+name: Tìm kiếm trong Course
+order: 1000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/search'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"query": {{queryJson}}, "topK": {{topK}}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Search returns bounded results without vectors', () => {
+        pm.response.to.have.status(200);
+        const data = pm.response.json();
+        pm.expect(data.items).to.be.an('array');
+        pm.expect(data.items.length).to.be.at.most(Number(pm.variables.get('topK')));
+        data.items.forEach(item => {
+          pm.expect(item).not.to.have.property('embedding');
+          pm.expect(item).not.to.have.property('storagePath');
+          pm.expect(Number.isFinite(item.score)).to.eql(true);
+        });
+        for (let i=1; i<data.items.length; i++) pm.expect(data.items[i-1].score + 1e-6).to.be.at.least(data.items[i].score);
+      });

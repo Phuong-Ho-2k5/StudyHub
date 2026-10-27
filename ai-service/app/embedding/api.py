@@ -1,5 +1,5 @@
 from threading import Lock
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Security
 from pydantic import BaseModel, Field, StringConstraints
@@ -14,6 +14,7 @@ Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max
 
 class EmbeddingRequest(BaseModel):
     texts: list[Text] = Field(min_length=1, max_length=32)
+    inputType: Literal["passage", "query"] = "passage"
 
 
 class EmbeddingResponse(BaseModel):
@@ -53,10 +54,10 @@ def close_embedding_service():
     504: {"description": "Embedding deadline exceeded"},
 })
 def embed_documents(request: EmbeddingRequest):
-    """Embed 1–32 contextualized document texts in order. E5 passage prefix is added internally."""
+    """Embed 1–32 texts in order. Adds the E5 passage or query prefix internally; defaults to passage."""
     try:
         settings = EmbeddingSettings.from_env()
     except ValueError:
         raise HTTPException(503, "Embedding configuration is invalid.") from None
     service = get_embedding_service(settings)
-    return service.embed(request.texts)
+    return service.embed(request.texts, input_type=request.inputType)

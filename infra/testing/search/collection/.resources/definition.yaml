@@ -1,0 +1,28 @@
+$kind: collection
+name: StudyHub Course Search
+description: 'Tìm trên phiên bản đã công bố. Cung cấp các biến qua môi trường cục bộ; không lưu token thật trong Git.'
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+  - key: accessToken
+    value: ''
+  - key: courseId
+    value: ''
+  - key: emptyCourseId
+    value: ''
+  - key: foreignCourseId
+    value: ''
+  - key: query
+    value: 'Khi nào nên sử dụng transaction?'
+  - key: topK
+    value: '5'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: http:beforeRequest
+    language: text/javascript
+    code: |-
+      pm.variables.set('queryJson', JSON.stringify(pm.variables.get('query')));

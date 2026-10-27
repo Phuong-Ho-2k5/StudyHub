@@ -44,6 +44,21 @@ public class Document {
     @Column(nullable = false)
     private boolean managedFile;
 
+    @Enumerated(EnumType.STRING)
+    @Column(insertable=false,updatable=false)
+    private DocumentIngestionStatus ingestionStatus=DocumentIngestionStatus.NOT_REQUESTED;
+
+    @Column(insertable=false,updatable=false)
+    private String publishedIngestionId;
+
+    @Column(insertable=false,updatable=false)
+    private String ingestionError;
+
+    public DocumentIngestionStatus getIngestionStatus(){return ingestionStatus;}
+    public String getPublishedIngestionId(){return publishedIngestionId;}
+    public String getIngestionError(){return ingestionError;}
+    public void markIngestionPending(){ingestionStatus=DocumentIngestionStatus.PENDING;}
+
     public boolean isManagedFile() { return managedFile; }
     public void setManagedFile(boolean managedFile) { this.managedFile = managedFile; }
 

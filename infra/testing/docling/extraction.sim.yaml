@@ -7,6 +7,8 @@ mocks:
     path: ./invalid.js
   - routeKey: embed-invalid
     path: ./embed-invalid.js
+  - routeKey: query-too-long
+    path: ./query-too-long.js
   - routeKey: no-chunks
     path: ./no-chunks.js
   - routeKey: html-error

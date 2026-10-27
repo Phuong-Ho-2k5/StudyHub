@@ -1,0 +1,17 @@
+$kind: http-request
+name: Course của người khác
+order: 4000
+method: POST
+url: '{{baseUrl}}/api/courses/{{foreignCourseId}}/search'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"query": {{queryJson}}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Other owners are hidden with 404', () => pm.response.to.have.status(404));

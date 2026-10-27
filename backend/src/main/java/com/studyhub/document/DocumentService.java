@@ -29,12 +29,14 @@ public class DocumentService {
     private final ResourceAccessService resourceAccessService;
     private final DocumentStorage storage;
     private final DocumentFileLifecycle files;
+    private final DocumentIngestionRepository ingestion;
 
-    public DocumentService(DocumentRepository documentRepository, ResourceAccessService resourceAccessService, DocumentStorage storage, DocumentFileLifecycle files) {
+    public DocumentService(DocumentRepository documentRepository, ResourceAccessService resourceAccessService, DocumentStorage storage, DocumentFileLifecycle files, DocumentIngestionRepository ingestion) {
         this.documentRepository = documentRepository;
         this.resourceAccessService = resourceAccessService;
         this.storage = storage;
         this.files = files;
+        this.ingestion = ingestion;
     }
 
     @Transactional
@@ -46,7 +48,10 @@ public class DocumentService {
         files.uploaded(stored.key());
         Document document = new Document(title.trim(), stored.fileName(), "application/pdf", stored.key(), DocumentStatus.READY, course);
         document.setManagedFile(true);
-        return toResponse(documentRepository.saveAndFlush(document));
+        documentRepository.saveAndFlush(document);
+        ingestion.enqueueUploaded(document.getId(),userId);
+        document.markIngestionPending();
+        return toResponse(document);
     }
 
     @Transactional
@@ -123,6 +128,7 @@ public class DocumentService {
 
     private DocumentResponse toResponse(Document document) {
         return new DocumentResponse(document.getId(), document.getCourse().getId(), document.getTitle(), document.getFileName(),
-                document.getFileType(), document.getStoragePath(), document.getStatus(), document.isManagedFile());
+                document.getFileType(), document.getStoragePath(), document.getStatus(), document.isManagedFile(),
+                document.getIngestionStatus(),document.getPublishedIngestionId(),document.getIngestionError());
     }
 }

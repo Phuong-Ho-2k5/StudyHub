@@ -1,0 +1,17 @@
+$kind: http-request
+name: K không hợp lệ
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/search'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"query": "Question", "topK": 0}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Invalid K returns 400', () => pm.response.to.have.status(400));

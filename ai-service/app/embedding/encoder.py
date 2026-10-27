@@ -41,15 +41,17 @@ class E5Encoder:
             raise ValueError("Configured embedding dimensions do not match the model")
         self.model = model.to("cpu").eval()
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    def embed(self, texts: list[str], input_type: str = "passage") -> list[list[float]]:
         import torch
         import torch.nn.functional as functional
 
+        if input_type not in ("passage", "query"):
+            raise EmbeddingInputError("Invalid embedding input type")
         if not 1 <= len(texts) <= 32 or any(not text.strip() or len(text) > 16384 for text in texts):
             raise EmbeddingInputError("Invalid embedding batch")
         if self.model is None:
             self._load()
-        inputs = ["passage: " + text for text in texts]
+        inputs = [input_type + ": " + text for text in texts]
         lengths = self.tokenizer(inputs, truncation=False, add_special_tokens=True)["input_ids"]
         if any(len(ids) > 512 for ids in lengths):
             raise EmbeddingInputError("Embedding input exceeds 512 tokens including prefix")

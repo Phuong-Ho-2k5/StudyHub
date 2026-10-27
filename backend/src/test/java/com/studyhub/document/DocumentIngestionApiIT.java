@@ -51,10 +51,15 @@ class DocumentIngestionApiIT {
     }
     @Value("${local.server.port}") int port;
     @Autowired JdbcTemplate jdbc;
+    @Autowired DocumentIngestionWorker worker;
+    @Autowired DocumentService documents;
+    @Autowired DocumentIngestionRepository queue;
+    @Autowired DocumentChunkRepository chunks;
+    @Autowired DocumentEmbeddingClient embeddings;
     final HttpClient http=HttpClient.newHttpClient();
     final ObjectMapper json=new ObjectMapper();
 
-    @Test void ingestsOwnedUploadAtomicallyAndRejectsRepeatWithoutChangingStatus() throws Exception {
+    @Test void autoIngestsUploadThenRebuildsAndKeepsPublishedVersionOnUpstreamFailure() throws Exception {
         String token=login();
         long workspaceId=call("POST","/api/workspaces",token,Map.of("name","Ingest","description","Test"),201).path("id").asLong();
         long courseId=call("POST","/api/workspaces/"+workspaceId+"/courses",token,Map.of("name","PDF","description","Test"),201).path("id").asLong();
@@ -63,7 +68,33 @@ class DocumentIngestionApiIT {
         call("POST",path,null,null,401);
         call("POST",path,login(),null,404);
         assertEquals(0L,jdbc.queryForObject("SELECT count(*) FROM document_chunks WHERE document_id=?",Long.class,documentId));
+        var pending=call("GET","/api/documents/"+documentId,token,null,200);
+        assertEquals("PENDING",pending.path("ingestionStatus").asText());
+        assertTrue(pending.path("publishedIngestionId").isNull());
+        String searchPath="/api/courses/"+courseId+"/search";
+        call("POST",searchPath,null,Map.of("query","Question"),401);
+        call("POST",searchPath,login(),Map.of("query","Question"),404);
+        assertEquals(0,call("POST",searchPath,token,Map.of("query","Question"),200).path("items").size());
+        for(Object invalid:List.of(Map.of("query"," "),Map.of("query","Question","topK",0),
+                Map.of("query","Question","topK",21),Map.of("query","x".repeat(16385))))
+            call("POST",searchPath,token,invalid,400);
+        var nullK=new HashMap<String,Object>();nullK.put("query","Question");nullK.put("topK",null);
+        call("POST",searchPath,token,nullK,400);
+        assertTrue(worker.processNext());
+        var automatic=call("GET","/api/documents/"+documentId,token,null,200);
+        assertEquals("INDEXED",automatic.path("ingestionStatus").asText());
+        String first=automatic.path("publishedIngestionId").asText();
+        assertFalse(first.isBlank());
+        var found=call("POST",searchPath,token,Map.of("query","  Transaction  ","topK",1),200);
+        assertEquals("Transaction",found.path("query").asText());
+        assertEquals(1,found.path("items").size());
+        assertEquals(documentId,found.path("items").get(0).path("documentId").asLong());
+        assertEquals(1,found.path("items").get(0).path("pageStart").asInt());
+        assertFalse(found.path("items").get(0).has("embedding"));
+        assertFalse(found.path("items").get(0).has("storagePath"));
         var summary=call("POST",path,token,null,200);
+        String second=summary.path("ingestionId").asText();
+        assertNotEquals(first,second);
         assertEquals(documentId,summary.path("documentId").asLong());
         assertEquals(1,summary.path("chunkCount").asInt());
         assertEquals(MODEL,summary.path("embeddingModel").asText());
@@ -79,9 +110,27 @@ class DocumentIngestionApiIT {
         assertEquals(200,metadata.path("sourceRefs").get(0).path("bbox").path("r").asInt());
         assertEquals(8,metadata.path("tokenCount").asInt());
         assertEquals("intfloat/multilingual-e5-small",metadata.path("tokenizerModel").asText());
-        call("POST",path,token,null,409);
+        long owner=jdbc.queryForObject("SELECT w.owner_id FROM documents d JOIN courses c ON c.id=d.course_id JOIN workspaces w ON w.id=c.workspace_id WHERE d.id=?",Long.class,documentId);
+        var failing=new DocumentIngestionService(documents,
+                new DocumentExtractionClient(System.getenv("AI_SIMULATION_URL")+"/unavailable","simulation-token",5),embeddings,chunks,queue);
+        var error=assertThrows(org.springframework.web.server.ResponseStatusException.class,()->failing.ingest(documentId,owner));
+        assertEquals(503,error.getStatusCode().value());
+        var failed=call("GET","/api/documents/"+documentId,token,null,200);
+        assertEquals("FAILED",failed.path("ingestionStatus").asText());
+        assertEquals("AI_UNAVAILABLE",failed.path("ingestionError").asText());
+        assertEquals(second,failed.path("publishedIngestionId").asText());
+        assertEquals(1,call("POST",searchPath,token,Map.of("query","Transaction"),200).path("items").size());
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM document_chunks ch JOIN documents d ON d.id=ch.document_id AND d.published_ingestion_id=ch.ingestion_id WHERE d.id=?",Integer.class,documentId));
+        var retry=call("POST",path,token,null,200);
+        assertNotEquals(second,retry.path("ingestionId").asText());
         assertEquals(1L,jdbc.queryForObject("SELECT count(*) FROM document_chunks WHERE document_id=?",Long.class,documentId));
         assertEquals("READY",call("GET","/api/documents/"+documentId,token,null,200).path("status").asText());
+        assertTrue(call("GET","/api/documents/"+documentId,token,null,200).path("ingestionError").isNull());
+        call("DELETE","/api/documents/"+documentId,token,null,204);
+        assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM document_ingestions WHERE document_id=?",Integer.class,documentId));
+        assertEquals(0L,jdbc.queryForObject("SELECT count(*) FROM document_chunks WHERE document_id=?",Long.class,documentId));
+        assertFalse(worker.processNext());
+        assertEquals(0,call("POST",searchPath,token,Map.of("query","Question"),200).path("items").size());
     }
 
     String login() throws Exception {

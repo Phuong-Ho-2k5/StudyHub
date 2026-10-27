@@ -3,6 +3,10 @@ spring:
     name: studyhub-backend
   profiles:
     default: local
+  task:
+    scheduling:
+      pool:
+        size: 2
   flyway:
     locations: classpath:db/migration,classpath:db/vendor/{vendor}
   jpa:
@@ -15,6 +19,11 @@ spring:
       max-request-size: ${DOCUMENT_MAX_REQUEST_SIZE:21MB}
 
 studyhub:
+  ingestion:
+    worker-enabled: ${DOCUMENT_INGESTION_WORKER_ENABLED:true}
+    poll-delay-ms: ${DOCUMENT_INGESTION_POLL_DELAY_MS:1000}
+    lease-seconds: ${DOCUMENT_INGESTION_LEASE_SECONDS:600}
+    max-attempts: ${DOCUMENT_INGESTION_MAX_ATTEMPTS:3}
   ai:
     url: ${AI_SERVICE_URL:http://localhost:8000}
     token: ${AI_SERVICE_TOKEN:}

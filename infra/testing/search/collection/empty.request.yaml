@@ -1,0 +1,20 @@
+$kind: http-request
+name: Course chưa có chỉ mục
+order: 2000
+method: POST
+url: '{{baseUrl}}/api/courses/{{emptyCourseId}}/search'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"query": {{queryJson}}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('No published chunks returns an empty array', () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json().items).to.eql([]);
+      });

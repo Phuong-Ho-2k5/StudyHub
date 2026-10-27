@@ -22,14 +22,14 @@ public class DocumentIngestionController {
     public DocumentIngestionController(DocumentIngestionService ingestion) { this.ingestion = ingestion; }
 
     @PostMapping("/{documentId}/ingest")
-    @Operation(summary="Extract and embed an uploaded PDF",description="Owner-only synchronous ingestion. Persists all chunks atomically and returns a summary. Existing chunks return 409; document status is unchanged.")
+    @Operation(summary="Xử lý hoặc xử lý lại PDF đã tải lên",description="Chỉ chủ sở hữu được gọi. Xử lý đồng bộ và công bố toàn bộ phiên bản mới trong một giao dịch. Giữ phiên bản cũ khi lỗi; trả 409 nếu tác vụ đang được xử lý. Theo dõi ingestionStatus và publishedIngestionId qua API tài liệu; Document.status giữ nguyên.")
     @ApiResponses({
         @ApiResponse(responseCode="200",description="All chunks and embeddings persisted"),
         @ApiResponse(responseCode="401",description="JWT is missing or invalid",
                 content=@Content(mediaType="application/json",schema=@Schema(implementation=ApiErrorResponse.class))),
         @ApiResponse(responseCode="404",description="Document does not exist or is not owned by the caller",
                 content=@Content(mediaType="application/json",schema=@Schema(implementation=ApiErrorResponse.class))),
-        @ApiResponse(responseCode="409",description="Document already ingested, source changed, or uploaded PDF unavailable"),
+        @ApiResponse(responseCode="409",description="Ingestion is processing, claim expired, source changed, or uploaded PDF unavailable"),
         @ApiResponse(responseCode="413",description="PDF exceeds extraction limits"),
         @ApiResponse(responseCode="415",description="PDF is unsupported or invalid"),
         @ApiResponse(responseCode="422",description="Document has no ingestible chunks or cannot be extracted completely"),

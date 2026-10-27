@@ -27,6 +27,22 @@ class DocumentEmbeddingSimulationTest {
         assertEquals(1., result.vectors().getFirst().getFirst());
     }
 
+    @Test void sendsQueryTypeOverRealHttp() {
+        var result = client("success", 10).embedQuery("When to use transactions?");
+        assertEquals(MODEL, result.model());
+        assertEquals(384, result.dimensions());
+        assertEquals(1, result.vectors().size());
+        assertEquals(-1., result.vectors().getFirst().getFirst());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"embed-invalid,502", "html-error,502", "unavailable,503", "timeout,504", "query-too-long,422"})
+    void mapsQueryFailuresOverRealHttp(String route, int status) {
+        var error = assertThrows(ResponseStatusException.class,
+                () -> client(route, 1).embedQuery("Question"));
+        assertEquals(status, error.getStatusCode().value());
+    }
+
     @ParameterizedTest
     @CsvSource({"embed-invalid,502", "html-error,502", "unavailable,503", "timeout,504"})
     void rejectsMalformedResponsesAndTranslatesUpstreamFailures(String route, int status) {

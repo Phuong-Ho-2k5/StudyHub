@@ -43,6 +43,19 @@ public class DocumentEmbeddingClient {
     }
 
     public EmbeddingBatch embed(List<String> texts) {
+        return embed(texts, false);
+    }
+
+    public String expectedModel() { return expectedModel; }
+    public int expectedDimensions() { return expectedDimensions; }
+
+    public EmbeddingBatch embedQuery(String query) {
+        if (query == null || query.isBlank() || query.length() > 16384)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Query must contain 1 to 16384 characters.");
+        return embed(List.of(query.strip()), true);
+    }
+
+    private EmbeddingBatch embed(List<String> texts, boolean query) {
         if (baseUrl.isBlank() || token.isBlank())
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI service is not configured.");
         if (texts == null || texts.isEmpty() || texts.size() > 32
@@ -51,10 +64,12 @@ public class DocumentEmbeddingClient {
         try {
             var request = HttpRequest.newBuilder(URI.create(baseUrl + "/internal/embeddings"))
                     .timeout(timeout).header("X-AI-Service-Token", token).header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(Map.of("texts", texts)))).build();
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(query
+                            ? Map.of("texts", texts, "inputType", "query") : Map.of("texts", texts)))).build();
             var response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() != 200) {
                 HttpStatus status = switch (response.statusCode()) {
+                    case 422 -> query ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_GATEWAY;
                     case 401, 403, 503 -> HttpStatus.SERVICE_UNAVAILABLE;
                     case 504 -> HttpStatus.GATEWAY_TIMEOUT;
                     default -> HttpStatus.BAD_GATEWAY;

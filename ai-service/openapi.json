@@ -65,7 +65,7 @@
           "Internal embeddings"
         ],
         "summary": "Embed Documents",
-        "description": "Embed 1–32 contextualized document texts in order. E5 passage prefix is added internally.",
+        "description": "Embed 1–32 texts in order. Adds the E5 passage or query prefix internally; defaults to passage.",
         "operationId": "embed_documents_internal_embeddings_post",
         "requestBody": {
           "content": {
@@ -366,6 +366,15 @@
             "maxItems": 32,
             "minItems": 1,
             "title": "Texts"
+          },
+          "inputType": {
+            "type": "string",
+            "enum": [
+              "passage",
+              "query"
+            ],
+            "title": "Inputtype",
+            "default": "passage"
           }
         },
         "type": "object",

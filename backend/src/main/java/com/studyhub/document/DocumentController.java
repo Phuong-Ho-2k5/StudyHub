@@ -53,7 +53,7 @@ public class DocumentController {
     }
 
     @PostMapping(value = "/courses/{courseId}/documents/upload", consumes = "multipart/form-data")
-    @Operation(summary = "Tải tài liệu PDF lên Course", description = "Nhận title và file PDF. Kiểm tra quyền Course, nội dung PDF và dung lượng cấu hình. Tên lưu do server tạo.")
+    @Operation(summary = "Tải tài liệu PDF lên Course", description = "Nhận title và file PDF. Kiểm tra quyền Course, nội dung PDF và dung lượng cấu hình. Tên lưu do server tạo. Tạo tác vụ ingestion PENDING trong cùng giao dịch; worker xử lý sau khi upload commit. Chỉ tìm kiếm khi có publishedIngestionId.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Đã lưu tệp và metadata"),
         @ApiResponse(responseCode = "400", description = "Thiếu tệp hoặc tiêu đề không hợp lệ"),

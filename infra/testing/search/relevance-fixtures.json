@@ -1,0 +1,26 @@
+{
+  "documents": [
+    {"id": "transaction", "text": "Giao dịch cơ sở dữ liệu nhóm nhiều thao tác thành một đơn vị. Nếu bất kỳ thao tác nào thất bại, rollback hoàn tác toàn bộ để bảo đảm tính nguyên tử và nhất quán. Commit xác nhận mọi thay đổi thành công."},
+    {"id": "index", "text": "Chỉ mục cơ sở dữ liệu tăng tốc việc tìm các bản ghi mà không phải quét toàn bộ bảng. Cấu trúc B-tree hỗ trợ truy vấn bằng và truy vấn khoảng; đánh đổi là tốn thêm dung lượng và chi phí cập nhật."},
+    {"id": "tcp", "text": "TCP là giao thức truyền tải có kết nối. TCP đánh số thứ tự các gói, xác nhận dữ liệu đã nhận và truyền lại gói mất, giúp bên nhận khôi phục đúng thứ tự và nội dung thông điệp."},
+    {"id": "newton", "text": "Định luật II Newton mô tả gia tốc của vật dưới tác dụng của hợp lực. Công thức F = m a cho biết lực bằng khối lượng nhân gia tốc, với khối lượng đo bằng kilogram và lực đo bằng newton."},
+    {"id": "photosynthesis", "text": "Quang hợp ở cây xanh sử dụng năng lượng ánh sáng để chuyển nước và khí carbon dioxide thành đường glucose. Diệp lục hấp thụ ánh sáng và quá trình này giải phóng khí oxygen."},
+    {"id": "derivative", "text": "Đạo hàm biểu diễn tốc độ thay đổi tức thời của hàm số tại một điểm, cũng là hệ số góc của tiếp tuyến. Với hàm f(x) = x bình phương, đạo hàm f'(x) = 2x."},
+    {"id": "binary", "text": "Tìm kiếm nhị phân áp dụng trên dãy đã sắp xếp. Thuật toán so sánh phần tử giữa với giá trị cần tìm, rồi loại bỏ một nửa miền tìm kiếm mỗi bước. Độ phức tạp thời gian là O(log n)."},
+    {"id": "join", "text": "Phép JOIN trong SQL kết hợp các hàng từ hai bảng dựa trên điều kiện liên kết, thường là khóa ngoại và khóa chính. INNER JOIN chỉ giữ hàng khớp; LEFT JOIN giữ toàn bộ bảng bên trái kể cả khi không có hàng bên phải tương ứng."},
+    {"id": "recursion", "text": "Đệ quy là kỹ thuật trong đó hàm gọi lại chính nó để giải bài toán con nhỏ hơn. Hàm đệ quy phải có điều kiện dừng và mỗi lần gọi phải tiến gần điều kiện đó để tránh lặp vô hạn hoặc tràn ngăn xếp."},
+    {"id": "rsa", "text": "RSA là hệ mật mã bất đối xứng dùng cặp khóa công khai và khóa bí mật. Dữ liệu mã hóa bằng khóa công khai chỉ được giải mã bằng khóa bí mật tương ứng. Độ an toàn liên quan đến độ khó phân tích số nguyên lớn thành thừa số nguyên tố."}
+  ],
+  "questions": [
+    {"query": "Làm sao hoàn tác cả nhóm lệnh cập nhật khi một lệnh bị lỗi?", "expectedDocumentId": "transaction"},
+    {"query": "Cấu trúc nào giúp truy vấn bảng nhanh hơn nhưng làm thao tác ghi tốn thêm chi phí?", "expectedDocumentId": "index"},
+    {"query": "Giao thức nào bảo đảm dữ liệu truyền qua mạng đến đúng thứ tự và gửi lại khi mất gói?", "expectedDocumentId": "tcp"},
+    {"query": "Tính gia tốc khi đã biết hợp lực và khối lượng của vật bằng cách nào?", "expectedDocumentId": "newton"},
+    {"query": "Cây xanh tạo đường và thải oxy từ ánh sáng mặt trời như thế nào?", "expectedDocumentId": "photosynthesis"},
+    {"query": "Đại lượng nào thể hiện tốc độ biến thiên tức thời và độ dốc tiếp tuyến của đồ thị?", "expectedDocumentId": "derivative"},
+    {"query": "Tìm một số trong mảng đã sắp xếp bằng cách chia đôi phạm vi liên tục ra sao?", "expectedDocumentId": "binary"},
+    {"query": "Làm sao ghép dữ liệu hai bảng và vẫn giữ hàng bên trái chưa có hàng bên phải tương ứng?", "expectedDocumentId": "join"},
+    {"query": "Vì sao hàm tự gọi chính nó cần có điều kiện dừng?", "expectedDocumentId": "recursion"},
+    {"query": "Thuật toán mã hóa nào dùng hai khóa khác nhau và dựa vào bài toán phân tích thừa số nguyên tố?", "expectedDocumentId": "rsa"}
+  ]
+}

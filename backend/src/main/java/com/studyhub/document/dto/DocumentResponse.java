@@ -10,5 +10,8 @@ public record DocumentResponse(
     String fileType,
     String storagePath,
     DocumentStatus status,
-    boolean managedFile
+    boolean managedFile,
+    com.studyhub.document.DocumentIngestionStatus ingestionStatus,
+    String publishedIngestionId,
+    String ingestionError
 ) {}

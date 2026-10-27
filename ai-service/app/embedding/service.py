@@ -12,9 +12,9 @@ def _embedding_worker(settings, connection):
     encoder = E5Encoder(settings)
     try:
         while True:
-            texts = connection.recv()
+            texts, input_type = connection.recv()
             try:
-                connection.send((200, encoder.embed(texts)))
+                connection.send((200, encoder.embed(texts, input_type=input_type)))
             except EmbeddingInputError:
                 connection.send((422, "Embedding input exceeds the supported token budget."))
             except Exception:
@@ -56,7 +56,9 @@ class EmbeddingService:
         with self._lock:
             self._stop()
 
-    def embed(self, texts: list[str]) -> dict:
+    def embed(self, texts: list[str], input_type: str = "passage") -> dict:
+        if input_type not in ("passage", "query"):
+            raise HTTPException(422, "Invalid embedding input type.")
         if not self._lock.acquire(blocking=False):
             raise HTTPException(503, "Embedding is busy; retry later.")
         deadline = monotonic() + self.settings.timeout_seconds
@@ -79,7 +81,7 @@ class EmbeddingService:
                 try:
                     # send/recv may block on a full pipe or partial response, so both
                     # run under the same deadline enforced by the request thread.
-                    connection.send(texts)
+                    connection.send((texts, input_type))
                     outcome.append(connection.recv())
                 except (EOFError, OSError, ValueError):
                     pass

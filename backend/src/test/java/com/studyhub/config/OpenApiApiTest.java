@@ -122,6 +122,20 @@ class OpenApiApiTest {
         assertEquals(403, send("GET", "/api/admin/statistics", token, null).statusCode());
     }
 
+    @Test void searchContractKeepsDefaultTopKOptionalAndDocumentsLifecycle() throws Exception {
+        var spec=mapper.readTree(send("GET","/v3/api-docs",null,null).body());
+        var input=spec.at("/components/schemas/CourseSearchRequest");
+        assertEquals(5,input.at("/properties/topK/default").asInt());
+        assertEquals(1,input.at("/properties/topK/minimum").asInt());
+        assertEquals(20,input.at("/properties/topK/maximum").asInt());
+        assertFalse(java.util.stream.StreamSupport.stream(input.path("required").spliterator(),false)
+                .anyMatch(value->value.asText().equals("topK")));
+        var operation=spec.path("paths").path("/api/courses/{courseId}/search").path("post");
+        for(String code:java.util.List.of("200","400","401","404","422","502","503","504"))
+            assertTrue(operation.path("responses").has(code));
+        assertTrue(spec.at("/components/schemas/DocumentResponse/properties").has("publishedIngestionId"));
+    }
+
     private HttpResponse<String> send(String method, String path, String token, Object body) throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path));
         if (token != null) request.header("Authorization", "Bearer " + token);

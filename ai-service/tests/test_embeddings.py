@@ -38,7 +38,7 @@ def test_embedding_route_returns_vectors_in_input_order(monkeypatch):
         def close(self):
             pass
 
-        def embed(self, texts):
+        def embed(self, texts, input_type="passage"):
             assert texts == ["Học toán", "Học lý"]
             return {"model": "test@revision", "dimensions": 2, "vectors": [[1., 0.], [0., 1.]]}
 
@@ -103,7 +103,7 @@ def _echo_worker(settings, connection):
     # A real spawned process exercises IPC, reuse and termination without model downloads.
     try:
         while True:
-            texts = connection.recv()
+            texts, input_type = connection.recv()
             if texts == ["hang"]:
                 time.sleep(10)
             connection.send((200, [[1.] + [0.] * (settings.dimensions - 1) for _ in texts]))
@@ -130,7 +130,7 @@ def test_worker_reuses_process_then_recovers_after_hard_timeout(monkeypatch):
         assert error.value.status_code == 504
         from multiprocessing import active_children
         assert worker not in active_children()
-        assert service.embed(["three"])["vectors"][0][0] == 1.
+        assert service.embed(["three"], input_type="query")["vectors"][0][0] == 1.
         assert service._worker is not worker
     finally:
         service.close()
@@ -139,7 +139,7 @@ def test_worker_reuses_process_then_recovers_after_hard_timeout(monkeypatch):
 def _delayed_reader(settings, connection):
     try:
         time.sleep(5)
-        texts = connection.recv()
+        texts, input_type = connection.recv()
         connection.send((200, [[1.] + [0.] * (settings.dimensions - 1) for _ in texts]))
     finally:
         connection.close()

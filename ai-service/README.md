@@ -119,7 +119,7 @@ Compose đã truyền URL nội bộ và token cho backend. Khi chạy local, pr
 
 ## Embedding và lưu chunk
 
-Client gọi `POST /api/documents/{documentId}/ingest` với JWT qua backend. Backend đọc PDF managed sau khi kiểm tra owner, gọi extraction với chunking, rồi gửi các `embeddingText` theo batch tối đa 32 tới AI Service. Backend kiểm tra tất cả vector trước khi lưu atomically vào PostgreSQL/pgvector. AI Service không có credential database.
+Upload PDF qua backend tự tạo tác vụ ingestion bền vững; worker đọc PDF managed sau khi kiểm tra owner, gọi extraction với chunking, rồi gửi các `embeddingText` theo batch tối đa 32 tới AI Service. Backend kiểm tra tất cả vector trước khi công bố một phiên bản hoàn chỉnh vào PostgreSQL/pgvector; xử lý lại thất bại giữ bản cũ. Client cũng có thể gọi `POST /api/documents/{documentId}/ingest` với JWT để chạy đồng bộ hoặc thử lại. AI Service không có credential database.
 
 API nội bộ `POST /internal/embeddings` nhận header `X-AI-Service-Token` và JSON:
 
@@ -127,7 +127,15 @@ API nội bộ `POST /internal/embeddings` nhận header `X-AI-Service-Token` v�
 {"texts": ["Chương 1\nNội dung đoạn tài liệu"]}
 ```
 
-Kết quả gồm `model` (định danh `model@revision`), `dimensions` và `vectors` theo đúng thứ tự input. Tối đa 32 text, mỗi text không rỗng và tối đa 16.384 ký tự; text vượt 512 token sau khi thêm tiền tố bị từ chối bằng 422, không tự cắt. Adapter hiện hỗ trợ local `intfloat/multilingual-e5-small`: tự thêm `passage: `, masked mean pooling và L2 normalization. Khi thêm retrieval, câu hỏi phải dùng adapter query với `query: ` và cùng model/revision.
+Kết quả gồm `model` (định danh `model@revision`), `dimensions` và `vectors` theo đúng thứ tự input. Tối đa 32 text, mỗi text không rỗng và tối đa 16.384 ký tự; text vượt 512 token sau khi thêm tiền tố và token đặc biệt bị từ chối bằng 422, không tự cắt. Adapter hiện hỗ trợ local `intfloat/multilingual-e5-small`, gộp vector có xét attention mask và chuẩn hóa L2.
+
+Trường `inputType` nhận `passage` (mặc định, dùng cho tài liệu) hoặc `query` (dùng cho câu hỏi). Adapter tự thêm tiền tố `passage: ` hoặc `query: `; phía gọi gửi văn bản không có tiền tố. Loại đầu vào khác, kể cả null, bị từ chối bằng 422 trước khi nạp mô hình. Vector câu hỏi và tài liệu dùng cùng model/revision và số chiều:
+
+```json
+{"texts": ["Khi nào nên sử dụng transaction?"], "inputType": "query"}
+```
+
+Backend có `DocumentEmbeddingClient.embedQuery` để gọi chế độ câu hỏi, kiểm tra vector và giữ lỗi 422 khi vượt giới hạn token; `embed` cho tài liệu giữ nguyên hành vi. API `POST /api/courses/{courseId}/search` dùng vector câu hỏi để tìm các đoạn trong phiên bản chỉ mục đã công bố theo quyền Course; AI Service không truy vấn database hoặc quyết định phân quyền.
 
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |

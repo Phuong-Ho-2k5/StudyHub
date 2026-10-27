@@ -60,6 +60,9 @@ class DocumentFileApiTest {
         assertEquals(201, response.statusCode(), response.body());
         var doc = tree(response);
         assertTrue(doc.path("managedFile").asBoolean());
+        assertEquals("PENDING",doc.path("ingestionStatus").asText());
+        assertTrue(doc.path("publishedIngestionId").isNull());
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM document_ingestions WHERE document_id=? AND status='PENDING'",Integer.class,doc.path("id").asLong()));
         assertEquals("Bài học", doc.path("title").asText());
         String key = doc.path("storagePath").asText();
         assertTrue(key.matches("[a-f0-9-]{36}\\.pdf"), key);
@@ -107,12 +110,14 @@ class DocumentFileApiTest {
 
     @Test void rejectsInvalidPdfEmptyFileAndInvalidTitleWithoutLeavingFiles() throws Exception {
         long before = countFiles();
+        long queuedBefore=jdbc.queryForObject("SELECT count(*) FROM document_ingestions",Long.class);
         assertEquals(415, upload(token, "fake.pdf", "application/pdf", "%PDF-fake".getBytes(), "PDF").statusCode());
         assertEquals(415, upload(token, "notes.txt", "text/plain", pdf(), "PDF").statusCode());
         assertEquals(400, upload(token, "empty.pdf", "application/pdf", new byte[0], "PDF").statusCode());
         assertEquals(400, upload(token, "lecture.pdf", "application/pdf", pdf(), " ").statusCode());
         assertEquals(400, upload(token, "lecture.pdf", "application/pdf", pdf(), "x".repeat(201)).statusCode());
         assertEquals(before, countFiles());
+        assertEquals(queuedBefore,jdbc.queryForObject("SELECT count(*) FROM document_ingestions",Long.class));
     }
 
     @Test void rejectsOversizedFileWithJsonError() throws Exception {

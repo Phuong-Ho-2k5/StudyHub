@@ -334,12 +334,24 @@ Sau đó đăng nhập bằng tài khoản này. Không có endpoint đăng ký 
 | --- | --- |
 | 401 | Thiếu/sai JWT |
 | 404 | Document không tồn tại hoặc không thuộc owner |
-| 409 | Tệp chưa được upload, nguồn thay đổi trong lúc xử lý hoặc đã có chunk |
+| 409 | Tệp chưa được upload, nguồn thay đổi, mã nhận việc hết hiệu lực hoặc ingestion đang được xử lý |
 | 413/415/422 | PDF vượt giới hạn, không hợp lệ, không trích xuất được hoặc không có chunk |
 | 502 | AI trả sai model/dimension/số lượng/vector hoặc tokenizer không khớp |
 | 503/504 | AI thiếu cấu hình, bận, không sẵn sàng hoặc quá hạn |
 
-Không có transaction DB nào giữ trong lúc gọi model/network. Khi lưu, backend khóa và kiểm tra lại document/owner/nguồn, rồi insert tất cả chunk trong một transaction ngắn. Một lỗi sẽ rollback cả batch; hai yêu cầu đồng thời không tạo dữ liệu trùng. Lần gọi lại sau khi đã ingest thành công trả 409 tại bước lưu, không thay thế chunk cũ. Phiên bản này vẫn thực hiện công việc AI trước kiểm tra trùng; ingest lại và quản lý phiên bản chỉ mục sẽ được triển khai sau. `Document.status` hiện có giữ nguyên ý nghĩa quản lý tài liệu.
+Không có transaction DB nào giữ trong lúc gọi model/network. Upload PDF tạo tác vụ `PENDING` trong cùng giao dịch lưu tài liệu. Worker chạy sau khi giao dịch hoàn tất, nhận tác vụ thành `PROCESSING`, trích xuất/chia đoạn/sinh vector rồi công bố toàn bộ trong một giao dịch ngắn. API upload vẫn trả 201, không chờ mô hình. Tài liệu chỉ có metadata mang trạng thái ingestion `NOT_REQUESTED` và chưa được xử lý tự động.
+
+`GET /api/documents/{id}` và danh sách tài liệu bổ sung `ingestionStatus`, `publishedIngestionId`, `ingestionError`. `Document.status` giữ nguyên ý nghĩa cũ; chỉ mục có thể tìm kiếm khi `publishedIngestionId` khác null và trỏ đến phiên bản `INDEXED`. Lần xử lý mới nhất có thể `PROCESSING` hoặc `FAILED` trong khi phiên bản cũ vẫn được công bố. `ingestionError` chỉ chứa mã lỗi an toàn như `AI_UNAVAILABLE`, `AI_TIMEOUT`, `NO_CONTENT`, `SOURCE_CHANGED`, `INGESTION_FAILED`; không trả chi tiết lỗi upstream hoặc mã nhận việc.
+
+`POST /api/documents/{id}/ingest` vẫn xử lý đồng bộ, nay hỗ trợ thử lại/xử lý lại và trả thêm `ingestionId` khi thành công. Nếu có tác vụ `PENDING` từ upload thì nhận tác vụ đó; nếu đang có worker còn thời hạn thì trả 409 trước khi gọi AI. Sau một lần thành công hoặc thất bại, yêu cầu mới tạo một phiên bản xử lý mới.
+
+Khi công bố, backend khóa Workspace → Course → Document → tác vụ, kiểm tra lại quyền/nguồn/mã nhận việc, thay toàn bộ đoạn/vector và con trỏ phiên bản trong cùng giao dịch. Một lỗi chèn hoàn tác cả việc xóa bản cũ. Các truy vấn đang đọc vẫn thấy bản cũ theo MVCC; sau khi commit sẽ thấy bản mới. Vector cũ được dọn ngay trong giao dịch, lịch sử tác vụ giữ lại metadata. Xóa Document/Course/Workspace dọn tác vụ và vector bằng khóa ngoại; worker đang chạy không được ghi trở lại tài liệu đã xóa.
+
+Hàng đợi nằm trong bảng `document_ingestions`, không phụ thuộc bộ nhớ tiến trình. Tác vụ đang xử lý có thời hạn mặc định 600 giây, được gia hạn trước mỗi lời gọi AI. Thời hạn phải dài hơn `AI_SERVICE_TIMEOUT_SECONDS` ít nhất 30 giây. Sau khi backend dừng, worker nhận lại tác vụ quá hạn với mã mới; mã cũ không được công bố hoặc thay đổi trạng thái của lần nhận mới. Tối đa 3 lần nhận tự động do gián đoạn, sau đó lỗi `INTERRUPTED`; chủ sở hữu vẫn có thể thử lại qua API. Lỗi AI thông thường chuyển sang `FAILED`, không tự lặp vô hạn.
+
+Các biến cấu hình: `DOCUMENT_INGESTION_WORKER_ENABLED` (mặc định true), `DOCUMENT_INGESTION_POLL_DELAY_MS` (1000), `DOCUMENT_INGESTION_LEASE_SECONDS` (600), `DOCUMENT_INGESTION_MAX_ATTEMPTS` (3). Kiểm thử dùng profile `test` tắt worker nền và chủ động nhận tác vụ để tránh gọi nhầm dịch vụ AI trên máy phát triển.
+
+Migration V21 thêm hàng đợi, trạng thái và con trỏ phiên bản; V22 PostgreSQL thêm `document_chunks.ingestion_id`. Các bộ vector cũ của PDF managed có model/số chiều nhất quán được công bố thành phiên bản `legacy-*`; PDF còn lại được xếp hàng xử lý. Dữ liệu cũ không nhất quán chưa được công bố và sẽ được thay sau khi xử lý thành công. M6-T06 phải nối `document_chunks.ingestion_id = documents.published_ingestion_id` và `document_ingestions.status = 'INDEXED'`, đồng thời lọc Course/owner/model/số chiều; không chỉ lọc trạng thái ingestion gần nhất của Document.
 
 Migration PostgreSQL V20 bổ sung `embedding_text` và `metadata` JSONB vào `document_chunks`; metadata giữ headings, blockIds, sourceRefs và overlapSourceRefs kèm bbox/coordOrigin. `embedding_text` là nội dung đã thêm heading/overlap gửi sang adapter; tiền tố E5 `passage: ` được adapter thêm khi chạy model. Các row cũ được giữ nguyên, `embedding_text` có thể null với row cũ. Xóa Document/Course/Workspace tiếp tục dọn vector qua foreign key cascade.
 
@@ -377,3 +389,23 @@ Remove-Item Env:AI_SIMULATION_URL
 ```
 
 Simulation kiểm tra backend HTTP/transaction với AI giả lập theo contract. Smoke test AI dùng model thật chạy riêng; không cần credential provider tính phí.
+
+## Tìm kiếm ngữ nghĩa theo Course
+
+Sau khi upload, theo dõi `GET /api/documents/{id}`. Tài liệu có `publishedIngestionId` khác null mới có phiên bản để tìm kiếm; `ingestionStatus=FAILED` do xử lý lại không làm mất bản công bố cũ. Metadata chưa upload hoặc PDF chưa có chỉ mục công bố không xuất hiện trong kết quả.
+
+Gọi `POST /api/courses/{courseId}/search` với Bearer JWT và JSON:
+
+```json
+{"query": "Khi nào nên sử dụng transaction?", "topK": 5}
+```
+
+`query` không rỗng, tối đa 16384 ký tự; backend bỏ khoảng trắng ở hai đầu. Không truyền `topK` thì dùng 5; truyền null hoặc ngoài 1–20 trả 400. Giới hạn mô hình là 512 token tính cả tiền tố và token đặc biệt; vượt giới hạn trả 422, không tự cắt câu hỏi.
+
+Phản hồi có `courseId`, câu hỏi đã chuẩn hóa và `items`. Mỗi kết quả gồm `chunkId`, `documentId`, `documentTitle`, `chunkIndex`, `content`, `pageStart`, `pageEnd`, `score`; trang có thể null. Không trả vector, đường dẫn lưu trữ hoặc mã nhận tác vụ. Điểm bằng `1 - cosineDistance`, càng lớn càng gần nghĩa; đây không phải xác suất đúng. Đồng điểm sắp theo mã đoạn tăng dần. Chưa áp dụng ngưỡng điểm, nên kết quả gần nhất vẫn có thể ít liên quan nếu tài liệu không trả lời câu hỏi.
+
+Backend kiểm tra quyền trước khi sinh vector, sau đó lọc Course/owner/phiên bản công bố/model/số chiều trong SQL trước khi lấy Top-K. Không có hoặc không sở hữu Course trả 404. Không có đoạn tương thích đã công bố trả `items: []` khi bước AI thành công. AI vẫn có thể được gọi khi chỉ mục rỗng; các lỗi upstream giữ nguyên: 502 dữ liệu không hợp lệ, 503 chưa cấu hình/bận/không khả dụng, 504 quá thời gian chờ. Lỗi có định dạng `ApiErrorResponse`.
+
+Tìm kiếm chính xác bằng pgvector, chưa thêm ANN/HNSW hoặc xếp hạng lại. Tài liệu và câu hỏi dùng cùng mô hình/phiên bản; chỉ tiền tố khác nhau (`passage: ` và `query: `). Một câu lệnh SQL đọc phiên bản hiện tại sau khi AI trả, nên không ghép các phiên bản trong lúc công bố lại. Truy vấn đã bắt đầu trước khi công bố vẫn có thể thấy bản cũ theo MVCC.
+
+Xem [bộ yêu cầu Postman và dữ liệu đánh giá](../infra/testing/search/README.md). Kiểm thử SQL dùng PostgreSQL thật và vector có khoảng cách đã biết; kiểm thử chất lượng tiếng Việt dùng E5 thật trên bộ dữ liệu mẫu nhỏ, không thay cho đánh giá trên tài liệu thực tế của người dùng.

@@ -16,6 +16,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (!req.headers['content-type']?.startsWith('application/json') ||
         !Array.isArray(data.texts) || !data.texts.length || data.texts.length > 32 ||
+        !['passage', 'query'].includes(data.inputType === undefined ? 'passage' : data.inputType) ||
         data.texts.some(text => typeof text !== 'string' || !text.trim() || text.length > 16384)) {
       res.writeHead(422); return res.end();
     }
@@ -23,7 +24,8 @@ const server = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({
       model: 'intfloat/multilingual-e5-small@614241f622f53c4eeff9890bdc4f31cfecc418b3',
       dimensions: 384,
-      vectors: data.texts.map(() => [1, ...Array(383).fill(0)]),
+      // Distinct synthetic vectors prove which input type reached the real HTTP boundary.
+      vectors: data.texts.map(() => [data.inputType === 'query' ? -1 : 1, ...Array(383).fill(0)]),
     }));
   }
   if (req.method !== 'POST' || req.url !== '/internal/documents/extract') {
