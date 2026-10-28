@@ -1,5 +1,28 @@
 # AI service
 
+## RAG Chat và OpenAI
+
+Backend gọi `POST /internal/rag/answer` với `X-AI-Service-Token`, `question` và 1–20 `contexts` đã kiểm tra quyền. FastAPI không retrieve hoặc truy vấn DB. Nội dung question và các context được chọn được gửi tới OpenAI; không gửi PDF đầy đủ hay credential nội bộ. Endpoint dùng Responses API với JSON schema, `store=false`, không tools, không streaming và không retry generation.
+
+| Biến | Mặc định | Ý nghĩa |
+| --- | --- | --- |
+| `LLM_PROVIDER` | `openai` | Adapter duy nhất hiện hỗ trợ |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | Chỉ cấu hình phía server; HTTP chỉ cho loopback simulation |
+| `LLM_API_KEY` | trống | Key phía AI Service; không gửi cho backend/client |
+| `LLM_MODEL` | `gpt-4.1-mini` | Model cấu hình, có thể đặt snapshot được tài khoản hỗ trợ |
+| `LLM_TIMEOUT_SECONDS` | `60` | Deadline tổng đếm token + generation, tối đa 60 giây |
+| `RAG_MAX_INPUT_TOKENS` | `8192` | Ngân sách input gồm system, question, metadata/context và schema |
+| `LLM_MAX_OUTPUT_TOKENS` | `1024` | Token dành cho output |
+| `LLM_CONTEXT_WINDOW_TOKENS` | `32768` | Trần ứng dụng, phải không vượt context window thật của model |
+
+Đếm bằng `POST /responses/input_tokens` với cùng input và schema trước khi generation; nếu vượt budget, bỏ nguyên các chunk cuối theo thứ tự retrieval và đếm lại. Không chunk nào vừa trả 422/code `TOKEN_BUDGET_EXCEEDED`. Input/output budget phải vừa trần ứng dụng; không tự cắt question/context hoặc để provider truncate.
+
+Request nội bộ tối đa 8 MiB; question 1–16384 ký tự sau trim; title 1–200 ký tự, content không trắng và tối đa 65536 ký tự/chunk. Page phải cùng null hoặc cùng có giá trị dương, end không trước start. Schema nghiêm ngặt, không nhận provider/model override từ caller.
+
+`ANSWERED` hoặc `INSUFFICIENT_CONTEXT` cùng answer/model/promptVersion được backend kiểm tra lại. Model alias được chuẩn hóa về tên cấu hình khi OpenAI trả snapshot có hậu tố ngày; pin snapshot khi cần tái lập. Thiếu cấu hình không làm hỏng `/health`; chat trả 503. Rate limit, provider auth lỗi hoặc 5xx trả 503; output sai/rỗng/refusal/truncated trả 502; deadline trả 504. Không trả raw provider error.
+
+Xem [hướng dẫn simulation, pipeline và eval](../infra/testing/rag/README.md). Hợp đồng được đối chiếu với [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) và [Counting tokens](https://developers.openai.com/api/docs/guides/token-counting) ngày 27/10/2026.
+
 FastAPI service dành cho parse, clean, chunk, embedding, retrieval và gọi LLM. Backend là cổng xác thực và kiểm tra quyền trước khi gọi service này.
 
 Service cung cấp health check, OpenAPI và pipeline dùng Docling để đọc PDF, phân tích bố cục/bảng và OCR tiếng Việt/Anh bằng EasyOCR. Có thể bật mô tả hình bằng mô hình thị giác chạy local. Không cần database, provider LLM hoặc embedding model để khởi động service.

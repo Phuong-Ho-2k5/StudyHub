@@ -13,7 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Component
 public class DocumentEmbeddingClient {
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(5)).build();
     private final ObjectMapper json = new ObjectMapper();
     private final String baseUrl;
     private final String token;

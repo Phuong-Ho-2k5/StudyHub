@@ -28,6 +28,8 @@ studyhub:
     url: ${AI_SERVICE_URL:http://localhost:8000}
     token: ${AI_SERVICE_TOKEN:}
     timeout-seconds: ${AI_SERVICE_TIMEOUT_SECONDS:240}
+    chat-timeout-seconds: ${AI_CHAT_TIMEOUT_SECONDS:75}
+    llm-model: ${LLM_MODEL:gpt-4.1-mini}
     embedding-model: ${AI_EMBEDDING_MODEL:intfloat/multilingual-e5-small}@${AI_EMBEDDING_REVISION:614241f622f53c4eeff9890bdc4f31cfecc418b3}
     embedding-dimensions: ${AI_EMBEDDING_DIMENSIONS:384}
   storage:

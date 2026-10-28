@@ -1,0 +1,17 @@
+$kind: http-request
+name: Câu hỏi trắng không hợp lệ
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/ai/chat'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"question": "   "}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Blank question rejected', () => pm.response.to.have.status(400));

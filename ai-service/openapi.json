@@ -111,6 +111,61 @@
         ]
       }
     },
+    "/internal/rag/answer": {
+      "post": {
+        "tags": [
+          "Internal RAG"
+        ],
+        "summary": "Answer",
+        "description": "Answer using backend-authorized context only; never performs retrieval or database access.",
+        "operationId": "answer_internal_rag_answer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagAnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagAnswerResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid internal token"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "422": {
+            "description": "Invalid context or TOKEN_BUDGET_EXCEEDED"
+          },
+          "502": {
+            "description": "Invalid model output"
+          },
+          "503": {
+            "description": "LLM unavailable or unconfigured"
+          },
+          "504": {
+            "description": "Total generation deadline exceeded"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -510,6 +565,133 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "RagAnswerRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/RagContext"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Contexts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question",
+          "contexts"
+        ],
+        "title": "RagAnswerRequest"
+      },
+      "RagAnswerResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ANSWERED",
+              "INSUFFICIENT_CONTEXT"
+            ],
+            "title": "Status"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 32768,
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "promptVersion": {
+            "type": "string",
+            "const": "course-rag-v1",
+            "title": "Promptversion",
+            "default": "course-rag-v1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "answer",
+          "model"
+        ],
+        "title": "RagAnswerResponse"
+      },
+      "RagContext": {
+        "properties": {
+          "chunkId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Chunkid"
+          },
+          "documentId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Documentid"
+          },
+          "documentTitle": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Documenttitle"
+          },
+          "chunkIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chunkindex"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "pageStart": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagestart"
+          },
+          "pageEnd": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pageend"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chunkId",
+          "documentId",
+          "documentTitle",
+          "chunkIndex",
+          "content"
+        ],
+        "title": "RagContext"
       }
     },
     "securitySchemes": {

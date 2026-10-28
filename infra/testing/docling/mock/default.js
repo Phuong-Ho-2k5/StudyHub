@@ -1,6 +1,25 @@
 // Based on ai-service/openapi.json. Validates the multipart contract used by Spring.
 const http = require('http');
 const server = http.createServer(async (req, res) => {
+  if (req.method === 'POST' && req.url === '/internal/rag/answer') {
+    if (req.headers['x-ai-service-token'] !== 'simulation-token') { res.writeHead(401); return res.end(); }
+    let data=req.body;
+    if (data === undefined) { const chunks=[]; for await (const chunk of req) chunks.push(chunk); data=Buffer.concat(chunks).toString('utf8'); }
+    try { if (typeof data === 'string') data=JSON.parse(data); } catch { res.writeHead(422); return res.end(); }
+    if (!data.question || !data.contexts?.length || data.contexts.some(c=>!c.chunkId || !c.documentId || !c.content || c.score !== undefined)) {
+      res.writeHead(422); return res.end();
+    }
+    const marker=data.question;
+    res.setHeader('Content-Type','application/json');
+    if (marker.includes('[budget]')) { res.writeHead(422); return res.end(JSON.stringify({detail:{code:'TOKEN_BUDGET_EXCEEDED'}})); }
+    if (marker.includes('[invalid-context]')) { res.writeHead(422); return res.end(JSON.stringify({detail:[{type:'invalid'}]})); }
+    if (marker.includes('[unavailable]')) { res.writeHead(503); return res.end('{}'); }
+    if (marker.includes('[timeout]')) await new Promise(resolve=>setTimeout(resolve,2000));
+    if (marker.includes('[malformed]')) { res.writeHead(200); return res.end('{}'); }
+    res.writeHead(200);
+    return res.end(JSON.stringify({status:marker.includes('[insufficient]')?'INSUFFICIENT_CONTEXT':'ANSWERED',
+      answer:data.contexts[0].content,model:'gpt-4.1-mini',promptVersion:'course-rag-v1'}));
+  }
   if (req.method === 'POST' && req.url === '/internal/embeddings') {
     if (req.headers['x-ai-service-token'] !== 'simulation-token') {
       res.writeHead(401); return res.end();

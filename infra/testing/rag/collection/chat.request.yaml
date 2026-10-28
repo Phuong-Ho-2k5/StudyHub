@@ -1,0 +1,24 @@
+$kind: http-request
+name: Hỏi đáp tài liệu Course
+order: 1000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/ai/chat'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"question": {{questionJson}}, "topK": {{topK}}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Chat returns validated answer without internal data', () => {
+        pm.response.to.have.status(200);
+        const data = pm.response.json();
+        pm.expect(['ANSWERED', 'INSUFFICIENT_CONTEXT']).to.include(data.status);
+        pm.expect(data.answer).to.be.a('string').and.not.empty;
+        pm.expect(data.promptVersion).to.eql('course-rag-v1');
+        ['vectors','embedding','contexts','storagePath','apiKey','citations'].forEach(key => pm.expect(data).not.to.have.property(key));
+      });

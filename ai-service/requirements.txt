@@ -1,3 +1,4 @@
 fastapi[standard]==0.159.1
 docling[easyocr,vlm]==2.142.1
 transformers==5.20.2
+httpx==0.28.1

@@ -72,6 +72,10 @@ class DocumentIngestionApiIT {
         assertEquals("PENDING",pending.path("ingestionStatus").asText());
         assertTrue(pending.path("publishedIngestionId").isNull());
         String searchPath="/api/courses/"+courseId+"/search";
+        String chatPath="/api/courses/"+courseId+"/ai/chat";
+        call("POST",chatPath,null,Map.of("question","Question"),401);
+        call("POST",chatPath,login(),Map.of("question","Question"),404);
+        assertEquals("INSUFFICIENT_CONTEXT",call("POST",chatPath,token,Map.of("question","Question"),200).path("status").asText());
         call("POST",searchPath,null,Map.of("query","Question"),401);
         call("POST",searchPath,login(),Map.of("query","Question"),404);
         assertEquals(0,call("POST",searchPath,token,Map.of("query","Question"),200).path("items").size());
@@ -92,6 +96,10 @@ class DocumentIngestionApiIT {
         assertEquals(1,found.path("items").get(0).path("pageStart").asInt());
         assertFalse(found.path("items").get(0).has("embedding"));
         assertFalse(found.path("items").get(0).has("storagePath"));
+        var answer=call("POST",chatPath,token,Map.of("question","Question"),200);
+        assertEquals("ANSWERED",answer.path("status").asText());
+        assertEquals("StudyHub extracted text",answer.path("answer").asText());
+        assertFalse(answer.has("citations"));
         var summary=call("POST",path,token,null,200);
         String second=summary.path("ingestionId").asText();
         assertNotEquals(first,second);
@@ -120,6 +128,7 @@ class DocumentIngestionApiIT {
         assertEquals("AI_UNAVAILABLE",failed.path("ingestionError").asText());
         assertEquals(second,failed.path("publishedIngestionId").asText());
         assertEquals(1,call("POST",searchPath,token,Map.of("query","Transaction"),200).path("items").size());
+        assertEquals("ANSWERED",call("POST",chatPath,token,Map.of("question","Question"),200).path("status").asText());
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM document_chunks ch JOIN documents d ON d.id=ch.document_id AND d.published_ingestion_id=ch.ingestion_id WHERE d.id=?",Integer.class,documentId));
         var retry=call("POST",path,token,null,200);
         assertNotEquals(second,retry.path("ingestionId").asText());

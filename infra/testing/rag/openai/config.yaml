@@ -1,0 +1,9 @@
+version: 1
+name: studyhub-openai-responses
+slug: studyhub-openai-responses
+protocol: http
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

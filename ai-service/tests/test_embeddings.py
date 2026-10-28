@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from embedding_workers import echo_worker as _echo_worker, delayed_reader as _delayed_reader
 
 
 def test_embedding_route_authenticates_before_reading_json(monkeypatch):
@@ -99,20 +100,6 @@ def test_rejects_corrupt_model_output(vectors):
         validate_vectors(vectors, count=1, dimensions=2)
 
 
-def _echo_worker(settings, connection):
-    # A real spawned process exercises IPC, reuse and termination without model downloads.
-    try:
-        while True:
-            texts, input_type = connection.recv()
-            if texts == ["hang"]:
-                time.sleep(10)
-            connection.send((200, [[1.] + [0.] * (settings.dimensions - 1) for _ in texts]))
-    except EOFError:
-        pass
-    finally:
-        connection.close()
-
-
 def test_worker_reuses_process_then_recovers_after_hard_timeout(monkeypatch):
     from fastapi import HTTPException
     from app.embedding import service as module
@@ -134,15 +121,6 @@ def test_worker_reuses_process_then_recovers_after_hard_timeout(monkeypatch):
         assert service._worker is not worker
     finally:
         service.close()
-
-
-def _delayed_reader(settings, connection):
-    try:
-        time.sleep(5)
-        texts, input_type = connection.recv()
-        connection.send((200, [[1.] + [0.] * (settings.dimensions - 1) for _ in texts]))
-    finally:
-        connection.close()
 
 
 def test_deadline_includes_large_request_ipc_and_worker_startup(monkeypatch):

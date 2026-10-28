@@ -1,5 +1,25 @@
 # StudyHub Backend
 
+## RAG Chat theo Course
+
+`POST /api/courses/{courseId}/ai/chat`, Bearer JWT, body:
+
+```json
+{"question":"Transaction bảo đảm điều gì?","topK":5}
+```
+
+`question` bắt buộc là chuỗi JSON, không trắng, tối đa 16384 ký tự. `topK` phải là số nguyên JSON, mặc định 5 khi bỏ qua; null, chuỗi, số thực hoặc ngoài 1–20 trả 400. Không tự ép kiểu số/boolean thành câu hỏi. Backend kiểm tra ownership trước embedding/retrieval, dùng semantic search M6-T06 trên phiên bản đã công bố, gửi các đoạn được chọn sang FastAPI rồi kiểm tra lại quyền Course trước khi trả kết quả. Không giữ transaction DB trong lúc chờ AI.
+
+Response gồm `courseId`, `question`, `status`, `answer`, `model`, `promptVersion`. `status` là `ANSWERED` hoặc `INSUFFICIENT_CONTEXT`. Không có hit thì không gọi generation, `model=null`. Không đủ bằng chứng dùng câu trả lời cố định: “Không đủ thông tin trong tài liệu của khóa học để trả lời câu hỏi này.” Lỗi embedding/provider không biến thành fallback thành công.
+
+Mã lỗi: 400 input/JSON; 401 JWT; 404 Course không có quyền/không tồn tại; 422 token budget; 502 AI trả sai schema/output hoặc context nội bộ không hợp lệ; 503 thiếu cấu hình/rate limit/unavailable; 504 timeout. Response lỗi giữ `ApiErrorResponse` hiện có.
+
+Backend nhận `LLM_MODEL` để đối chiếu response và `AI_CHAT_TIMEOUT_SECONDS=75` cho bước generation; AI Service dùng deadline tổng 60 giây. Timeout embedding vẫn theo cấu hình riêng. LLM key chỉ nằm ở AI Service. Cấu hình `.env.example` được truyền qua Docker Compose; khi chạy local, đặt cùng `LLM_MODEL` ở hai service.
+
+Context giữ snapshot lúc retrieve; publish mới trong lúc chờ LLM áp dụng cho request tiếp theo. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. M6-T07 không có streaming, lịch sử, citation kiểm chứng hoặc API mở nguồn.
+
+Xem [simulation/PostgreSQL/pipeline và eval](../infra/testing/rag/README.md) và [cấu hình OpenAI của AI Service](../ai-service/README.md).
+
 Backend dùng Spring Boot 4.1.1, Java 21, Maven, PostgreSQL, Flyway và JWT. Các API hiện có gồm Auth, Workspace, Course, Document, Concept, Quiz, DiscussionPost và Comment. Xem [README gốc](../README.md) để chạy cả backend lẫn frontend.
 
 ## Cấu hình

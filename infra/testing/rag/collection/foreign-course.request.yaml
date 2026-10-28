@@ -1,0 +1,17 @@
+$kind: http-request
+name: Không được hỏi Course người khác
+order: 4000
+method: POST
+url: '{{baseUrl}}/api/courses/{{foreignCourseId}}/ai/chat'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"question": {{questionJson}}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Foreign Course hidden', () => pm.response.to.have.status(404));

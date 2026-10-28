@@ -30,7 +30,8 @@ class ExtractionGuard:
             return await JSONResponse({"detail": "AI service token is not configured."}, 503)(scope, receive, send)
         if not hmac.compare_digest(supplied, token.encode("utf-8")):
             return await JSONResponse({"detail": "Invalid internal service token."}, 401)(scope, receive, send)
-        maximum = ExtractionSettings.from_env().max_file_bytes + 1024 * 1024
+        maximum = (8 * 1024 * 1024 if scope["path"] == "/internal/rag/answer"
+                   else ExtractionSettings.from_env().max_file_bytes + 1024 * 1024)
         try:
             length = int(headers.get(b"content-length", b"0"))
         except ValueError:

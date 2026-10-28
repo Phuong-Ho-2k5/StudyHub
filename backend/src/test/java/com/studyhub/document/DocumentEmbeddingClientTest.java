@@ -19,11 +19,13 @@ class DocumentEmbeddingClientTest {
     List<String> texts;
     String authorization;
     String inputType;
+    String upgrade;
 
     @BeforeEach void start() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/internal/embeddings", exchange -> {
             authorization = exchange.getRequestHeaders().getFirst("X-AI-Service-Token");
+            upgrade=exchange.getRequestHeaders().getFirst("Upgrade");
             texts = new ArrayList<>();
             var body = json.readTree(exchange.getRequestBody());
             inputType = body.path("inputType").asText("passage");
@@ -46,6 +48,7 @@ class DocumentEmbeddingClientTest {
         assertEquals("secret", authorization);
         assertEquals(List.of("Heading\nFirst", "Second"), texts);
         assertEquals("passage", inputType);
+        assertNull(upgrade, "Do not negotiate h2c with Uvicorn");
         assertEquals("model@revision", result.model());
         assertEquals(3, result.dimensions());
         assertEquals(List.of(0.0, 1.0, 0.0), result.vectors().get(1));

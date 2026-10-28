@@ -1,0 +1,5 @@
+simulation: studyhub-course-rag
+routing: path
+mocks:
+  - routeKey: openai
+    path: ./openai/config.yaml

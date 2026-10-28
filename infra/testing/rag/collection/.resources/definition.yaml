@@ -1,0 +1,28 @@
+$kind: collection
+name: StudyHub Course RAG Chat
+description: 'Chat đồng bộ theo Course, chỉ dùng chỉ mục đã công bố. Không lưu credential thật.'
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+  - key: accessToken
+    value: ''
+  - key: courseId
+    value: ''
+  - key: emptyCourseId
+    value: ''
+  - key: foreignCourseId
+    value: ''
+  - key: question
+    value: 'Transaction bảo đảm điều gì?'
+  - key: topK
+    value: '5'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: http:beforeRequest
+    language: text/javascript
+    code: |-
+      pm.variables.set('questionJson', JSON.stringify(pm.variables.get('question')));

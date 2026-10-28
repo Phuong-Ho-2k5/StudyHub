@@ -1,0 +1,21 @@
+$kind: http-request
+name: Course chưa có chỉ mục
+order: 2000
+method: POST
+url: '{{baseUrl}}/api/courses/{{emptyCourseId}}/ai/chat'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"question": {{questionJson}}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Empty retrieval does not generate', () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json().status).to.eql('INSUFFICIENT_CONTEXT');
+        pm.expect(pm.response.json().model).to.eql(null);
+      });
