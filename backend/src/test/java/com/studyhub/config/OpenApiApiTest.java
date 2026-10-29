@@ -107,6 +107,27 @@ class OpenApiApiTest {
     }
 
     @Test
+    void citationAndSourceContractIncludesAuthAndStaleSourceErrors() throws Exception {
+        var spec=mapper.readTree(send("GET","/v3/api-docs",null,null).body());
+        var schemas=spec.at("/components/schemas");
+        assertTrue(schemas.at("/CourseChatResponse/properties/citations").isObject());
+        assertTrue(schemas.at("/CourseCitationResponse/properties/quote").isObject());
+        for(String dto:java.util.List.of("CourseCitationResponse","DocumentSourceResponse"))
+            for(String field:java.util.List.of("pageStart","pageEnd","fileUrl")) {
+                var property=schemas.path(dto).path("properties").path(field);
+                assertTrue(property.path("nullable").asBoolean() || property.path("type").toString().contains("null"),
+                    dto+"."+field+" must allow null");
+            }
+        for(String path:java.util.List.of("/api/courses/{courseId}/ai/chat",
+                "/api/courses/{courseId}/documents/{documentId}/chunks/{chunkId}/source","/api/documents/{documentId}/file")) {
+            var operation=spec.path("paths").path(path).path(path.endsWith("/chat")?"post":"get");
+            assertFalse(operation.path("security").isEmpty());assertTrue(operation.path("responses").has("409"));
+        }
+        assertTrue(spec.path("paths").path("/api/documents/{documentId}/file").path("get").path("responses")
+            .path("200").path("content").has("application/pdf"));
+    }
+
+    @Test
     void openingDocsDoesNotBypassJwtOrAdminAuthorization() throws Exception {
         assertEquals(401, send("GET", "/api/workspaces", null, null).statusCode());
         assertEquals(401, send("GET", "/api/workspaces", "invalid-token", null).statusCode());

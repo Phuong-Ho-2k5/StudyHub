@@ -18,7 +18,8 @@ const server = http.createServer(async (req, res) => {
     if (marker.includes('[malformed]')) { res.writeHead(200); return res.end('{}'); }
     res.writeHead(200);
     return res.end(JSON.stringify({status:marker.includes('[insufficient]')?'INSUFFICIENT_CONTEXT':'ANSWERED',
-      answer:data.contexts[0].content,model:'gpt-4.1-mini',promptVersion:'course-rag-v1'}));
+      answer:data.contexts[0].content,model:'gpt-4.1-mini',promptVersion:'course-rag-v2',
+      evidence:marker.includes('[insufficient]')?[]:[{chunkId:data.contexts[0].chunkId,quote:Array.from(data.contexts[0].content).slice(0,1000).join('')}]}));
   }
   if (req.method === 'POST' && req.url === '/internal/embeddings') {
     if (req.headers['x-ai-service-token'] !== 'simulation-token') {

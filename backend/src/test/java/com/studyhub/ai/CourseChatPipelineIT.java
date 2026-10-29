@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.fasterxml.jackson.databind.*;
 import com.studyhub.document.*;
 import com.studyhub.document.dto.DocumentExtractionResponse.Chunk;
+import com.studyhub.document.storage.DocumentStorage;
+import java.nio.file.*;
+import java.util.concurrent.TimeUnit;
 import java.net.URI;
 import java.net.http.*;
 import java.sql.DriverManager;
@@ -42,6 +45,7 @@ class CourseChatPipelineIT {
     @Autowired DocumentEmbeddingClient embeddings;
     @Autowired DocumentChunkRepository chunks;
     @Autowired DocumentIngestionRepository queue;
+    @Autowired DocumentStorage storage;
     final HttpClient http=HttpClient.newHttpClient();
     final ObjectMapper json=new ObjectMapper();
 
@@ -54,19 +58,57 @@ class CourseChatPipelineIT {
         var empty=call("POST",path,token,Map.of("question","Transaction bảo đảm điều gì?"),200);
         assertEquals("INSUFFICIENT_CONTEXT",empty.path("status").asText());assertTrue(empty.path("model").isNull());
         long owner=jdbc.queryForObject("SELECT owner_id FROM workspaces WHERE id=?",Long.class,workspace);
-        long document=jdbc.queryForObject("INSERT INTO documents(course_id,title,file_name,file_type,storage_path,managed_file) VALUES (?,'Database','lesson.pdf','application/pdf','pipeline.pdf',true) RETURNING id",Long.class,course);
+        byte[] pdfBytes;
+        try(var pdf=new org.apache.pdfbox.pdmodel.PDDocument();var output=new java.io.ByteArrayOutputStream()) {
+            pdf.addPage(new org.apache.pdfbox.pdmodel.PDPage());pdf.save(output);pdfBytes=output.toByteArray();
+        }
+        var stored=storage.store(new org.springframework.mock.web.MockMultipartFile("file","lesson.pdf","application/pdf",pdfBytes));
+        long document=jdbc.queryForObject("INSERT INTO documents(course_id,title,file_name,file_type,storage_path,managed_file) VALUES (?,'Database','lesson.pdf','application/pdf',?,true) RETURNING id",Long.class,course,stored.key());
         String content="Transaction bảo đảm tính nguyên tử (atomicity).";
         var batch=embeddings.embed(List.of(content));
         var chunk=new Chunk(document,"lesson.pdf",0,content,content,List.of(),1,1,List.of(),List.of(),"",List.of(),16,"intfloat/multilingual-e5-small");
-        chunks.persist(queue.claimNow(document,owner),new DocumentService.ExtractionSource(document,"lesson.pdf","pipeline.pdf",new byte[]{1}),
+        chunks.persist(queue.claimNow(document,owner),new DocumentService.ExtractionSource(document,"lesson.pdf",stored.key(),pdfBytes),
                 List.of(chunk),batch.vectors(),batch.model(),batch.dimensions());
         var answer=call("POST",path,token,Map.of("question","Transaction bảo đảm điều gì?"),200);
         assertEquals("ANSWERED",answer.path("status").asText());assertTrue(answer.path("answer").asText().contains("atomicity"));
-        assertEquals("gpt-4.1-mini",answer.path("model").asText());assertEquals("course-rag-v1",answer.path("promptVersion").asText());
+        assertEquals("gpt-4.1-mini",answer.path("model").asText());assertEquals("course-rag-v2",answer.path("promptVersion").asText());
+        assertEquals(1,answer.path("citations").size());var citation=answer.path("citations").get(0);
+        assertEquals(content,citation.path("quote").asText());assertEquals(document,citation.path("documentId").asLong());
+        String sourceUrl=citation.path("sourceUrl").asText();
+        var source=call("GET",sourceUrl,token,null,200);
+        assertEquals(content,source.path("content").asText());assertEquals(1,source.path("pageStart").asInt());
+        assertEquals(citation.path("chunkId"),source.path("chunkId"));
+        call("GET",sourceUrl,other,null,404);call("GET",citation.path("fileUrl").asText(),other,null,404);
         assertEquals("INSUFFICIENT_CONTEXT",call("POST",path,token,Map.of("question","[insufficient] Ngoài tài liệu"),200).path("status").asText());
         call("POST",path,token,Map.of("question","[budget] Question"),422);
         call("POST",path,token,Map.of("question","[malformed] Question"),502);
         call("POST",path,token,Map.of("question","[rate-limit] Question"),503);
+        chunks.persist(queue.claimNow(document,owner),new DocumentService.ExtractionSource(document,"lesson.pdf",stored.key(),pdfBytes),
+                List.of(chunk),batch.vectors(),batch.model(),batch.dimensions());
+        call("GET",sourceUrl,token,null,409);
+        if("1".equals(System.getenv("RUN_RAG_COLLECTION"))) {
+            long emptyCourse=call("POST","/api/workspaces/"+workspace+"/courses",token,Map.of("name","Empty","description","Test"),201).path("id").asLong();
+            long otherWorkspace=call("POST","/api/workspaces",other,Map.of("name","Foreign","description","Test"),201).path("id").asLong();
+            long foreignCourse=call("POST","/api/workspaces/"+otherWorkspace+"/courses",other,Map.of("name","Foreign","description","Test"),201).path("id").asLong();
+            runCollection(Map.of("baseUrl","http://127.0.0.1:"+port,"accessToken",token,"courseId",String.valueOf(course),
+                "emptyCourseId",String.valueOf(emptyCourse),"foreignCourseId",String.valueOf(foreignCourse),
+                "staleDocumentId",String.valueOf(document),"staleChunkId",citation.path("chunkId").asText()));
+        }
+        storage.delete(stored.key());
+    }
+
+    void runCollection(Map<String,String> variables) throws Exception {
+        var root=Path.of("..").toAbsolutePath().normalize();
+        Path environment=Files.createTempFile("studyhub-rag-", ".environment.yaml");
+        Path output=root.resolve(".superpowers/collection-run.log");Files.createDirectories(output.getParent());
+        try {
+            json.writeValue(environment.toFile(),Map.of("name","Disposable RAG pipeline","values",variables.entrySet().stream()
+                .map(e->Map.of("key",e.getKey(),"value",e.getValue(),"enabled",true,"type",e.getKey().equals("accessToken")?"secret":"default")).toList()));
+            var process=new ProcessBuilder("postman","collection","run",root.resolve("infra/testing/rag/collection").toString(),
+                "--environment",environment.toString()).directory(root.toFile()).redirectErrorStream(true).redirectOutput(output.toFile()).start();
+            if(!process.waitFor(90,TimeUnit.SECONDS)) { process.destroyForcibly();fail("Collection timed out; see local collection-run.log"); }
+            assertEquals(0,process.exitValue(),"Collection failed; see local .superpowers/collection-run.log");
+        } finally { Files.deleteIfExists(environment); }
     }
 
     String login() throws Exception {

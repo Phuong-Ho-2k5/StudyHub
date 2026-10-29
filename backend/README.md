@@ -10,13 +10,24 @@
 
 `question` bắt buộc là chuỗi JSON, không trắng, tối đa 16384 ký tự. `topK` phải là số nguyên JSON, mặc định 5 khi bỏ qua; null, chuỗi, số thực hoặc ngoài 1–20 trả 400. Không tự ép kiểu số/boolean thành câu hỏi. Backend kiểm tra ownership trước embedding/retrieval, dùng semantic search M6-T06 trên phiên bản đã công bố, gửi các đoạn được chọn sang FastAPI rồi kiểm tra lại quyền Course trước khi trả kết quả. Không giữ transaction DB trong lúc chờ AI.
 
-Response gồm `courseId`, `question`, `status`, `answer`, `model`, `promptVersion`. `status` là `ANSWERED` hoặc `INSUFFICIENT_CONTEXT`. Không có hit thì không gọi generation, `model=null`. Không đủ bằng chứng dùng câu trả lời cố định: “Không đủ thông tin trong tài liệu của khóa học để trả lời câu hỏi này.” Lỗi embedding/provider không biến thành fallback thành công.
+Response gồm `courseId`, `question`, `status`, `answer`, `model`, `promptVersion` và `citations`. `status` là `ANSWERED` hoặc `INSUFFICIENT_CONTEXT`. Không có hit thì không gọi generation, `model=null`. Không đủ bằng chứng dùng câu trả lời cố định: “Không đủ thông tin trong tài liệu của khóa học để trả lời câu hỏi này.” Lỗi embedding/provider không biến thành fallback thành công.
 
-Mã lỗi: 400 input/JSON; 401 JWT; 404 Course không có quyền/không tồn tại; 422 token budget; 502 AI trả sai schema/output hoặc context nội bộ không hợp lệ; 503 thiếu cấu hình/rate limit/unavailable; 504 timeout. Response lỗi giữ `ApiErrorResponse` hiện có.
+Mã lỗi: 400 input/JSON; 401 JWT; 404 Course không có quyền/không tồn tại; 409 nguồn citation thay đổi khi đang generation; 422 token budget; 502 AI trả sai schema/output/evidence hoặc context nội bộ không hợp lệ; 503 thiếu cấu hình/rate limit/unavailable; 504 timeout. Response lỗi giữ `ApiErrorResponse` hiện có.
 
 Backend nhận `LLM_MODEL` để đối chiếu response và `AI_CHAT_TIMEOUT_SECONDS=75` cho bước generation; AI Service dùng deadline tổng 60 giây. Timeout embedding vẫn theo cấu hình riêng. LLM key chỉ nằm ở AI Service. Cấu hình `.env.example` được truyền qua Docker Compose; khi chạy local, đặt cùng `LLM_MODEL` ở hai service.
 
-Context giữ snapshot lúc retrieve; publish mới trong lúc chờ LLM áp dụng cho request tiếp theo. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. M6-T07 không có streaming, lịch sử, citation kiểm chứng hoặc API mở nguồn.
+Context giữ snapshot lúc retrieve. Sau generation, backend kiểm tra citation trên snapshot và batch lookup lại bản published; nguồn bị thay/xóa trả 409 để client hỏi lại, không tự gọi LLM lần hai. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. Chưa có streaming, lịch sử và UI chat.
+
+### Citation và mở nguồn (M6-T08)
+
+`ANSWERED` có ít nhất một citation; `INSUFFICIENT_CONTEXT` có `citations: []`. Mỗi citation gồm `chunkId`, `documentId`, `documentTitle`, `chunkIndex`, `pageStart`, `pageEnd`, `quote`, `sourceUrl`, `fileUrl`. Quote nguyên văn từ context thực sự gửi LLM; backend tự dựng metadata và URL, không lấy title/trang/URL từ LLM. Trang không có provenance trả null; `fileUrl` null nếu không có managed PDF. Thứ tự citation theo evidence, chưa có marker gắn từng khẳng định trong answer.
+
+- `GET /api/courses/{courseId}/documents/{documentId}/chunks/{chunkId}/source`: JWT, trả metadata cùng toàn bộ `content` của chunk published INDEXED. 404 khi Course/Document foreign, missing hoặc không khớp; 409 khi chunk ID không còn published, kể cả ID không tồn tại trong Document có quyền.
+- `GET /api/documents/{documentId}/file`: JWT, trả PDF bytes với `Content-Type: application/pdf`, `Content-Disposition: inline`, `Cache-Control: private, no-store` và `X-Content-Type-Options: nosniff`. 404 nếu missing/foreign; 409 nếu metadata-only hoặc file không khả dụng. Không trả storage path.
+
+Re-ingest thành công thay toàn bộ chunk, nên link cũ trả 409; rebuild pending/failed giữ nguồn published cũ. Client fetch PDF bằng Authorization header, dùng Blob URL và pageStart/pageEnd để định vị; không đặt JWT vào URL. Chưa hỗ trợ Range trong API này. Citation xác minh provenance và quote nguyên văn, chưa chứng minh mọi khẳng định trong answer đúng ngữ nghĩa. UI xem nguồn thuộc M6-T08A.
+
+Public API thêm trường `citations`; internal contract nâng thành `course-rag-v2` với evidence bắt buộc. Triển khai backend và AI Service đồng bộ, không trộn v1/v2.
 
 Xem [simulation/PostgreSQL/pipeline và eval](../infra/testing/rag/README.md) và [cấu hình OpenAI của AI Service](../ai-service/README.md).
 

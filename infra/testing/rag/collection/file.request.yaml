@@ -1,0 +1,17 @@
+$kind: http-request
+name: Open private PDF
+order: 1200
+method: GET
+url: '{{baseUrl}}{{fileUrl}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Managed PDF has private inline response headers', () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');
+        pm.expect(pm.response.headers.get('Content-Disposition')).to.match(/^inline;/);
+        pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');
+        pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff');
+        pm.expect(pm.response.text().slice(0,5)).to.eql('%PDF-');
+      });

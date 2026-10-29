@@ -5,7 +5,7 @@ import anyio
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from typing import Literal
-from .schemas import GenerationResult
+from .schemas import GenerationResult, Evidence
 from .settings import LlmSettings
 
 
@@ -20,6 +20,7 @@ class _Answer(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     status: Literal["ANSWERED", "INSUFFICIENT_CONTEXT"]
     answer: str = Field(min_length=1, max_length=32768)
+    evidence: list[Evidence] = Field(max_length=20)
 
 
 class LlmProvider:
@@ -92,6 +93,7 @@ class LlmProvider:
             answer = _Answer.model_validate_json(content[0]["text"])
             if not answer.answer.strip():
                 raise ValueError()
-            return GenerationResult(status=answer.status, answer=answer.answer.strip(), model=configured)
+            return GenerationResult(status=answer.status, answer=answer.answer.strip(), model=configured,
+                                    evidence=answer.evidence)
         except (KeyError, TypeError, ValueError, AttributeError, ValidationError):
             raise ProviderError(502) from None

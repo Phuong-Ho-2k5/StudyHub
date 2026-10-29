@@ -30,8 +30,14 @@ const server = http.createServer(async (req, res) => {
     if (question.includes('[truncated]')) return reply(200,{status:'incomplete',model:body.model,output:[]});
     const insufficient=question.includes('[insufficient]');
     const answer=insufficient ? 'No evidence.' : data.contexts[0].content;
+    let evidence=insufficient ? [] : [{chunkId:data.contexts[0].chunkId,quote:Array.from(data.contexts[0].content).slice(0,1000).join('')}];
+    if (question.includes('[fake-id]')) evidence[0].chunkId=999999999;
+    if (question.includes('[fake-quote]')) evidence[0].quote='fabricated evidence';
+    if (question.includes('[duplicate-evidence]')) evidence.push({...evidence[0]});
+    const result={status:insufficient?'INSUFFICIENT_CONTEXT':'ANSWERED',answer,evidence};
+    if (question.includes('[missing-evidence]')) delete result.evidence;
     return reply(200,{id:'resp_simulation',object:'response',status:'completed',model:body.model,
-      output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify({status:insufficient?'INSUFFICIENT_CONTEXT':'ANSWERED',answer}),annotations:[]}]}],
+      output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify(result),annotations:[]}]}],
       usage:{input_tokens:100,output_tokens:20,total_tokens:120}});
   } catch { return reply(400,{error:{message:'Invalid simulated request'}}); }
 });

@@ -467,6 +467,28 @@
         ],
         "title": "EmbeddingResponse"
       },
+      "Evidence": {
+        "properties": {
+          "chunkId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Chunkid"
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Quote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chunkId",
+          "quote"
+        ],
+        "title": "Evidence"
+      },
       "ExtractedPage": {
         "properties": {
           "pageNumber": {
@@ -612,11 +634,19 @@
             "type": "string",
             "title": "Model"
           },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Evidence"
+          },
           "promptVersion": {
             "type": "string",
-            "const": "course-rag-v1",
+            "const": "course-rag-v2",
             "title": "Promptversion",
-            "default": "course-rag-v1"
+            "default": "course-rag-v2"
           }
         },
         "additionalProperties": false,
@@ -624,7 +654,8 @@
         "required": [
           "status",
           "answer",
-          "model"
+          "model",
+          "evidence"
         ],
         "title": "RagAnswerResponse"
       },

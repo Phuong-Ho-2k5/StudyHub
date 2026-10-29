@@ -99,7 +99,12 @@ class DocumentIngestionApiIT {
         var answer=call("POST",chatPath,token,Map.of("question","Question"),200);
         assertEquals("ANSWERED",answer.path("status").asText());
         assertEquals("StudyHub extracted text",answer.path("answer").asText());
-        assertFalse(answer.has("citations"));
+        assertEquals(1,answer.path("citations").size());
+        var citation=answer.path("citations").get(0);
+        assertEquals(documentId,citation.path("documentId").asLong());
+        assertEquals("StudyHub extracted text",citation.path("quote").asText());
+        var citedSource=call("GET",citation.path("sourceUrl").asText(),token,null,200);
+        assertEquals(citation.path("chunkId"),citedSource.path("chunkId"));
         var summary=call("POST",path,token,null,200);
         String second=summary.path("ingestionId").asText();
         assertNotEquals(first,second);

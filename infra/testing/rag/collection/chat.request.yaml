@@ -19,6 +19,21 @@ scripts:
         const data = pm.response.json();
         pm.expect(['ANSWERED', 'INSUFFICIENT_CONTEXT']).to.include(data.status);
         pm.expect(data.answer).to.be.a('string').and.not.empty;
-        pm.expect(data.promptVersion).to.eql('course-rag-v1');
-        ['vectors','embedding','contexts','storagePath','apiKey','citations'].forEach(key => pm.expect(data).not.to.have.property(key));
+        pm.expect(data.promptVersion).to.eql('course-rag-v2');
+        ['vectors','embedding','contexts','storagePath','apiKey'].forEach(key => pm.expect(data).not.to.have.property(key));
+        pm.expect(data.citations).to.be.an('array');
+        if (data.status === 'INSUFFICIENT_CONTEXT') pm.expect(data.citations).to.eql([]);
+        else pm.expect(data.citations.length).to.be.above(0);
+      });
+      pm.test('Seeded Course has a citation to open', () => {
+        const data = pm.response.json();
+        pm.expect(data.status).to.eql('ANSWERED');
+        const citation = data.citations[0];
+        pm.expect(citation.quote).to.be.a('string').and.not.empty;
+        pm.expect(citation.sourceUrl).to.eql(`/api/courses/${data.courseId}/documents/${citation.documentId}/chunks/${citation.chunkId}/source`);
+        pm.collectionVariables.set('citationJson', JSON.stringify(citation));
+        pm.collectionVariables.set('sourceUrl', citation.sourceUrl);
+        pm.collectionVariables.set('fileUrl', citation.fileUrl);
+        pm.collectionVariables.set('documentId', String(citation.documentId));
+        pm.collectionVariables.set('chunkId', String(citation.chunkId));
       });

@@ -18,4 +18,5 @@ scripts:
         pm.response.to.have.status(200);
         pm.expect(pm.response.json().status).to.eql('INSUFFICIENT_CONTEXT');
         pm.expect(pm.response.json().model).to.eql(null);
+        pm.expect(pm.response.json().citations).to.eql([]);
       });

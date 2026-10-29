@@ -39,13 +39,20 @@ def test_full_generation_http_contract(client):
     r=ask(client,"Transaction bảo đảm điều gì?")
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "ANSWERED" and "atomicity" in r.json()["answer"]
-    assert r.json()["model"] == "gpt-4.1-mini" and r.json()["promptVersion"] == "course-rag-v1"
+    assert r.json()["model"] == "gpt-4.1-mini" and r.json()["promptVersion"] == "course-rag-v2"
     assert generation_count("Transaction bảo đảm điều gì?") == before+1
+    assert r.json()["evidence"] == [{"chunkId":1,"quote":"Transaction bảo đảm tính nguyên tử (atomicity)."}]
 
 
 def test_insufficient_evidence_is_normalized(client):
     r=ask(client,"[insufficient] Hỏi ngoài tài liệu")
     assert r.status_code == 200 and r.json()["answer"] == INSUFFICIENT_ANSWER
+    assert r.json()["evidence"] == []
+
+
+@pytest.mark.parametrize("marker", ["fake-id","fake-quote","missing-evidence","duplicate-evidence"])
+def test_fabricated_citation_is_rejected_over_real_http(client, marker):
+    assert ask(client,"["+marker+"] Question").status_code == 502
 
 
 @pytest.mark.parametrize("marker,status",[("rate-limit",503),("unavailable",503),("html-error",503),

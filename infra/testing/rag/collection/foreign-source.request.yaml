@@ -1,0 +1,13 @@
+$kind: http-request
+name: Foreign Course cannot expose source
+order: 1300
+method: GET
+url: '{{baseUrl}}/api/courses/{{foreignCourseId}}/documents/{{documentId}}/chunks/{{chunkId}}/source'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Foreign source is hidden', () => {
+        pm.response.to.have.status(404);
+        pm.expect(pm.response.json()).not.to.have.property('content');
+      });

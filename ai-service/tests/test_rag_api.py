@@ -39,7 +39,7 @@ def test_answer_endpoint_normalizes_question(client, monkeypatch):
         def __init__(self, settings): pass
         async def answer(self, request):
             assert request.question == "Transaction?"
-            return RagAnswerResponse(status="ANSWERED",answer="Atomicity",model="gpt-4.1-mini",promptVersion="course-rag-v1")
+            return RagAnswerResponse(status="ANSWERED",answer="Atomicity",evidence=[dict(chunkId=1,quote="Atomicity")],model="gpt-4.1-mini",promptVersion="course-rag-v2")
     monkeypatch.setattr(api,"RagService",FakeService)
     r=client.post("/internal/rag/answer",json=payload(),headers={"X-AI-Service-Token":"test-token"})
     assert r.status_code == 200 and r.json()["answer"] == "Atomicity"

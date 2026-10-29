@@ -1,0 +1,17 @@
+$kind: http-request
+name: Open verified chunk
+order: 1100
+method: GET
+url: '{{baseUrl}}{{sourceUrl}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Citation opens the exact source and quote', () => {
+        pm.response.to.have.status(200);
+        const data = pm.response.json();
+        const citation = JSON.parse(pm.collectionVariables.get('citationJson'));
+        ['documentId','chunkId','chunkIndex','pageStart','pageEnd','fileUrl'].forEach(key => pm.expect(data[key]).to.eql(citation[key]));
+        pm.expect(data.content).to.include(citation.quote);
+        ['storagePath','embedding','metadata'].forEach(key => pm.expect(data).not.to.have.property(key));
+      });

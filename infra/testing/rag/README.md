@@ -1,7 +1,7 @@
-# Kiểm chứng RAG Chat M6-T07
+# Kiểm chứng RAG Chat và citation M6-T08
 
 API public: `POST /api/courses/{courseId}/ai/chat`, Bearer JWT, body `{"question":"Transaction bảo đảm điều gì?","topK":5}`.
-Chỉ dùng các chunk từ phiên bản đã công bố và thuộc Course của owner. Không lưu lịch sử; citation kiểm chứng thuộc M6-T08.
+Chỉ dùng các chunk từ phiên bản đã công bố và thuộc Course của owner. `course-rag-v2` trả citations từ evidence đã kiểm tra quote và context thực sự gửi LLM. Không lưu lịch sử. API nguồn/PDF và giới hạn provenance được mô tả trong [README backend](../../../backend/README.md).
 
 ## Hợp đồng và nguồn
 
@@ -57,14 +57,17 @@ Từ repo root:
 ```powershell
 $env:AI_SIMULATION_URL='http://127.0.0.1:4918'
 $env:RAG_PIPELINE_AI_URL='http://127.0.0.1:8027'
+$env:RUN_RAG_COLLECTION='1'
 .\infra\test-pgvector.ps1
 ```
 
 `CourseChatPipelineIT` dùng Spring HTTP thật, PostgreSQL disposable schema, FastAPI thật và E5 local thật để embedding/retrieve. Chỉ OpenAI là simulation. E5 cần model cache hoặc tải lần đầu; AI Service không đọc database. Không chạy hai Maven command đồng thời trên cùng `backend/target` vì có thể xóa class của tiến trình đang test.
 
+`DocumentSourceRepositoryIT` kiểm tra ownership/published SQL thật, nguồn còn đọc được khi rebuild pending/failed, ID cũ biến mất sau publish và race publish/delete với generation bị chặn bằng latch. `RUN_RAG_COLLECTION=1` chạy collection trên Spring server/fixture của pipeline: PDF thật tạo tạm, owner/foreign/empty Course và stale chunk có sẵn; environment có JWT tạm bị xóa sau run. Xem `.superpowers/collection-run.log` trong checkout chạy test; không commit log/token. Bỏ biến này nếu chỉ chạy JUnit pipeline.
+
 ## Collection và eval thật
 
-`collection/` gồm success, empty retrieval, blank question và foreign Course. Cung cấp biến `baseUrl`, `accessToken`, `courseId`, `emptyCourseId`, `foreignCourseId`, `question`, `topK` từ môi trường cục bộ. Chỉ mục có hit và Course rỗng phải thuộc owner token; foreign Course thuộc owner khác.
+`collection/` gồm success, mở đúng chunk/PDF, foreign/stale source, empty retrieval, blank question và foreign Course. Cung cấp biến `baseUrl`, `accessToken`, `courseId`, `emptyCourseId`, `foreignCourseId`, `question`, `topK`, `staleDocumentId`, `staleChunkId` từ môi trường cục bộ. Course chính cần evidence đủ trả ANSWERED và managed PDF; stale Document cùng Course vẫn tồn tại nhưng chunk ID đã bị thay bởi re-ingest thành công. Chat tự lưu citation vào collection variables cho các request mở nguồn tiếp theo. Course rỗng thuộc owner token; foreign Course thuộc owner khác.
 
 ```powershell
 postman collection lint infra/testing/rag/collection
@@ -80,5 +83,7 @@ Remove-Item Env:RUN_RAG_LIVE_TESTS
 ```
 
 Gate tự động kiểm tra từ khóa expected facts (ít nhất 5/6), 3/3 abstention và không xuất marker injection. Cần đọc câu trả lời bằng rubric để đánh giá đầy đủ unsupported claims; keyword gate không chứng minh correctness toàn diện. Output eval chỉ ghi ID fixture, status, model cấu hình, promptVersion, latency và kết quả gate; không dump credential hay raw tài liệu. Đặt `LLM_MODEL` thành snapshot nếu cần tái lập chính xác; alias có thể được provider đổi snapshot.
+
+M6-T08 bổ sung gate evidence hợp lệ vào live eval. Simulation có `[fake-id]`, `[fake-quote]`, `[missing-evidence]`, `[duplicate-evidence]` để kiểm tra 502 qua HTTP thật; các marker chỉ là fixture. Test trimming dùng provider giả với token count có kiểm soát, bảo đảm evidence ngoài `included_contexts` bị từ chối. Thành công với simulation không chứng minh chất lượng citation của model thật.
 
 Nhật ký simulation chứa input/output tổng hợp; chỉ giữ ở `logs/` đã ignore. Không đưa tài liệu thật vào simulation log.

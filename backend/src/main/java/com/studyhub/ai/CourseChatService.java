@@ -8,14 +8,16 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class CourseChatService {
-    public static final String PROMPT_VERSION = "course-rag-v1";
+    public static final String PROMPT_VERSION = "course-rag-v2";
     public static final String INSUFFICIENT_ANSWER = "Không đủ thông tin trong tài liệu của khóa học để trả lời câu hỏi này.";
     private final CourseSearchService search;
     private final ResourceAccessService access;
     private final RagAnswerClient ai;
+    private final CitationMapper citations;
 
-    public CourseChatService(CourseSearchService search, ResourceAccessService access, RagAnswerClient ai) {
+    public CourseChatService(CourseSearchService search, ResourceAccessService access, RagAnswerClient ai, CitationMapper citations) {
         this.search = search; this.access = access; this.ai = ai;
+        this.citations = citations;
     }
 
     public CourseChatResponse chat(Long courseId, Long userId, CourseChatRequest request) {
@@ -28,6 +30,7 @@ public class CourseChatService {
         access.requireCourse(courseId, userId);
         boolean insufficient = result == null || "INSUFFICIENT_CONTEXT".equals(result.status());
         return new CourseChatResponse(courseId, question, insufficient ? "INSUFFICIENT_CONTEXT" : "ANSWERED",
-                insufficient ? INSUFFICIENT_ANSWER : result.answer(), result == null ? null : result.model(), PROMPT_VERSION);
+                insufficient ? INSUFFICIENT_ANSWER : result.answer(), result == null ? null : result.model(), PROMPT_VERSION,
+                insufficient ? java.util.List.of() : citations.map(courseId,userId,retrieved.items(),result.evidence()));
     }
 }

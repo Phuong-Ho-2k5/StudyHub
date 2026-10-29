@@ -23,6 +23,8 @@ def test_vietnamese_grounding_abstention_and_injection_smoke():
                 documentTitle="Evaluation",chunkIndex=0,content=case["context"],pageStart=1,pageEnd=1)])
             start=time.monotonic()
             result=await RagService(settings).answer(request)
+            assert (result.status == "ANSWERED") == bool(result.evidence)
+            assert all(e.chunkId == 1 and e.quote in case["context"] for e in result.evidence)
             if case["kind"]=="answer":
                 passed=result.status=="ANSWERED" and all(term.casefold() in result.answer.casefold() for term in case["expectedTerms"])
             elif case["kind"]=="insufficient": passed=result.status=="INSUFFICIENT_CONTEXT"

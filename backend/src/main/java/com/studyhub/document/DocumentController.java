@@ -52,6 +52,21 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
+    @GetMapping(value="/documents/{documentId}/file",produces="application/pdf")
+    @Operation(summary="Mở PDF tài liệu",description="Chỉ owner; chỉ đọc managed PDF. Client fetch bằng Bearer JWT và dùng Blob URL. Không nhận token hoặc storage path qua query.")
+    @ApiResponses({@ApiResponse(responseCode="200",description="PDF riêng tư",content=@Content(mediaType="application/pdf",schema=@Schema(type="string",format="binary"))),
+        @ApiResponse(responseCode="404",description="Document không tồn tại hoặc không có quyền",content=@Content(mediaType="application/json",schema=@Schema(implementation=ApiErrorResponse.class))),
+        @ApiResponse(responseCode="409",description="Metadata-only hoặc file không khả dụng",content=@Content(mediaType="application/json",schema=@Schema(implementation=ApiErrorResponse.class)))})
+    public ResponseEntity<byte[]> file(@PathVariable Long documentId,@AuthenticationPrincipal CustomUserDetails user) {
+        var file=documentService.readFile(documentId,user.getId());
+        String name=file.fileName()==null?"document.pdf":file.fileName().replaceAll("[\\p{Cntrl}]","_").replace('\\','/');
+        name=name.substring(name.lastIndexOf('/')+1);
+        return ResponseEntity.ok().contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+            .header("Content-Disposition",org.springframework.http.ContentDisposition.inline()
+                .filename(name,java.nio.charset.StandardCharsets.UTF_8).build().toString())
+            .header("Cache-Control","private, no-store").header("X-Content-Type-Options","nosniff").body(file.bytes());
+    }
+
     @PostMapping(value = "/courses/{courseId}/documents/upload", consumes = "multipart/form-data")
     @Operation(summary = "Tải tài liệu PDF lên Course", description = "Nhận title và file PDF. Kiểm tra quyền Course, nội dung PDF và dung lượng cấu hình. Tên lưu do server tạo. Tạo tác vụ ingestion PENDING trong cùng giao dịch; worker xử lý sau khi upload commit. Chỉ tìm kiếm khi có publishedIngestionId.")
     @ApiResponses({

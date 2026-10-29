@@ -19,7 +19,9 @@ Backend gọi `POST /internal/rag/answer` với `X-AI-Service-Token`, `question`
 
 Request nội bộ tối đa 8 MiB; question 1–16384 ký tự sau trim; title 1–200 ký tự, content không trắng và tối đa 65536 ký tự/chunk. Page phải cùng null hoặc cùng có giá trị dương, end không trước start. Schema nghiêm ngặt, không nhận provider/model override từ caller.
 
-`ANSWERED` hoặc `INSUFFICIENT_CONTEXT` cùng answer/model/promptVersion được backend kiểm tra lại. Model alias được chuẩn hóa về tên cấu hình khi OpenAI trả snapshot có hậu tố ngày; pin snapshot khi cần tái lập. Thiếu cấu hình không làm hỏng `/health`; chat trả 503. Rate limit, provider auth lỗi hoặc 5xx trả 503; output sai/rỗng/refusal/truncated trả 502; deadline trả 504. Không trả raw provider error.
+`ANSWERED` hoặc `INSUFFICIENT_CONTEXT` cùng answer/model/promptVersion/evidence được backend kiểm tra lại. Internal contract `course-rag-v2` yêu cầu `evidence: [{chunkId, quote}]`: ID nguyên dương strict, quote không trắng 1–1000 ký tự Unicode, tối đa 20 chunk khác nhau. ANSWERED phải có evidence; INSUFFICIENT_CONTEXT phải có `[]`. Quote phải là substring nguyên văn của context thực sự đưa vào prompt sau trimming, không strip/normalize Unicode. Unknown/trimmed ID, quote sai, duplicate hoặc thiếu evidence đều trả 502. Backend tự map evidence sang citation, xác minh lại retrieval và published version; deploy hai service cùng v2.
+
+Model alias được chuẩn hóa về tên cấu hình khi OpenAI trả snapshot có hậu tố ngày; pin snapshot khi cần tái lập. Thiếu cấu hình không làm hỏng `/health`; chat trả 503. Rate limit, provider auth lỗi hoặc 5xx trả 503; output sai/rỗng/refusal/truncated trả 502; deadline trả 504. Không trả raw provider error. Quote validation chứng minh provenance, không thay thế đánh giá correctness/grounding ngữ nghĩa.
 
 Xem [hướng dẫn simulation, pipeline và eval](../infra/testing/rag/README.md). Hợp đồng được đối chiếu với [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) và [Counting tokens](https://developers.openai.com/api/docs/guides/token-counting) ngày 27/10/2026.
 

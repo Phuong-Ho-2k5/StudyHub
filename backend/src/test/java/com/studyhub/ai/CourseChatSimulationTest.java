@@ -16,7 +16,7 @@ class CourseChatSimulationTest {
     @Test void generatesOverAuthenticatedHttpWithSourceMetadata() {
         var result=client(10).answer("Question",hits());
         assertEquals("ANSWERED",result.status()); assertEquals("Atomicity",result.answer());
-        assertEquals("course-rag-v1",result.promptVersion());
+        assertEquals("course-rag-v2",result.promptVersion());
     }
     @Test void preservesInsufficientContextStatus() {
         assertEquals("INSUFFICIENT_CONTEXT",client(10).answer("[insufficient]",hits()).status());

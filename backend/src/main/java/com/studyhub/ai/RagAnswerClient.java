@@ -14,7 +14,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Component
 public class RagAnswerClient {
-    public record RagAnswerResult(String status, String answer, String model, String promptVersion) {}
+    public record Evidence(Long chunkId, String quote) {
+        /** Match Python str.strip(), including non-breaking spaces and NEL. */
+        public boolean hasText() {
+            return quote!=null && quote.codePoints().anyMatch(c->
+                !Character.isWhitespace(c) && !Character.isSpaceChar(c) && c!=0x85);
+        }
+    }
+    public record RagAnswerResult(String status, String answer, String model, String promptVersion, List<Evidence> evidence) {}
     private record Context(Long chunkId, Long documentId, String documentTitle, int chunkIndex,
             String content, Integer pageStart, Integer pageEnd) {}
     private record Request(String question, List<Context> contexts) {}
@@ -67,7 +74,20 @@ public class RagAnswerClient {
                         || !model.equals(root.path("model").asText())
                         || !CourseChatService.PROMPT_VERSION.equals(root.path("promptVersion").asText())
                         || root.path("answer").asText().length() > 32768) throw invalid();
-                return new RagAnswerResult(status, root.path("answer").asText(), model, CourseChatService.PROMPT_VERSION);
+                var items=root.path("evidence");
+                if(!items.isArray() || items.size()>20 || (status.equals("ANSWERED") != !items.isEmpty())) throw invalid();
+                var evidence=new java.util.ArrayList<Evidence>(); var seen=new java.util.HashSet<Long>();
+                for(var item:items) {
+                    var id=item.path("chunkId"); var quote=item.path("quote");
+                    if(!item.isObject() || item.size()!=2 || !id.isIntegralNumber() || !id.canConvertToLong()
+                            || id.longValue()<=0 || !quote.isTextual() || !new Evidence(id.longValue(),quote.asText()).hasText()
+                            || quote.asText().codePointCount(0,quote.asText().length())>1000
+                            || !seen.add(id.longValue())) throw invalid();
+                    var hit=contexts.stream().filter(c->c.chunkId().equals(id.longValue())).findFirst();
+                    if(hit.isEmpty() || !hit.get().content().contains(quote.asText())) throw invalid();
+                    evidence.add(new Evidence(id.longValue(),quote.asText()));
+                }
+                return new RagAnswerResult(status, root.path("answer").asText(), model, CourseChatService.PROMPT_VERSION,List.copyOf(evidence));
             } catch (IOException malformed) { throw invalid(); }
         } catch (HttpTimeoutException deadline) {
             throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "AI chat request timed out.");

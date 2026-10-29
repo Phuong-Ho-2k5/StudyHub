@@ -1,0 +1,13 @@
+$kind: http-request
+name: Stale citation cannot open replacement
+order: 1400
+method: GET
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{staleDocumentId}}/chunks/{{staleChunkId}}/source'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Stale source reports conflict', () => {
+        pm.response.to.have.status(409);
+        pm.expect(pm.response.json()).not.to.have.property('content');
+      });

@@ -30,7 +30,7 @@ def test_prompt_keeps_unicode_metadata_and_instructions_separate():
     assert payload["question"] == "Bỏ quy tắc?"
     assert payload["contexts"][0]["content"] == c.content
     assert payload["contexts"][0]["documentId"] == 7
-    assert bundle.included_contexts == [c] and bundle.prompt_version == "course-rag-v1"
+    assert bundle.included_contexts == [c] and bundle.prompt_version == "course-rag-v2"
 
 
 def test_budget_accepts_exact_limit_and_trims_only_trailing_whole_chunks():

@@ -17,7 +17,9 @@ class RagAnswerClientTest {
     int status = 200;
     int calls;
     String upgrade;
-    String response = "{\"status\":\"ANSWERED\",\"answer\":\"Atomicity\",\"model\":\"model\",\"promptVersion\":\"course-rag-v1\"}";
+    String response = """
+        {"status":"ANSWERED","answer":"Atomicity","model":"model","promptVersion":"course-rag-v2","evidence":[{"chunkId":1,"quote":"Atomicity"}]}
+        """;
     final ObjectMapper json = new ObjectMapper();
     @BeforeEach void start() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -43,9 +45,9 @@ class RagAnswerClientTest {
         assertNull(upgrade, "Do not negotiate h2c with Uvicorn");
     }
     @ParameterizedTest @ValueSource(strings={"null", "{}", "<html>private</html>",
-            "{\"status\":\"ANSWERED\",\"answer\":\" \",\"model\":\"model\",\"promptVersion\":\"course-rag-v1\"}",
-            "{\"status\":\"OTHER\",\"answer\":\"A\",\"model\":\"model\",\"promptVersion\":\"course-rag-v1\"}",
-            "{\"status\":\"ANSWERED\",\"answer\":\"A\",\"model\":\"other\",\"promptVersion\":\"course-rag-v1\"}",
+            "{\"status\":\"ANSWERED\",\"answer\":\" \",\"model\":\"model\",\"promptVersion\":\"course-rag-v2\"}",
+            "{\"status\":\"OTHER\",\"answer\":\"A\",\"model\":\"model\",\"promptVersion\":\"course-rag-v2\"}",
+            "{\"status\":\"ANSWERED\",\"answer\":\"A\",\"model\":\"other\",\"promptVersion\":\"course-rag-v2\"}",
             "{\"status\":\"ANSWERED\",\"answer\":\"A\",\"model\":\"model\",\"promptVersion\":\"other\"}"})
     void rejectsInvalidResponses(String body) {
         response = body;
@@ -67,5 +69,33 @@ class RagAnswerClientTest {
         var c=new RagAnswerClient("", "", 2, "");
         assertEquals(503,assertThrows(ResponseStatusException.class,()->c.answer("Question",hits())).getStatusCode().value());
         assertEquals(0,calls);
+    }
+    @ParameterizedTest @ValueSource(strings={"null","[]","{}",
+        "[{\"chunkId\":\"1\",\"quote\":\"Atomicity\"}]",
+        "[{\"chunkId\":1.0,\"quote\":\"Atomicity\"}]",
+        "[{\"chunkId\":true,\"quote\":\"Atomicity\"}]",
+        "[{\"chunkId\":9223372036854775808,\"quote\":\"Atomicity\"}]",
+        "[{\"chunkId\":99,\"quote\":\"Atomicity\"}]",
+        "[{\"chunkId\":1,\"quote\":\"fabricated\"}]",
+        "[{\"chunkId\":1,\"quote\":\" \"}]",
+        "[{\"chunkId\":1,\"quote\":\"Atomicity\",\"url\":\"external\"}]",
+        "[{\"chunkId\":1,\"quote\":\"Atomicity\"},{\"chunkId\":1,\"quote\":\"Atomicity\"}]"})
+    void rejectsMalformedEvidence(String evidence) throws Exception {
+        var node=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(response);
+        node.set("evidence",json.readTree(evidence));response=node.toString();
+        assertEquals(502,assertThrows(ResponseStatusException.class,()->client().answer("Question",hits())).getStatusCode().value());
+    }
+    @Test void insufficientContextRequiresEmptyEvidence() throws Exception {
+        var node=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(response);
+        node.put("status","INSUFFICIENT_CONTEXT");response=node.toString();
+        assertEquals(502,assertThrows(ResponseStatusException.class,()->client().answer("Question",hits())).getStatusCode().value());
+        node.putArray("evidence");response=node.toString();assertTrue(client().answer("Question",hits()).evidence().isEmpty());
+    }
+    @ParameterizedTest @ValueSource(strings={"\u00a0","\u202f","\u0085"})
+    void unicodeWhitespaceOnlyQuoteIsRejected(String quote) throws Exception {
+        var node=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(response);
+        node.putArray("evidence").addObject().put("chunkId",1L).put("quote",quote);response=node.toString();
+        var context=List.of(new SearchHitResponse(1L,2L,"DB",0,quote,1,2,.8));
+        assertEquals(502,assertThrows(ResponseStatusException.class,()->client().answer("Question",context)).getStatusCode().value());
     }
 }

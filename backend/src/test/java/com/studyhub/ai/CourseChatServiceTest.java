@@ -18,7 +18,12 @@ class CourseChatServiceTest {
     final CourseSearchService search = mock(CourseSearchService.class);
     final ResourceAccessService access = mock(ResourceAccessService.class);
     final RagAnswerClient ai = mock(RagAnswerClient.class);
-    final CourseChatService service = new CourseChatService(search, access, ai);
+    final com.studyhub.document.DocumentSourceRepository sources = mock(com.studyhub.document.DocumentSourceRepository.class);
+    final CourseChatService service = new CourseChatService(search, access, ai, new CitationMapper(sources));
+    @org.junit.jupiter.api.BeforeEach void sourceSnapshot() {
+        when(sources.findPublishedByIds(anyLong(),anyLong(),anyList())).thenReturn(List.of(
+            new com.studyhub.document.DocumentSourceRepository.PublishedSource(7L,2L,"Database",1L,0,"Atomicity",1,2,true)));
+    }
 
     CourseChatRequest request() { var r = new CourseChatRequest(); r.setQuestion("  Transaction?  "); return r; }
     List<SearchHitResponse> hits() { return List.of(new SearchHitResponse(1L, 2L, "Database", 0, "Atomicity", 1, 2, .8)); }
@@ -29,7 +34,7 @@ class CourseChatServiceTest {
             assertEquals("Transaction?", r.getQuery()); assertEquals(5, r.getTopK());
             return new CourseSearchResponse(7L, r.getQuery(), hits());
         });
-        when(ai.answer("Transaction?", hits())).thenReturn(new RagAnswerClient.RagAnswerResult("ANSWERED", "Atomicity", "model", "course-rag-v1"));
+        when(ai.answer("Transaction?", hits())).thenReturn(new RagAnswerClient.RagAnswerResult("ANSWERED", "Atomicity", "model", "course-rag-v2", List.of(new RagAnswerClient.Evidence(1L,"Atomicity"))));
         var result = service.chat(7L, 9L, request());
         assertEquals("ANSWERED", result.status()); assertEquals("Atomicity", result.answer());
         assertEquals("Transaction?", result.question());
@@ -56,14 +61,14 @@ class CourseChatServiceTest {
 
     @Test void insufficientEvidenceUsesFixedAnswerAndPreservesModel() {
         when(search.search(anyLong(), anyLong(), any())).thenReturn(new CourseSearchResponse(7L, "Transaction?", hits()));
-        when(ai.answer(anyString(), anyList())).thenReturn(new RagAnswerClient.RagAnswerResult("INSUFFICIENT_CONTEXT", "untrusted wording", "model", "course-rag-v1"));
+        when(ai.answer(anyString(), anyList())).thenReturn(new RagAnswerClient.RagAnswerResult("INSUFFICIENT_CONTEXT", "untrusted wording", "model", "course-rag-v2", List.of()));
         var result = service.chat(7L, 9L, request());
         assertEquals(CourseChatService.INSUFFICIENT_ANSWER, result.answer()); assertEquals("model", result.model());
     }
 
     @Test void deletionWhileGeneratingIsNotReturnedAsSuccess() {
         when(search.search(anyLong(), anyLong(), any())).thenReturn(new CourseSearchResponse(7L, "Transaction?", hits()));
-        when(ai.answer(anyString(), anyList())).thenReturn(new RagAnswerClient.RagAnswerResult("ANSWERED", "Answer", "model", "course-rag-v1"));
+        when(ai.answer(anyString(), anyList())).thenReturn(new RagAnswerClient.RagAnswerResult("ANSWERED", "Answer", "model", "course-rag-v2", List.of(new RagAnswerClient.Evidence(1L,"Atomicity"))));
         when(access.requireCourse(7L, 9L)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.chat(7L, 9L, request())).getStatusCode().value());
     }
@@ -74,23 +79,24 @@ class CourseChatServiceTest {
         assertEquals(504, assertThrows(ResponseStatusException.class, () -> service.chat(7L, 9L, request())).getStatusCode().value());
     }
 
-    @Test void publishDuringGenerationKeepsRetrievedSnapshotAndNextRequestSeesNewVersion() throws Exception {
+    @Test void publishDuringGenerationRejectsStaleCitation() throws Exception {
         var version=new AtomicReference<>(hits());
         var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
         when(search.search(anyLong(),anyLong(),any())).thenAnswer(i->new CourseSearchResponse(7L,"Transaction?",version.get()));
         when(ai.answer(anyString(),anyList())).thenAnswer(i->{
             var contexts=i.<List<SearchHitResponse>>getArgument(1);
             entered.countDown();assertTrue(release.await(10,TimeUnit.SECONDS));
-            return new RagAnswerClient.RagAnswerResult("ANSWERED",contexts.getFirst().content(),"model","course-rag-v1");
+            return new RagAnswerClient.RagAnswerResult("ANSWERED",contexts.getFirst().content(),"model","course-rag-v2",List.of(new RagAnswerClient.Evidence(1L,"Atomicity")));
         });
         try(var pool=Executors.newSingleThreadExecutor()) {
             var pending=pool.submit(()->service.chat(7L,9L,request()));
             try {
                 assertTrue(entered.await(10,TimeUnit.SECONDS));
                 version.set(List.of(new SearchHitResponse(3L,2L,"Database",0,"New version",1,1,.8)));
+                when(sources.findPublishedByIds(anyLong(),anyLong(),anyList())).thenReturn(List.of());
             } finally { release.countDown(); }
-            assertEquals("Atomicity",pending.get(10,TimeUnit.SECONDS).answer());
-            assertEquals("New version",service.chat(7L,9L,request()).answer());
+            var error=assertThrows(ExecutionException.class,()->pending.get(10,TimeUnit.SECONDS));
+            assertEquals(409,((ResponseStatusException)error.getCause()).getStatusCode().value());
         }
     }
 
@@ -99,7 +105,7 @@ class CourseChatServiceTest {
         var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
         when(ai.answer(anyString(),anyList())).thenAnswer(i->{
             entered.countDown();assertTrue(release.await(10,TimeUnit.SECONDS));
-            return new RagAnswerClient.RagAnswerResult("ANSWERED","Atomicity","model","course-rag-v1");
+            return new RagAnswerClient.RagAnswerResult("ANSWERED","Atomicity","model","course-rag-v2",List.of(new RagAnswerClient.Evidence(1L,"Atomicity")));
         });
         try(var pool=Executors.newSingleThreadExecutor()) {
             var pending=pool.submit(()->service.chat(7L,9L,request()));

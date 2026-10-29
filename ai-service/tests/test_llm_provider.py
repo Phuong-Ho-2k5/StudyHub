@@ -8,7 +8,7 @@ from app.generation.settings import LlmSettings
 def response(content=None, **overrides):
     return {"status": "completed", "model": "gpt-4.1-mini-2025-04-14", "output": [
         {"type": "message", "role": "assistant", "status": "completed", "content": [
-            {"type": "output_text", "text": json.dumps(content or {"status": "ANSWERED", "answer": "Atomicity"})}
+            {"type": "output_text", "text": json.dumps(content or {"status": "ANSWERED", "answer": "Atomicity", "evidence": [{"chunkId": 1, "quote": "Atomicity"}]})}
         ]}], **overrides}
 
 
