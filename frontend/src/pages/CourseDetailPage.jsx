@@ -13,6 +13,9 @@ import { CourseProgress } from '../components/learning/CourseProgress'
 import { StudySessionPanel } from '../components/learning/StudySessionPanel'
 import { DiscussionPanel } from '../components/discussion/DiscussionPanel'
 import { DocumentUploadDialog } from '../components/DocumentUploadDialog'
+import { CourseAiPanel } from '../components/ai/CourseAiPanel'
+import { DocumentIngestionStatus } from '../components/documents/DocumentIngestionStatus'
+import { useDocumentIngestionPolling } from '../hooks/useDocumentIngestionPolling'
 
 const CONCEPT_STATUSES = [
   ['NEW', 'Mới'], ['LEARNING', 'Đang học'], ['UNDERSTOOD', 'Đã hiểu'], ['MASTERED', 'Thành thạo'],
@@ -139,7 +142,7 @@ function CourseDetail() {
   const [courseError, setCourseError] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedTab = searchParams.get('tab')
-  const tab = ['documents', 'concepts', 'quizzes', 'discussions'].includes(selectedTab) ? selectedTab : 'documents'
+  const tab = ['documents', 'concepts', 'quizzes', 'discussions', 'ai'].includes(selectedTab) ? selectedTab : 'documents'
   const [documents, setDocuments] = useState([])
   const [documentPage, setDocumentPage] = useState(0)
   const [documentPages, setDocumentPages] = useState(0)
@@ -152,6 +155,8 @@ function CourseDetail() {
   const [revision, setRevision] = useState(0)
   const [dialog, setDialog] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const updateDocumentRow = (item) => setDocuments(current => current.map(row => row.id === item.id ? item : row))
+  const ingestionPolling = useDocumentIngestionPolling({ token, courseId, documents: tab === 'documents' && !loading && !courseError ? documents : [], onDocumentUpdated: updateDocumentRow })
   useEffect(() => {
     let active = true
     getCourse(token, courseId).then((data) => { if (active) setCourse(data) })
@@ -160,7 +165,7 @@ function CourseDetail() {
   }, [token, courseId])
 
   useEffect(() => {
-    if (tab === 'quizzes' || tab === 'discussions') return undefined
+    if (tab === 'quizzes' || tab === 'discussions' || tab === 'ai') return undefined
     let active = true
     const request = tab === 'documents'
       ? listDocuments(token, { courseId, q: search, page: documentPage })
@@ -204,10 +209,17 @@ function CourseDetail() {
       {courseError && <p className="form-message error" role="alert">{courseError}</p>}
       {course && !courseError && <div className="course-learning-grid"><CourseProgress courseId={courseId} revision={revision} /><StudySessionPanel courseId={courseId} /></div>}
       {!courseError && <div className="course-panel">
-        <div className="detail-toolbar"><div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học"><button type="button" role="tab" aria-selected={tab === 'documents'} className={tab === 'documents' ? 'active' : ''} onClick={() => changeTab('documents')}>Tài liệu</button><button type="button" role="tab" aria-selected={tab === 'concepts'} className={tab === 'concepts' ? 'active' : ''} onClick={() => changeTab('concepts')}>Khái niệm</button><button type="button" role="tab" aria-selected={tab === 'quizzes'} className={tab === 'quizzes' ? 'active' : ''} onClick={() => changeTab('quizzes')}>Quiz</button><button type="button" role="tab" aria-selected={tab === 'discussions'} className={tab === 'discussions' ? 'active' : ''} onClick={() => changeTab('discussions')}>Thảo luận</button></div>{tab !== 'quizzes' && tab !== 'discussions' && <button className="primary-button detail-add" type="button" onClick={() => setDialog({ type: tab === 'documents' ? 'document' : 'concept' })}>+ Thêm {tab === 'documents' ? 'tài liệu' : 'khái niệm'}</button>}</div>
+        <div className="detail-toolbar">
+          <div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học">
+            {[['documents', 'Tài liệu'], ['concepts', 'Khái niệm'], ['quizzes', 'Quiz'], ['discussions', 'Thảo luận'], ['ai', 'Trợ lý AI']].map(([value, label]) => <button type="button" role="tab" key={value} aria-selected={tab === value} className={tab === value ? 'active' : ''} onClick={() => changeTab(value)}>{label}</button>)}
+          </div>
+          {['documents', 'concepts'].includes(tab) && <button className="primary-button detail-add" type="button" onClick={() => setDialog({ type: tab === 'documents' ? 'document' : 'concept' })}>+ Thêm {tab === 'documents' ? 'tài liệu' : 'khái niệm'}</button>}
+        </div>
+        {tab === 'ai' && course && <CourseAiPanel key={`${courseId}-${token}`} courseId={courseId} token={token} />}
+        {tab === 'documents' && ingestionPolling.error && <div role="alert" className="form-message error">Không thể tự cập nhật trạng thái. <button type="button" className="secondary-button" onClick={ingestionPolling.retry}>Cập nhật trạng thái</button></div>}
         {tab === 'discussions' && <DiscussionPanel key={courseId} courseId={courseId} />}
         {tab === 'quizzes' && <QuizPanel key={courseId} courseId={courseId} token={token} />}
-        {tab !== 'quizzes' && tab !== 'discussions' && <>
+        {tab !== 'quizzes' && tab !== 'discussions' && tab !== 'ai' && <>
         {tab === 'documents' ? <>
           <p className="inline-help">Tải PDF lên để lưu và quản lý tài liệu của khóa học.</p>
           <form className="search-form detail-search" role="search" onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); setDocumentPage(0); setLoading(true) }}><label className="sr-only" htmlFor="document-search">Tìm tài liệu</label><input id="document-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Tìm theo tiêu đề…" /><button className="secondary-button" type="submit">Tìm</button></form>
@@ -216,7 +228,7 @@ function CourseDetail() {
         {loading && <p className="list-state">Đang tải…</p>}
         {!loading && !error && tab === 'documents' && (documents.length ? <div className="resource-list">{documents.map((item) => <article className="resource-card" key={item.id}>
           <div className="resource-copy"><h3>{item.title}</h3><p>{item.fileName} · {item.fileType}</p><p className="resource-path">{item.managedFile ? 'PDF đã lưu' : 'Chỉ có thông tin tệp'}</p></div>
-          <span className="status-badge">{DOCUMENT_LABELS[item.status] ?? item.status}</span>
+          <div className="document-processing"><span className="status-badge">{DOCUMENT_LABELS[item.status] ?? item.status}</span><DocumentIngestionStatus document={item} token={token} onChanged={updateDocumentRow} /></div>
           <div className="course-actions">
             <button type="button" onClick={() => setDialog({ type: 'document', item })}>Sửa</button>
             <button type="button" onClick={() => remove('document', item)} disabled={deleting === `document-${item.id}`}>Xóa</button>

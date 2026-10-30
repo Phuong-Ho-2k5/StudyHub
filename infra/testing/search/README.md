@@ -19,4 +19,4 @@ $env:RUN_EMBEDDING_TESTS = '1'
 Remove-Item Env:RUN_EMBEDDING_TESTS
 ```
 
-Nhật ký mô phỏng Postman và kết quả chạy kiểm thử lưu dưới `logs/`, không đưa vào Git. Dịch vụ AI giả lập chứng minh HTTP/lỗi, không chứng minh chất lượng ngữ nghĩa; không có API sinh câu trả lời bằng LLM trong phạm vi M6-T06.
+Nhật ký mô phỏng Postman và kết quả chạy kiểm thử lưu dưới `logs/`, không đưa vào Git. Dịch vụ AI giả lập chứng minh HTTP/lỗi, không chứng minh chất lượng ngữ nghĩa; bộ kiểm thử tìm kiếm này không kiểm tra API sinh câu trả lời bằng LLM.

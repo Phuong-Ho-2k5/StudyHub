@@ -1,4 +1,4 @@
-# Kiểm chứng RAG Chat và citation M6-T08
+# Kiểm chứng RAG Chat và citation
 
 API public: `POST /api/courses/{courseId}/ai/chat`, Bearer JWT, body `{"question":"Transaction bảo đảm điều gì?","topK":5}`.
 Chỉ dùng các chunk từ phiên bản đã công bố và thuộc Course của owner. `course-rag-v2` trả citations từ evidence đã kiểm tra quote và context thực sự gửi LLM. Không lưu lịch sử. API nguồn/PDF và giới hạn provenance được mô tả trong [README backend](../../../backend/README.md).
@@ -84,6 +84,6 @@ Remove-Item Env:RUN_RAG_LIVE_TESTS
 
 Gate tự động kiểm tra từ khóa expected facts (ít nhất 5/6), 3/3 abstention và không xuất marker injection. Cần đọc câu trả lời bằng rubric để đánh giá đầy đủ unsupported claims; keyword gate không chứng minh correctness toàn diện. Output eval chỉ ghi ID fixture, status, model cấu hình, promptVersion, latency và kết quả gate; không dump credential hay raw tài liệu. Đặt `LLM_MODEL` thành snapshot nếu cần tái lập chính xác; alias có thể được provider đổi snapshot.
 
-M6-T08 bổ sung gate evidence hợp lệ vào live eval. Simulation có `[fake-id]`, `[fake-quote]`, `[missing-evidence]`, `[duplicate-evidence]` để kiểm tra 502 qua HTTP thật; các marker chỉ là fixture. Test trimming dùng provider giả với token count có kiểm soát, bảo đảm evidence ngoài `included_contexts` bị từ chối. Thành công với simulation không chứng minh chất lượng citation của model thật.
+Live eval kiểm tra evidence hợp lệ. Simulation có `[fake-id]`, `[fake-quote]`, `[missing-evidence]`, `[duplicate-evidence]` để kiểm tra 502 qua HTTP thật; các marker chỉ là fixture. Test trimming dùng provider giả với token count có kiểm soát, bảo đảm evidence ngoài `included_contexts` bị từ chối. Thành công với simulation không chứng minh chất lượng citation của model thật.
 
 Nhật ký simulation chứa input/output tổng hợp; chỉ giữ ở `logs/` đã ignore. Không đưa tài liệu thật vào simulation log.

@@ -7,16 +7,19 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node --test src/api/*.test.js",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",

@@ -4,8 +4,9 @@ Frontend của StudyHub được xây dựng bằng React 19, React Router 7 và
 
 ## Yêu cầu
 
-- Node.js **20.19+** hoặc **22.12+** và npm.
+- Node.js **22.13+** và npm; dependency PDF.js hiện yêu cầu tối thiểu phiên bản này.
 - Backend StudyHub đang chạy ở `http://localhost:8080`. Xem [hướng dẫn backend](../backend/README.md) để chuẩn bị PostgreSQL và khởi động API.
+- Để dùng tìm kiếm/RAG, cần FastAPI AI Service và tài liệu đã có bản chỉ mục được công bố trên PostgreSQL/pgvector. Xem [cấu hình AI Service](../ai-service/README.md); khóa LLM chỉ cấu hình ở dịch vụ AI, không đặt trong biến `VITE_*`.
 
 ## Chạy trên máy cá nhân
 
@@ -41,6 +42,7 @@ VITE_API_URL=http://localhost:8080
 | `/register` | Tạo tài khoản mới; đăng ký thành công sẽ chuyển về đăng nhập. |
 | `/welcome` | Bảng học tập yêu cầu đăng nhập. |
 | `/courses/:courseId` | Chi tiết khóa học: quản lý tài liệu, khái niệm và Quiz. |
+| `/courses/:courseId?tab=ai` | Trợ lý AI: tìm kiếm ngữ nghĩa, RAG Chat, citation và xem đoạn nguồn/PDF. |
 | `/courses/:courseId/quizzes/:quizId` | Soạn câu hỏi, xuất bản, làm bài và xem kết quả Quiz. |
 | `/courses/:courseId/discussions/:postId` | Chi tiết bài thảo luận, sửa/xóa bài và quản lý bình luận. |
 | `/notifications` | Thông báo có phân trang, trạng thái đã đọc và số chưa đọc. |
@@ -48,11 +50,15 @@ VITE_API_URL=http://localhost:8080
 
 Trong bảng học tập, người dùng có thể tạo, chọn, sửa và xóa Workspace; tạo, sửa và xóa Course trong Workspace; tìm Course theo tên, lọc theo trạng thái và chuyển trang kết quả. Các trạng thái Course là `PLANNED`, `IN_PROGRESS`, `COMPLETED` và `ARCHIVED`. Khi xóa Workspace, backend cũng xóa các Course thuộc Workspace đó.
 
-Trong chi tiết khóa học, người dùng có thể tải PDF lên bằng nút Thêm tài liệu, theo dõi tiến độ, đổi tiêu đề, tìm kiếm và xóa. Upload nhận PDF không có mật khẩu; mặc định giới hạn 20 MB mỗi tệp (backend có thể cấu hình khác). Lỗi được hiển thị trong biểu mẫu và giữ tệp đã chọn để thử lại. Người dùng cũng có thể quản lý khái niệm, mức độ hiểu và kiến thức tiên quyết trong cùng khóa học.
+Trong chi tiết khóa học, người dùng có thể tải PDF lên bằng nút Thêm tài liệu, theo dõi tiến độ, đổi tiêu đề, tìm kiếm và xóa. Upload nhận PDF không có mật khẩu; mặc định giới hạn 20 MB mỗi tệp (backend có thể cấu hình khác). Lỗi được hiển thị trong biểu mẫu và giữ tệp đã chọn để thử lại. Upload tự tạo tác vụ ingestion; giao diện cập nhật trạng thái và cho xử lý lại khi phù hợp. Nhãn **Đã có bản dùng cho AI** dựa trên `publishedIngestionId`, không chỉ trạng thái tệp. Khi xử lý lại đang chạy hoặc thất bại, AI vẫn dùng bản đã công bố trước đó nếu có. Người dùng cũng có thể quản lý khái niệm, mức độ hiểu và kiến thức tiên quyết trong cùng khóa học.
+
+Tab **Trợ lý AI** có hai chế độ: **Tìm trong tài liệu** trả các đoạn gần nghĩa với truy vấn; **Hỏi tài liệu** trả câu trả lời RAG và danh sách citation theo Course hiện tại. Mỗi câu hỏi được xử lý độc lập; giao diện giữ câu hỏi/câu trả lời gần nhất trong bộ nhớ, chưa lưu lịch sử và chưa hỗ trợ streaming. Khi thiếu bằng chứng, giao diện hiển thị trạng thái chưa đủ thông tin.
+
+Nút **Xem nguồn** tải lại đúng chunk và tô quote nguyên văn của citation. **Xem PDF** tải tệp bằng Authorization header, dùng Blob URL và PDF.js để mở trang nguồn, có điều hướng trang trước/sau. Module viewer và worker được bundle cùng ứng dụng, không dùng CDN. Trang hoặc PDF không có thì giao diện ghi rõ; nguồn cũ bị thay sau re-ingest trả 409 và cần tìm/hỏi lại. JWT không được đưa vào URL PDF. Đổi Course hoặc đăng xuất loại bỏ kết quả đang chờ; đóng viewer thu hồi Blob URL.
 
 Tab Quiz hỗ trợ tạo, sửa, xóa bài kiểm tra và mở trang riêng để quản lý câu hỏi. Người dùng có thể soạn trắc nghiệm (ít nhất 4 lựa chọn, có thể nhiều đáp án đúng), đúng/sai (2 lựa chọn và 1 đáp án đúng), trả lời ngắn (có đáp án mẫu), và gắn từng câu hỏi với khái niệm trong khóa học. Với câu trả lời ngắn, người soạn ghi rõ định dạng trả lời trong nội dung đề, ví dụ chỉ nhập số nguyên, không ghi đơn vị hoặc thêm khoảng trắng; chưa có trường hướng dẫn riêng. Bài mới ở trạng thái bản nháp; xuất bản sau khi thêm câu hỏi để làm bài.
 
-Màn làm bài yêu cầu trả lời đủ câu hỏi, gửi bài một lần khi nhấn Nộp bài và hiển thị kết quả do backend trả về. Câu trả lời ngắn được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, bao gồm chữ hoa/thường, dấu, khoảng trắng và xuống dòng, không gọi AI. Frontend giữ nguyên đáp án mẫu khi lưu và câu trả lời khi nộp, kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn 4.000 ký tự. Đáp án mẫu được hiển thị trong kết quả sau khi nộp. Sau lần nộp thành công, giao diện tải lại mức độ hiểu của các khái niệm liên quan; người dùng có thể làm lại để tạo một lần nộp mới. Luồng nộp sử dụng API có transaction. Lịch sử QuizAttempt được hiển thị tại bảng học tập; trang làm bài hiển thị kết quả chi tiết của lần nộp hiện tại và không khôi phục chi tiết này khi tải lại trang. Các lần nộp cũ giữ nguyên điểm và số câu chờ chấm đã lưu. AI/RAG chưa có giao diện.
+Màn làm bài yêu cầu trả lời đủ câu hỏi, gửi bài một lần khi nhấn Nộp bài và hiển thị kết quả do backend trả về. Câu trả lời ngắn được chấm ngay bằng cách so khớp từng ký tự với đáp án mẫu, bao gồm chữ hoa/thường, dấu, khoảng trắng và xuống dòng, không gọi AI. Frontend giữ nguyên đáp án mẫu khi lưu và câu trả lời khi nộp, kiểm tra chuỗi rỗng/toàn khoảng trắng và giới hạn 4.000 ký tự. Đáp án mẫu được hiển thị trong kết quả sau khi nộp. Sau lần nộp thành công, giao diện tải lại mức độ hiểu của các khái niệm liên quan; người dùng có thể làm lại để tạo một lần nộp mới. Luồng nộp sử dụng API có transaction. Lịch sử QuizAttempt được hiển thị tại bảng học tập; trang làm bài hiển thị kết quả chi tiết của lần nộp hiện tại và không khôi phục chi tiết này khi tải lại trang. Các lần nộp cũ giữ nguyên điểm và số câu chờ chấm đã lưu.
 
 Dashboard có thống kê tổng thời gian học, số phiên hoàn tất, lượt làm Quiz và điểm trung bình; lịch sử Quiz phân trang hiển thị kết quả tổng hợp đã lưu. Chi tiết khóa học có tiến độ dựa trên confidence của Concept, điều khiển phiên học và tab Thảo luận. Nội dung bài viết/bình luận hiển thị dưới dạng văn bản, không thực thi HTML.
 
@@ -68,11 +74,13 @@ Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: B
 | --- | --- |
 | `src/pages/` | Trang xác thực, bảng học tập, chi tiết khóa học và Quiz. |
 | `src/components/` | Thành phần dùng chung; `quiz/` chứa form soạn đề và luồng làm bài. |
+| `src/components/ai/`, `src/components/documents/` | Search/chat, citation, viewer nguồn/PDF và trạng thái ingestion. |
 | `src/auth/` | Lưu phiên, đọc JWT và bảo vệ route. |
 | `src/api/` | Gọi API xác thực và tài nguyên học tập, gồm Quiz/Question/Submit. |
 | `src/styles.css` | Kiểu giao diện và responsive layout. |
 | `src/context/`, `src/hooks/` | Trạng thái học tập, thông báo, kiểm tra quyền, phiên học và tải dữ liệu có bảo vệ response lỗi thời. |
 | `vite.config.js` | Cấu hình Vite và proxy `/api` khi phát triển. |
+| `e2e/`, `playwright.config.js` | Kiểm thử tương tác Course AI bằng Chromium với public API fixtures. |
 
 ## Build
 
@@ -86,4 +94,16 @@ Dùng `npm run preview` để xem thử bản build trên máy cá nhân. Khi tr
 
 ## Kiểm tra
 
-Trong `frontend/`, chạy `npm run lint` và `npm run build` để kiểm tra mã nguồn và tạo bản production. Lệnh `npm test` tiếp tục chạy các test đã có trước đợt bổ sung giao diện này.
+Chạy trong `frontend/`:
+
+```powershell
+npm test                          # Node tests cho API client và logic biểu mẫu/hiển thị
+npm run lint
+npm run build
+npx playwright install chromium   # Chuẩn bị browser trước lần chạy E2E đầu tiên
+npm run test:e2e -- --workers=2
+```
+
+Playwright tự khởi động Vite tại `127.0.0.1:4179`; cần cổng trống. Để `VITE_API_URL` trống khi chạy bộ fixture này. E2E dùng response API được điều khiển trong test nên không cần backend, tài khoản hoặc khóa LLM thật; không thay thế kiểm thử pipeline tích hợp. Trace khi thất bại và ảnh giao diện nằm trong `test-results/` đã ignore.
+
+Xem [checklist kiểm tra giao diện AI](../infra/testing/rag/UI-CHECKLIST.md) để biết phạm vi đã kiểm tra, các giới hạn và bước nghiệm thu với PostgreSQL/pgvector, Docling/E5 và dịch vụ AI thật.

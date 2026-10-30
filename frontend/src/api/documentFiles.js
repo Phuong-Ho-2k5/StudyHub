@@ -8,6 +8,30 @@ function unauthorized(token, status) {
   }
 }
 
+export async function fetchDocumentPdf(token, documentId, { signal } = {}) {
+  let response
+  try {
+    response = await fetch(`${API_URL}/api/documents/${documentId}/file`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/pdf' }, signal,
+    })
+  } catch (error) {
+    if (error.name === 'AbortError') throw error
+    throw new ApiError('Không thể tải PDF. Vui lòng thử lại.')
+  }
+  if (!response.ok) {
+    unauthorized(token, response.status)
+    throw new ApiError('Không thể tải PDF.', response.status)
+  }
+  if (response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/pdf') {
+    throw new ApiError('Máy chủ không trả về PDF hợp lệ.', 502)
+  }
+  try { return await response.blob() }
+  catch (error) {
+    if (error.name === 'AbortError') throw error
+    throw new ApiError('Không thể đọc PDF. Vui lòng thử lại.')
+  }
+}
+
 export function validatePdf(file) {
   if (!file || !file.size) return 'Tệp không được rỗng.'
   if (!file.name?.toLowerCase().endsWith('.pdf')) return 'Vui lòng chọn tệp PDF.'

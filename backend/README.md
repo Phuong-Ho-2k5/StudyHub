@@ -8,7 +8,7 @@
 {"question":"Transaction bảo đảm điều gì?","topK":5}
 ```
 
-`question` bắt buộc là chuỗi JSON, không trắng, tối đa 16384 ký tự. `topK` phải là số nguyên JSON, mặc định 5 khi bỏ qua; null, chuỗi, số thực hoặc ngoài 1–20 trả 400. Không tự ép kiểu số/boolean thành câu hỏi. Backend kiểm tra ownership trước embedding/retrieval, dùng semantic search M6-T06 trên phiên bản đã công bố, gửi các đoạn được chọn sang FastAPI rồi kiểm tra lại quyền Course trước khi trả kết quả. Không giữ transaction DB trong lúc chờ AI.
+`question` bắt buộc là chuỗi JSON, không trắng, tối đa 16384 ký tự. `topK` phải là số nguyên JSON, mặc định 5 khi bỏ qua; null, chuỗi, số thực hoặc ngoài 1–20 trả 400. Không tự ép kiểu số/boolean thành câu hỏi. Backend kiểm tra ownership trước embedding/retrieval, dùng semantic search trên phiên bản đã công bố, gửi các đoạn được chọn sang FastAPI rồi kiểm tra lại quyền Course trước khi trả kết quả. Không giữ transaction DB trong lúc chờ AI.
 
 Response gồm `courseId`, `question`, `status`, `answer`, `model`, `promptVersion` và `citations`. `status` là `ANSWERED` hoặc `INSUFFICIENT_CONTEXT`. Không có hit thì không gọi generation, `model=null`. Không đủ bằng chứng dùng câu trả lời cố định: “Không đủ thông tin trong tài liệu của khóa học để trả lời câu hỏi này.” Lỗi embedding/provider không biến thành fallback thành công.
 
@@ -16,16 +16,16 @@ Mã lỗi: 400 input/JSON; 401 JWT; 404 Course không có quyền/không tồn t
 
 Backend nhận `LLM_MODEL` để đối chiếu response và `AI_CHAT_TIMEOUT_SECONDS=75` cho bước generation; AI Service dùng deadline tổng 60 giây. Timeout embedding vẫn theo cấu hình riêng. LLM key chỉ nằm ở AI Service. Cấu hình `.env.example` được truyền qua Docker Compose; khi chạy local, đặt cùng `LLM_MODEL` ở hai service.
 
-Context giữ snapshot lúc retrieve. Sau generation, backend kiểm tra citation trên snapshot và batch lookup lại bản published; nguồn bị thay/xóa trả 409 để client hỏi lại, không tự gọi LLM lần hai. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. Chưa có streaming, lịch sử và UI chat.
+Context giữ snapshot lúc retrieve. Sau generation, backend kiểm tra citation trên snapshot và batch lookup lại bản published; nguồn bị thay/xóa trả 409 để client hỏi lại, không tự gọi LLM lần hai. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. Chưa có streaming và lịch sử hội thoại; giao diện chat nằm trong frontend.
 
-### Citation và mở nguồn (M6-T08)
+### Citation và mở nguồn
 
 `ANSWERED` có ít nhất một citation; `INSUFFICIENT_CONTEXT` có `citations: []`. Mỗi citation gồm `chunkId`, `documentId`, `documentTitle`, `chunkIndex`, `pageStart`, `pageEnd`, `quote`, `sourceUrl`, `fileUrl`. Quote nguyên văn từ context thực sự gửi LLM; backend tự dựng metadata và URL, không lấy title/trang/URL từ LLM. Trang không có provenance trả null; `fileUrl` null nếu không có managed PDF. Thứ tự citation theo evidence, chưa có marker gắn từng khẳng định trong answer.
 
 - `GET /api/courses/{courseId}/documents/{documentId}/chunks/{chunkId}/source`: JWT, trả metadata cùng toàn bộ `content` của chunk published INDEXED. 404 khi Course/Document foreign, missing hoặc không khớp; 409 khi chunk ID không còn published, kể cả ID không tồn tại trong Document có quyền.
 - `GET /api/documents/{documentId}/file`: JWT, trả PDF bytes với `Content-Type: application/pdf`, `Content-Disposition: inline`, `Cache-Control: private, no-store` và `X-Content-Type-Options: nosniff`. 404 nếu missing/foreign; 409 nếu metadata-only hoặc file không khả dụng. Không trả storage path.
 
-Re-ingest thành công thay toàn bộ chunk, nên link cũ trả 409; rebuild pending/failed giữ nguồn published cũ. Client fetch PDF bằng Authorization header, dùng Blob URL và pageStart/pageEnd để định vị; không đặt JWT vào URL. Chưa hỗ trợ Range trong API này. Citation xác minh provenance và quote nguyên văn, chưa chứng minh mọi khẳng định trong answer đúng ngữ nghĩa. UI xem nguồn thuộc M6-T08A.
+Re-ingest thành công thay toàn bộ chunk, nên link cũ trả 409; rebuild pending/failed giữ nguồn published cũ. Client fetch PDF bằng Authorization header, dùng Blob URL và pageStart/pageEnd để định vị; không đặt JWT vào URL. Chưa hỗ trợ Range trong API này. Citation xác minh provenance và quote nguyên văn, chưa chứng minh mọi khẳng định trong answer đúng ngữ nghĩa. Frontend hỗ trợ xem đoạn nguồn và PDF trong tab Trợ lý AI.
 
 Public API thêm trường `citations`; internal contract nâng thành `course-rag-v2` với evidence bắt buộc. Triển khai backend và AI Service đồng bộ, không trộn v1/v2.
 
@@ -382,7 +382,7 @@ Hàng đợi nằm trong bảng `document_ingestions`, không phụ thuộc bộ
 
 Các biến cấu hình: `DOCUMENT_INGESTION_WORKER_ENABLED` (mặc định true), `DOCUMENT_INGESTION_POLL_DELAY_MS` (1000), `DOCUMENT_INGESTION_LEASE_SECONDS` (600), `DOCUMENT_INGESTION_MAX_ATTEMPTS` (3). Kiểm thử dùng profile `test` tắt worker nền và chủ động nhận tác vụ để tránh gọi nhầm dịch vụ AI trên máy phát triển.
 
-Migration V21 thêm hàng đợi, trạng thái và con trỏ phiên bản; V22 PostgreSQL thêm `document_chunks.ingestion_id`. Các bộ vector cũ của PDF managed có model/số chiều nhất quán được công bố thành phiên bản `legacy-*`; PDF còn lại được xếp hàng xử lý. Dữ liệu cũ không nhất quán chưa được công bố và sẽ được thay sau khi xử lý thành công. M6-T06 phải nối `document_chunks.ingestion_id = documents.published_ingestion_id` và `document_ingestions.status = 'INDEXED'`, đồng thời lọc Course/owner/model/số chiều; không chỉ lọc trạng thái ingestion gần nhất của Document.
+Migration V21 thêm hàng đợi, trạng thái và con trỏ phiên bản; V22 PostgreSQL thêm `document_chunks.ingestion_id`. Các bộ vector cũ của PDF managed có model/số chiều nhất quán được công bố thành phiên bản `legacy-*`; PDF còn lại được xếp hàng xử lý. Dữ liệu cũ không nhất quán chưa được công bố và sẽ được thay sau khi xử lý thành công. Truy vấn tìm kiếm phải nối `document_chunks.ingestion_id = documents.published_ingestion_id` và `document_ingestions.status = 'INDEXED'`, đồng thời lọc Course/owner/model/số chiều; không chỉ lọc trạng thái ingestion gần nhất của Document.
 
 Migration PostgreSQL V20 bổ sung `embedding_text` và `metadata` JSONB vào `document_chunks`; metadata giữ headings, blockIds, sourceRefs và overlapSourceRefs kèm bbox/coordOrigin. `embedding_text` là nội dung đã thêm heading/overlap gửi sang adapter; tiền tố E5 `passage: ` được adapter thêm khi chạy model. Các row cũ được giữ nguyên, `embedding_text` có thể null với row cũ. Xóa Document/Course/Workspace tiếp tục dọn vector qua foreign key cascade.
 

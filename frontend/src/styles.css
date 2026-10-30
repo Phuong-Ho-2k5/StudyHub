@@ -591,3 +591,44 @@ progress.course-progress { appearance: none; overflow: hidden; border: 0; border
 /* Course document upload */
 .upload-progress { display: grid; gap: 8px; font-size: 14px; }
 .upload-progress progress { width: 100%; accent-color: #536b50; }
+.course-ai-panel { padding: 24px; min-width: 0; }
+.ai-mode-switch { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 20px; border-bottom: 1px solid #e0e8dd; }
+.ai-mode-switch button { border: 1px solid #d6e0d2; background: #fff; border-radius: 8px; padding: 10px 16px; color: #53654d; cursor: pointer; }
+.ai-mode-switch button.active { background: #eaf0e7; border-color: #6b865e; color: #304528; font-weight: 600; }
+.ai-section { min-width: 0; padding-top: 20px; }
+.ai-section h3 { margin: 0 0 8px; }
+.ai-form { display: grid; gap: 12px; margin: 20px 0; }
+.ai-form textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 90px; }
+.ai-form > button { justify-self: start; }
+.ai-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
+.ai-results { display: grid; gap: 14px; }
+.ai-result, .ai-answer { border: 1px solid #e0e8dd; border-radius: 12px; padding: 20px; background: #fafcf9; min-width: 0; }
+.ai-result h4 { margin: 0; }
+.ai-result .section-heading { flex-wrap: wrap; gap: 8px; }
+.ai-result .section-heading span { font-size: 12px; color: #63755b; }
+.ai-question { padding-bottom: 16px; border-bottom: 1px solid #e0e8dd; overflow-wrap: anywhere; }
+.citation-list ol { padding-left: 24px; }
+.citation-list li { padding: 12px 0; overflow-wrap: anywhere; }
+.citation-list blockquote { margin: 12px 0; padding-left: 14px; border-left: 3px solid #a5b89b; }
+.document-processing { display: grid; gap: 8px; flex: 1; }
+.document-ingestion { display: grid; justify-items: start; gap: 8px; }
+.document-ingestion .inline-help { margin: 0; }
+.ingestion-failed { background: #fff0e9; color: #9a4a28; }
+.source-dialog { position: fixed; width: min(960px, calc(100vw - 40px)); max-height: calc(100dvh - 40px); box-sizing: border-box; padding: 24px; border: 1px solid #d6e0d2; border-radius: 14px; color: #283425; overflow: auto; overscroll-behavior: contain; }
+.source-dialog::backdrop { background: rgb(22 32 18 / 55%); }
+.source-dialog h2 { overflow-wrap: anywhere; }
+.source-dialog .dialog-heading { position: sticky; top: -24px; background: white; padding-block: 12px; z-index: 1; }
+.source-content { background: #f4f7f1; border: 1px solid #e0e8dd; border-radius: 8px; margin-block: 16px; padding: 16px; }
+.source-content mark { background: #f8df91; color: inherit; }
+.pdf-preview { margin-top: 16px; border: 1px solid #d6e0d2; border-radius: 8px; overflow: hidden; }
+.pdf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 12px; background: #f4f7f1; }
+.pdf-page { padding: 8px; background: #e8ebe6; text-align: center; }
+.pdf-page canvas { display: block; max-width: 100%; height: auto; margin: auto; background: white; }
+@media (max-width: 700px) {
+  .course-ai-panel { padding: 16px; }
+  .ai-result, .ai-answer { padding: 14px; }
+  .source-dialog { width: calc(100vw - 16px); padding: 16px; max-height: calc(100dvh - 16px); }
+  .source-dialog .dialog-heading { top: -16px; }
+  .document-processing { flex-basis: 100%; }
+  .detail-tabs { flex-wrap: wrap; }
+}

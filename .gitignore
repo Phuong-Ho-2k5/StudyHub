@@ -36,3 +36,4 @@ data/
 *.log
 
 postman/
+node_modules/

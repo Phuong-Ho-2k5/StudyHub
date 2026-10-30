@@ -21,7 +21,7 @@ The first real FastAPI pipeline run exposed HTTP/2 cleartext-upgrade body loss f
 
 Synthetic token counts and answers prove orchestration/HTTP error handling, not OpenAI token accuracy, model availability or grounding quality. Live evaluation requires explicit opt-in and a real key. No simulation was deployed or pushed.
 
-## M6-T08 evidence verification (2026-10-29)
+## Evidence verification (2026-10-29)
 
 - **id:** included-context-citation-validation; **status:** supported for the local caller. **claim:** FastAPI rejects unknown/trimmed chunk IDs, fabricated quotes, duplicate or missing evidence, and requires empty evidence on insufficient context. **reason/verification:** 15 real HTTP provider-simulation tests passed, including fabricated-ID/quote/missing/duplicate cases; the controlled-budget service test rejected a citation to a trimmed chunk. **source:** `ai-service/tests/test_rag_citations.py`, `ai-service/tests/test_rag_provider_simulation.py`, `app/generation/citations.py`. Synthetic token counts establish control flow only.
 - **id:** current-publication-source-resolution; **status:** supported for the local pipeline. **claim:** A citation opens its exact authorized chunk/PDF, and its old chunk ID cannot open a new publication. **reason/verification:** Spring/PostgreSQL/FastAPI/E5 pipeline passed; the collection made eight actual Spring HTTP requests and passed nine assertions including private PDF headers, quote/source matching, foreign ownership and stale source 409. Four source repository PostgreSQL tests passed including latch-controlled publish/delete during generation and failed/pending rebuilds. **source:** `CourseChatPipelineIT`, `DocumentSourceRepositoryIT`, `infra/testing/rag/collection/`.
