@@ -19,7 +19,8 @@ class CourseChatServiceTest {
     final ResourceAccessService access = mock(ResourceAccessService.class);
     final RagAnswerClient ai = mock(RagAnswerClient.class);
     final com.studyhub.document.DocumentSourceRepository sources = mock(com.studyhub.document.DocumentSourceRepository.class);
-    final CourseChatService service = new CourseChatService(search, access, ai, new CitationMapper(sources));
+    final ChatHistoryService history = mock(ChatHistoryService.class);
+    final CourseChatService service = new CourseChatService(search, access, ai, new CitationMapper(sources), history);
     @org.junit.jupiter.api.BeforeEach void sourceSnapshot() {
         when(sources.findPublishedByIds(anyLong(),anyLong(),anyList())).thenReturn(List.of(
             new com.studyhub.document.DocumentSourceRepository.PublishedSource(7L,2L,"Database",1L,0,"Atomicity",1,2,true)));

@@ -16,7 +16,22 @@ Mã lỗi: 400 input/JSON; 401 JWT; 404 Course không có quyền/không tồn t
 
 Backend nhận `LLM_MODEL` để đối chiếu response và `AI_CHAT_TIMEOUT_SECONDS=75` cho bước generation; AI Service dùng deadline tổng 60 giây. Timeout embedding vẫn theo cấu hình riêng. LLM key chỉ nằm ở AI Service. Cấu hình `.env.example` được truyền qua Docker Compose; khi chạy local, đặt cùng `LLM_MODEL` ở hai service.
 
-Context giữ snapshot lúc retrieve. Sau generation, backend kiểm tra citation trên snapshot và batch lookup lại bản published; nguồn bị thay/xóa trả 409 để client hỏi lại, không tự gọi LLM lần hai. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. Chưa có streaming và lịch sử hội thoại; giao diện chat nằm trong frontend.
+Context giữ snapshot lúc retrieve. Sau generation, backend kiểm tra citation trên snapshot và batch lookup lại bản published; nguồn bị thay/xóa trả 409 để client hỏi lại, không tự gọi LLM lần hai. Course bị xóa trước bước kiểm tra cuối trả 404. Nội dung đã gửi provider không được thu hồi bằng thao tác xóa. Chưa có streaming; giao diện chat nằm trong frontend.
+
+### Lịch sử hội thoại theo User + Course
+
+API lịch sử yêu cầu Bearer JWT. User luôn lấy từ JWT, không nhận userId từ client; Course/session ngoài phạm vi trả 404, thiếu/sai JWT trả 401.
+
+1. `POST /api/courses/{courseId}/ai/chat-sessions` với `{"title":"Ôn tập chương 1"}` trả 201 và `{id, courseId, title, createdAt, updatedAt}`. Title bắt buộc là JSON string, trim, 1–150 ký tự.
+2. `POST /api/courses/{courseId}/ai/chat` với `{"question":"Transaction là gì?","topK":5,"sessionId":123}` trả response chat hiện tại cùng `sessionId`, `userMessageId`, `assistantMessageId`. ID phải thuộc đúng User + Course; chỉ chấp nhận JSON integer dương trong phạm vi Long.
+3. `GET /api/courses/{courseId}/ai/chat-sessions/{sessionId}/messages?page=0&size=20` trả Page với message theo `id ASC`. Mỗi message gồm `id, sessionId, role, content, status, model, promptVersion, citations, createdAt`. USER có metadata null và citations rỗng; ASSISTANT giữ metadata của câu trả lời (model có thể null khi không có context).
+4. `GET /api/courses/{courseId}/ai/chat-sessions?page=0&size=10` trả Page metadata theo `updatedAt DESC, id DESC`. Gửi lượt chat thành công cập nhật updatedAt. Cả hai API đọc yêu cầu page >= 0, size 1–100 và `page * size <= 2147483647` (giới hạn offset JPA); không nhận sort tùy ý. Tham số ngoài giới hạn trả 400; trang vượt cuối trong giới hạn có content rỗng.
+
+Bỏ qua `sessionId` hoặc gửi null giữ chat độc lập không lưu; ba trường ID trả null, giao diện hiện tại tiếp tục dùng luồng này. **Lưu lịch sử không tạo bộ nhớ nhiều lượt:** câu trả lời chỉ dùng câu hỏi hiện tại và tài liệu retrieve; không gửi message trước vào prompt. Giao diện tạo/mở hội thoại thuộc M7-T01A.
+
+Backend gọi AI ngoài transaction, rồi khóa Course → session và ghi USER/ASSISTANT cùng một transaction ngắn. `INSUFFICIENT_CONTEXT` vẫn được lưu; lỗi generation/citation không thêm message. Nếu ghi message thất bại thì rollback cả lượt, không trả 200. Hai request đồng thời được lưu theo thứ tự hoàn tất/lấy lock, từng cặp không xen kẽ; không cam kết thứ tự bắt đầu HTTP. Không tự retry: client gửi lại sau khi mất response có thể tạo lượt trùng; idempotency chưa thuộc task này.
+
+Citation lưu snapshot quote/metadata đã kiểm chứng, không truy vấn lại nguồn khi đọc lịch sử. Re-ingest hoặc xóa Document không sửa answer/quote cũ; mở `sourceUrl`/`fileUrl` vẫn kiểm tra quyền và nguồn hiện tại, có thể trả 409 khi chunk không còn published hoặc 404 khi tài nguyên đã xóa. Snapshot không giữ lại bản PDF cũ và không cấp quyền mới. Xóa Course/User xóa session/message qua FK cascade. Migration V23 tạo bảng, CHECK và index cho lịch sử.
 
 ### Citation và mở nguồn
 

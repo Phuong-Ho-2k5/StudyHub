@@ -157,6 +157,27 @@ class OpenApiApiTest {
         assertTrue(spec.at("/components/schemas/DocumentResponse/properties").has("publishedIngestionId"));
     }
 
+    @Test void chatHistoryContractDocumentsScopedCreationPagingAndOptionalSession() throws Exception {
+        var spec=mapper.readTree(send("GET","/v3/api-docs",null,null).body());
+        var paths=spec.path("paths");
+        var sessions=paths.path("/api/courses/{courseId}/ai/chat-sessions");
+        assertTrue(sessions.path("post").path("responses").has("201"));
+        for(var operation:java.util.List.of(sessions.path("post"),sessions.path("get"),
+                paths.path("/api/courses/{courseId}/ai/chat-sessions/{sessionId}/messages").path("get"))) {
+            assertFalse(operation.path("security").isEmpty());
+            for(String status:java.util.List.of("400","401","404"))assertTrue(operation.path("responses").has(status));
+        }
+        var input=spec.at("/components/schemas/CourseChatRequest");
+        assertEquals("int64",input.at("/properties/sessionId/format").asText());
+        assertFalse(java.util.stream.StreamSupport.stream(input.path("required").spliterator(),false)
+            .anyMatch(value->value.asText().equals("sessionId")));
+        for(String field:java.util.List.of("sessionId","userMessageId","assistantMessageId")) {
+            var property=spec.at("/components/schemas/CourseChatResponse/properties").path(field);
+            assertTrue(property.path("nullable").asBoolean() || property.path("type").toString().contains("null"));
+        }
+        assertTrue(spec.at("/components/schemas/ChatMessageResponse/properties/citations").isObject());
+    }
+
     private HttpResponse<String> send(String method, String path, String token, Object body) throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path));
         if (token != null) request.header("Authorization", "Bearer " + token);

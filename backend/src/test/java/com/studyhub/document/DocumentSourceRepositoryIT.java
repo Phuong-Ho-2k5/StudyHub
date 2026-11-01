@@ -76,7 +76,7 @@ class DocumentSourceRepositoryIT {
         var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
         when(ai.answer(anyString(),anyList())).thenAnswer(i->{entered.countDown();assertTrue(release.await(10,TimeUnit.SECONDS));
             return new RagAnswerClient.RagAnswerResult("ANSWERED","Atomicity","model","course-rag-v2",List.of(new RagAnswerClient.Evidence(old.chunkId(),"Atomicity")));});
-        var service=new CourseChatService(search,access,ai,new CitationMapper(sources));var request=new CourseChatRequest();request.setQuestion("Question");
+        var service=new CourseChatService(search,access,ai,new CitationMapper(sources),mock(ChatHistoryService.class));var request=new CourseChatRequest();request.setQuestion("Question");
         try(var pool=Executors.newSingleThreadExecutor()) {
             var pending=pool.submit(()->service.chat(course,owner,request));
             try { assertTrue(entered.await(10,TimeUnit.SECONDS));

@@ -1,7 +1,9 @@
 # Kiểm chứng RAG Chat và citation
 
 API public: `POST /api/courses/{courseId}/ai/chat`, Bearer JWT, body `{"question":"Transaction bảo đảm điều gì?","topK":5}`.
-Chỉ dùng các chunk từ phiên bản đã công bố và thuộc Course của owner. `course-rag-v2` trả citations từ evidence đã kiểm tra quote và context thực sự gửi LLM. Không lưu lịch sử. API nguồn/PDF và giới hạn provenance được mô tả trong [README backend](../../../backend/README.md).
+Chỉ dùng các chunk từ phiên bản đã công bố và thuộc Course của owner. `course-rag-v2` trả citations từ evidence đã kiểm tra quote và context thực sự gửi LLM. Có thể gửi `sessionId` để lưu lịch sử theo User + Course; bỏ qua/null thì không lưu. Mỗi câu hỏi vẫn độc lập, không đưa history vào prompt. API lịch sử/nguồn/PDF và giới hạn provenance được mô tả trong [README backend](../../../backend/README.md).
+
+`SessionChatSimulationIT` chạy Spring HTTP, PostgreSQL và các Java client thật với AI dependency mô phỏng tại `AI_SIMULATION_URL/success`. Khi có cả `PGVECTOR_TEST_*` và `AI_SIMULATION_URL`, `mvnw -Ppgvector-it verify` kiểm tra: lưu question/answer/citation, snapshot giữ nguyên sau re-ingest, nguồn cũ trả 409, chặn user khác và không thêm message khi upstream trả budget/malformed/unavailable/timeout. `ChatHistoryConcurrencyIT` dùng PostgreSQL thật và latch ở generation giả để kiểm tra các cặp message đồng thời cùng xóa Course/session khi đang generation. Không gọi provider tính phí.
 
 ## Hợp đồng và nguồn
 

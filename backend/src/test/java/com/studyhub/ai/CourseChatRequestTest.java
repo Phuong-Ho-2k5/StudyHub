@@ -20,4 +20,14 @@ class CourseChatRequestTest {
         assertNull(mapper.readValue("{\"question\":\"Q\",\"topK\":null}",CourseChatRequest.class).getTopK());
         assertEquals(20,mapper.readValue("{\"question\":\"Q\",\"topK\":20}",CourseChatRequest.class).getTopK());
     }
+    @ParameterizedTest @ValueSource(strings={"\"1\"","true","1.0","1.5","9223372036854775808","[]","{}"})
+    void rejectsCoercedSessionIds(String value) {
+        assertThrows(RuntimeException.class,()->mapper.readValue("{\"question\":\"Q\",\"sessionId\":"+value+"}",CourseChatRequest.class));
+    }
+    @Test void acceptsNullAndBothSmallAndLargeIntegerSessionIds() {
+        assertNull(mapper.readValue("{\"question\":\"Q\"}",CourseChatRequest.class).getSessionId());
+        assertNull(mapper.readValue("{\"question\":\"Q\",\"sessionId\":null}",CourseChatRequest.class).getSessionId());
+        assertEquals(1L,mapper.readValue("{\"question\":\"Q\",\"sessionId\":1}",CourseChatRequest.class).getSessionId());
+        assertEquals(Long.MAX_VALUE,mapper.readValue("{\"question\":\"Q\",\"sessionId\":9223372036854775807}",CourseChatRequest.class).getSessionId());
+    }
 }

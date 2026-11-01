@@ -14,13 +14,17 @@ public class CourseChatService {
     private final ResourceAccessService access;
     private final RagAnswerClient ai;
     private final CitationMapper citations;
+    private final ChatHistoryService history;
 
-    public CourseChatService(CourseSearchService search, ResourceAccessService access, RagAnswerClient ai, CitationMapper citations) {
+    public CourseChatService(CourseSearchService search, ResourceAccessService access, RagAnswerClient ai, CitationMapper citations,
+            ChatHistoryService history) {
         this.search = search; this.access = access; this.ai = ai;
         this.citations = citations;
+        this.history = history;
     }
 
     public CourseChatResponse chat(Long courseId, Long userId, CourseChatRequest request) {
+        if(request.getSessionId()!=null) history.requireSession(courseId,userId,request.getSessionId());
         String question = request.getQuestion().strip();
         var query = new CourseSearchRequest(); query.setQuery(question); query.setTopK(request.getTopK());
         // Search authorizes before embedding, and filters ownership/published versions in SQL.
@@ -29,8 +33,12 @@ public class CourseChatService {
         // No transaction spans HTTP. Recheck after the potentially slow generation call.
         access.requireCourse(courseId, userId);
         boolean insufficient = result == null || "INSUFFICIENT_CONTEXT".equals(result.status());
-        return new CourseChatResponse(courseId, question, insufficient ? "INSUFFICIENT_CONTEXT" : "ANSWERED",
+        var response = new CourseChatResponse(courseId, question, insufficient ? "INSUFFICIENT_CONTEXT" : "ANSWERED",
                 insufficient ? INSUFFICIENT_ANSWER : result.answer(), result == null ? null : result.model(), PROMPT_VERSION,
-                insufficient ? java.util.List.of() : citations.map(courseId,userId,retrieved.items(),result.evidence()));
+                insufficient ? java.util.List.of() : citations.map(courseId,userId,retrieved.items(),result.evidence()),null,null,null);
+        if(request.getSessionId()==null) return response;
+        var saved=history.appendTurn(courseId,userId,request.getSessionId(),response);
+        return new CourseChatResponse(response.courseId(),response.question(),response.status(),response.answer(),
+            response.model(),response.promptVersion(),response.citations(),saved.sessionId(),saved.userMessageId(),saved.assistantMessageId());
     }
 }

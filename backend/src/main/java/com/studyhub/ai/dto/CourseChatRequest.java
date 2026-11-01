@@ -12,6 +12,17 @@ public class CourseChatRequest {
     @Schema(type="integer", format="int32", defaultValue="5", requiredMode=Schema.RequiredMode.NOT_REQUIRED,
             description="Omitted uses 5; null and values outside 1–20 are rejected.")
     private Integer topK = 5;
+    @Positive
+    @Schema(type="integer", format="int64", nullable=true,
+            description="Optional owned session in this Course. Omitted/null keeps stateless chat. History is stored, not sent as conversation context.")
+    private Long sessionId;
+    public Long getSessionId() { return sessionId; }
+    @JsonSetter("sessionId")
+    public void setSessionId(Object value) {
+        if(value!=null && !(value instanceof Integer) && !(value instanceof Long))
+            throw new IllegalArgumentException("sessionId must be a JSON integer within the Long range.");
+        sessionId=value==null?null:((Number)value).longValue();
+    }
     public String getQuestion() { return question; }
     @JsonSetter("question")
     public void setQuestion(Object question) {
