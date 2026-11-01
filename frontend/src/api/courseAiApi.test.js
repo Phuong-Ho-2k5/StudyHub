@@ -4,6 +4,52 @@ import * as api from './courseAiApi.js'
 import { fetchDocumentPdf } from './documentFiles.js'
 import { validateAiInput, formatSourcePages, ingestionDisplay, validateChatResponse } from '../components/ai/aiDisplay.js'
 
+test('history client sends scoped pagination and optional session without retrying writes', async () => {
+  const original = globalThis.fetch
+  try {
+    for (const [name, args, path, method, body] of [
+      ['createChatSession', [7, { title: 'Revision' }], '/api/courses/7/ai/chat-sessions', 'POST', { title: 'Revision' }],
+      ['listChatSessions', [7], '/api/courses/7/ai/chat-sessions?page=0&size=10', 'GET', undefined],
+      ['listChatMessages', [7, 23, { page: 2, size: 20 }], '/api/courses/7/ai/chat-sessions/23/messages?page=2&size=20', 'GET', undefined],
+      ['chatCourse', [7, { question: 'ACID?', sessionId: 23 }], '/api/courses/7/ai/chat', 'POST', { question: 'ACID?', topK: 5, sessionId: 23 }],
+      ['chatCourse', [7, { question: 'ACID?', sessionId: null }], '/api/courses/7/ai/chat', 'POST', { question: 'ACID?', topK: 5, sessionId: null }],
+    ]) {
+      globalThis.fetch = async (url, options) => {
+        assert.equal(url, path)
+        assert.equal(options.method, method)
+        assert.equal(options.headers.Authorization, 'Bearer test')
+        assert.deepEqual(options.body ? JSON.parse(options.body) : undefined, body)
+        return Response.json({ ok: true })
+      }
+      assert.equal(typeof api[name], 'function', `${name} must exist`)
+      assert.deepEqual(await api[name]('test', ...args), { ok: true })
+    }
+    for (const status of [400, 404, 503]) {
+      let calls = 0
+      globalThis.fetch = async () => { calls++; return Response.json({}, { status }) }
+      await assert.rejects(api.createChatSession('test', 7, { title: 'Revision' }), e => e.status === status)
+      assert.equal(calls, 1)
+    }
+  } finally { globalThis.fetch = original }
+})
+
+test('history rejects foreign scope and malformed messages while merging stable IDs', async () => {
+  const { validateSessionPage, validateMessagePage, mergeMessages } = await import('../components/ai/chatHistory.js')
+  const page = content => ({ content, number: 0, size: 20, totalPages: 1, totalElements: content.length, last: true })
+  const session = { id: 23, courseId: 7, title: 'Revision', createdAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z' }
+  const user = { id: 1, sessionId: 23, role: 'USER', content: 'Question', status: null, model: null, promptVersion: null, citations: [], createdAt: session.createdAt }
+  const assistant = { ...user, id: 2, role: 'ASSISTANT', status: 'INSUFFICIENT_CONTEXT', promptVersion: 'v1', content: 'No context' }
+  assert.equal(validateSessionPage(page([session]), 7), true)
+  assert.equal(validateSessionPage(page([session]), 8), false)
+  assert.equal(validateSessionPage({ content: [] }, 7), false)
+  assert.equal(validateMessagePage(page([user, assistant]), 23), true)
+  assert.equal(validateMessagePage(page([user]), 24), false)
+  for (const invalid of [{ ...user, role: 'SYSTEM' }, { ...user, content: null }, { ...assistant, citations: null }, { ...assistant, status: 'ANSWERED' }, { ...user, id: Number.MAX_SAFE_INTEGER + 1 }]) {
+    assert.equal(validateMessagePage(page([invalid]), 23), false)
+  }
+  assert.deepEqual(mergeMessages([{ id: 2 }, { id: 1 }], [{ id: 2 }, { id: 3 }]).map(m => m.id), [1, 2, 3])
+})
+
 test('AI requests preserve scope, payload, JWT and server status without retries', async () => {
   const original = globalThis.fetch
   try {

@@ -7,7 +7,7 @@ const documentRow = { id: 9, courseId: 7, title: 'Database PDF', fileName: 'db.p
 const source = { courseId: 7, documentId: 9, chunkId: 12, chunkIndex: 0, documentTitle: 'Database PDF', content: 'Before. ACID protects transactions. After.', pageStart: 2, pageEnd: 3, fileUrl: '/api/documents/9/file' }
 const hit = { ...source, score: 0.8 }
 const citation = { ...source, quote: 'ACID protects transactions.', sourceUrl: '/api/courses/7/documents/9/chunks/12/source' }
-const answered = { courseId: 7, question: 'ACID?', status: 'ANSWERED', answer: 'ACID protects transactions.', citations: [citation] }
+const answered = { courseId: 7, question: 'ACID?', status: 'ANSWERED', answer: 'ACID protects transactions.', model: null, promptVersion: 'v1', citations: [citation], sessionId: 23, userMessageId: 101, assistantMessageId: 102 }
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(value => localStorage.setItem('studyhub_access_token', value), token)
@@ -19,6 +19,8 @@ test.beforeEach(async ({ page }) => {
     if (path.endsWith('/progress')) return route.fulfill({ json: { progressPercentage: 0, totalConcepts: 0, masteryPercentage: 0 } })
     if (path.endsWith('/active')) return route.fulfill({ status: 204 })
     if (path.endsWith('/search')) return route.fulfill({ json: { courseId: 7, query: 'ACID', items: [hit] } })
+    if (path.endsWith('/chat-sessions')) return route.fulfill({ json: { content: [{ id: 23, courseId: Number(path.split('/')[3]), title: 'Ôn tập', createdAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z' }], number: 0, size: 10, totalPages: 1, totalElements: 1, last: true } })
+    if (path.endsWith('/messages')) return route.fulfill({ json: { content: [], number: 0, size: 20, totalPages: 0, totalElements: 0, last: true } })
     if (path.endsWith('/ai/chat')) return route.fulfill({ json: answered })
     if (path.endsWith('/source')) return route.fulfill({ json: source })
     if (path.endsWith('/unread-count')) return route.fulfill({ json: { unreadCount: 0 } })
@@ -36,6 +38,8 @@ async function search(page) {
 async function chat(page) {
   await page.goto('/courses/7?tab=ai')
   await page.getByRole('button', { name: 'Hỏi tài liệu', exact: true }).click()
+  await page.getByRole('button', { name: 'Ôn tập', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeEnabled()
   await page.getByRole('textbox', { name: 'Câu hỏi' }).fill('ACID?')
   await page.getByRole('button', { name: 'Gửi câu hỏi' }).click()
 }
@@ -74,6 +78,8 @@ test('empty search, token limit and insufficient context have distinct states', 
   await expect(page.getByRole('alert')).toContainText('rút ngắn')
   await page.route('**/ai/chat', route => route.fulfill({ json: { ...answered, status: 'INSUFFICIENT_CONTEXT', answer: 'Không đủ thông tin trong tài liệu.', citations: [] } }))
   await page.getByRole('button', { name: 'Hỏi tài liệu', exact: true }).click()
+  await page.getByRole('button', { name: 'Ôn tập', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeEnabled()
   await page.getByRole('textbox', { name: 'Câu hỏi' }).fill('Unknown?')
   await page.getByRole('button', { name: 'Gửi câu hỏi' }).click()
   await expect(page.getByText('Không đủ thông tin trong tài liệu.', { exact: true })).toBeVisible()
@@ -187,6 +193,8 @@ test('chat rejects malformed evidence and renders model HTML as plain text', asy
   await expect(page.getByRole('alert')).toContainText('không hợp lệ')
   const html = '<img src=x onerror="window.injected=true">'
   await page.route('**/ai/chat', route => route.fulfill({ json: { ...answered, answer: html } }))
+  await page.getByRole('button', { name: 'Tải lại lịch sử' }).click()
+  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeEnabled()
   await page.getByRole('button', { name: 'Gửi câu hỏi' }).click()
   await expect(page.getByTestId('chat-answer')).toHaveText(html)
   expect(await page.evaluate(() => window.injected)).toBeUndefined()
@@ -200,6 +208,8 @@ test('double submit is locked and a late answer cannot cross Course boundaries',
   await page.route('**/api/courses/7/ai/chat', async route => { calls++; await barrier; await route.fulfill({ json: answered }) })
   await page.goto('/courses/7?tab=ai')
   await page.getByRole('button', { name: 'Hỏi tài liệu', exact: true }).click()
+  await page.getByRole('button', { name: 'Ôn tập', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeEnabled()
   const input = page.getByRole('textbox', { name: 'Câu hỏi' })
   await input.fill('ACID?')
   const pending = page.waitForRequest('**/api/courses/7/ai/chat')
@@ -213,6 +223,7 @@ test('double submit is locked and a late answer cannot cross Course boundaries',
   await response
   await expect(page.getByTestId('chat-answer')).toHaveCount(0)
   await page.getByRole('button', { name: 'Hỏi tài liệu', exact: true }).click()
+  await page.getByRole('button', { name: 'Ôn tập', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Câu hỏi' })).toHaveValue('')
 })
 
