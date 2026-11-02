@@ -1,0 +1,12 @@
+name: studyhub-document-concepts
+scope: Local validation of the existing Responses wire adapter with the new Concept JSON schema.
+evidence:
+  - Existing ai-service/app/generation/provider.py and infra/testing/rag/openai/default.js define the reused transport and envelope contract.
+  - Python HTTP tests exercise token count, generation, malformed output, evidence validation, deadline and no retry.
+  - PostgreSQL pipeline exercises real backend and FastAPI with only the external provider simulated.
+assumptions:
+  - Token counts are synthetic fixtures for orchestration and do not model provider tokenization.
+  - Mock content is synthetic; markers select failure scenarios and have no production meaning.
+unverified:
+  - Semantic quality and coverage of real LLM Concept suggestions.
+  - Current external provider capability and tokenizer accuracy are not established by these local mocks.

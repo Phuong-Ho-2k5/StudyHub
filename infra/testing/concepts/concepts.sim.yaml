@@ -1,0 +1,5 @@
+simulation: studyhub-document-concepts
+routing: path
+mocks:
+  - routeKey: openai
+    path: ./openai/config.yaml

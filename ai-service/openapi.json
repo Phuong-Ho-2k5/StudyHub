@@ -166,6 +166,61 @@
         ]
       }
     },
+    "/internal/concepts/extract": {
+      "post": {
+        "tags": [
+          "Internal Concepts"
+        ],
+        "summary": "Extract",
+        "description": "Generate suggestions from authorized Document context; never save Concept entities.",
+        "operationId": "extract_internal_concepts_extract_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConceptExtractionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptExtractionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid internal token"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "422": {
+            "description": "Invalid context or TOKEN_BUDGET_EXCEEDED"
+          },
+          "502": {
+            "description": "Invalid model output"
+          },
+          "503": {
+            "description": "LLM unavailable"
+          },
+          "504": {
+            "description": "Total generation deadline exceeded"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -269,6 +324,96 @@
           "bbox"
         ],
         "title": "ChunkSourceReference"
+      },
+      "ConceptExtractionRequest": {
+        "properties": {
+          "maxSuggestions": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Maxsuggestions",
+            "default": 5
+          },
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/RagContext"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Contexts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "contexts"
+        ],
+        "title": "ConceptExtractionRequest"
+      },
+      "ConceptExtractionResponse": {
+        "properties": {
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptSuggestion"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Suggestions"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model"
+          },
+          "promptVersion": {
+            "type": "string",
+            "const": "document-concepts-v1",
+            "title": "Promptversion",
+            "default": "document-concepts-v1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "suggestions",
+          "model"
+        ],
+        "title": "ConceptExtractionResponse"
+      },
+      "ConceptSuggestion": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "evidence"
+        ],
+        "title": "ConceptSuggestion"
       },
       "ContentBlock": {
         "properties": {

@@ -1,0 +1,19 @@
+$kind: http-request
+name: Retry confirmation
+order: 5000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions/{{batchId}}/items/{{itemId}}/confirm'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"name":{{approvedNameJson}},"description":"Reviewed description"}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Returns same Concept without duplication', () => {
+        pm.response.to.have.status(200);
+        pm.expect(String(pm.response.json().concept.id)).to.eql(pm.collectionVariables.get('createdConceptId'));
+      });

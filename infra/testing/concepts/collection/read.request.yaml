@@ -1,0 +1,13 @@
+$kind: http-request
+name: Read saved draft
+order: 2000
+method: GET
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions/{{batchId}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Draft is still pending', () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json().suggestions[0].state).to.eql('PENDING');
+      });

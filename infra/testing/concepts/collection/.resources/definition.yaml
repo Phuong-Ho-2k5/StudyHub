@@ -1,0 +1,13 @@
+$kind: collection
+name: StudyHub Concept Suggestions
+description: Generate sourced drafts, review, confirm and retry without duplicate Concepts. Synthetic fixture only.
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: http:beforeRequest
+    language: text/javascript
+    code: |-
+      pm.variables.set('approvedNameJson', JSON.stringify(pm.variables.get('approvedName')));

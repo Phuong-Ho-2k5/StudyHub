@@ -1,0 +1,30 @@
+$kind: http-request
+name: Generate draft without saving Concept
+order: 1000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"startChunkIndex":0,"chunkLimit":10,"maxSuggestions":5}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Draft contains validated source and explicit coverage', () => {
+        pm.response.to.have.status(201);
+        const b = pm.response.json();
+        pm.expect(b.promptVersion).to.eql('document-concepts-v1');
+        pm.expect(b.sourceCurrent).to.eql(true);
+        pm.expect(b.coverage.includedChunkIds.length).to.be.above(0);
+        pm.expect(b.suggestions.length).to.be.above(0);
+        const s = b.suggestions[0];
+        pm.expect(s.state).to.eql('PENDING');
+        pm.expect(s.conceptId).to.eql(null);
+        pm.expect(s.citations[0].documentId).to.eql(Number(pm.variables.get('documentId')));
+        pm.collectionVariables.set('batchId', b.id);
+        pm.collectionVariables.set('itemId', String(s.id));
+        pm.collectionVariables.set('sourceUrl', s.citations[0].sourceUrl);
+      });

@@ -183,3 +183,9 @@ Remove-Item Env:RUN_EMBEDDING_TESTS
 ```
 
 Smoke test cần mạng lần đầu và RAM cho model CPU. Xem [README backend](../backend/README.md) để kiểm tra dữ liệu pgvector và quy tắc ingest trùng.
+
+## Concept extraction
+
+`POST /internal/concepts/extract` nhận `maxSuggestions` (1–10) và `contexts` (1–20 chunk thuộc một Document), cùng `X-AI-Service-Token` như RAG. Trả `model`, `promptVersion=document-concepts-v1`, `suggestions[{name,description,evidence[{chunkId,quote}]}]`; danh sách rỗng là kết quả hợp lệ. AI Service kiểm tra schema, số lượng và evidence; không truy DB hoặc lưu Concept. Java kiểm tra scope/nguồn lần nữa, lưu draft rồi chờ confirm riêng.
+
+Token counting dùng schema Concept và toàn bộ context cửa sổ; không cắt context ngầm. Quá budget trả 422 `TOKEN_BUDGET_EXCEEDED`; malformed output/evidence 502, unavailable 503, deadline 504. Dùng cấu hình LLM hiện có, không thêm secret riêng. Xem [hợp đồng và kiểm thử Concept](../infra/testing/concepts/README.md).

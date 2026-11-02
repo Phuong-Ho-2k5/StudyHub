@@ -1,0 +1,23 @@
+$kind: http-request
+name: Confirm reviewed Concept
+order: 4000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions/{{batchId}}/items/{{itemId}}/confirm'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"name":{{approvedNameJson}},"description":"Reviewed description"}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Creates an unlearned Concept only after explicit approval', () => {
+        pm.response.to.have.status(201);
+        const c = pm.response.json().concept;
+        pm.expect(c.name).to.eql(pm.variables.get('approvedName'));
+        pm.expect(c.status).to.eql('NEW');
+        pm.expect(c.confidence).to.eql(0);
+        pm.collectionVariables.set('createdConceptId', String(c.id));
+      });

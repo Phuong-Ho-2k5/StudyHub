@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.ingestion.api import ExtractionGuard, router as extraction_router
 from app.embedding.api import close_embedding_service, router as embedding_router
 from app.generation.api import router as generation_router
+from app.concepts.api import router as concepts_router
 
 
 @asynccontextmanager
@@ -19,6 +20,7 @@ app.add_middleware(ExtractionGuard)
 app.include_router(extraction_router)
 app.include_router(embedding_router)
 app.include_router(generation_router)
+app.include_router(concepts_router)
 
 
 class HealthResponse(BaseModel):

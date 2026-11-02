@@ -72,7 +72,8 @@ class LlmProvider:
                                 "truncation": "disabled", "max_output_tokens": max_output_tokens})
         return self.parse_response(data)
 
-    def parse_response(self, data):
+    def output_text(self, data):
+        """Validate the Responses envelope before a task-specific JSON decoder runs."""
         try:
             if not isinstance(data, dict) or data.get("status") != "completed" or data.get("error"):
                 raise ValueError()
@@ -90,10 +91,18 @@ class LlmProvider:
             content = messages[0]["content"]
             if len(content) != 1 or content[0].get("type") != "output_text":
                 raise ValueError()
-            answer = _Answer.model_validate_json(content[0]["text"])
+            if not isinstance(content[0]["text"], str):
+                raise ValueError()
+            return content[0]["text"]
+        except (KeyError, TypeError, ValueError, AttributeError):
+            raise ProviderError(502) from None
+
+    def parse_response(self, data):
+        try:
+            answer = _Answer.model_validate_json(self.output_text(data))
             if not answer.answer.strip():
                 raise ValueError()
-            return GenerationResult(status=answer.status, answer=answer.answer.strip(), model=configured,
+            return GenerationResult(status=answer.status, answer=answer.answer.strip(), model=self.settings.model,
                                     evidence=answer.evidence)
         except (KeyError, TypeError, ValueError, AttributeError, ValidationError):
             raise ProviderError(502) from None

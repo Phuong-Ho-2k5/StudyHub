@@ -455,3 +455,15 @@ Backend kiểm tra quyền trước khi sinh vector, sau đó lọc Course/owner
 Tìm kiếm chính xác bằng pgvector, chưa thêm ANN/HNSW hoặc xếp hạng lại. Tài liệu và câu hỏi dùng cùng mô hình/phiên bản; chỉ tiền tố khác nhau (`passage: ` và `query: `). Một câu lệnh SQL đọc phiên bản hiện tại sau khi AI trả, nên không ghép các phiên bản trong lúc công bố lại. Truy vấn đã bắt đầu trước khi công bố vẫn có thể thấy bản cũ theo MVCC.
 
 Xem [bộ yêu cầu Postman và dữ liệu đánh giá](../infra/testing/search/README.md). Kiểm thử SQL dùng PostgreSQL thật và vector có khoảng cách đã biết; kiểm thử chất lượng tiếng Việt dùng E5 thật trên bộ dữ liệu mẫu nhỏ, không thay cho đánh giá trên tài liệu thực tế của người dùng.
+
+## AI Concept suggestions
+
+Backend sinh gợi ý Concept có nguồn từ Document đã publish, lưu bản nháp và chỉ tạo Concept sau khi người dùng xác nhận. Prefix API: `/api/courses/{courseId}/documents/{documentId}/ai/concept-suggestions`.
+
+- `POST` với `{"startChunkIndex":0,"chunkLimit":10,"maxSuggestions":5}` → 201 batch nháp, coverage và citation; chưa tạo Concept.
+- `GET /{batchId}` → snapshot gợi ý cùng `sourceCurrent`; JWT owner + Course + Document phải khớp.
+- `POST /{batchId}/items/{suggestionId}/confirm` với `{"name":"Tên đã duyệt","description":"Mô tả đã duyệt"}` → 201 Concept NEW/confidence 0, hoặc 200 cho retry cùng nội dung và cùng Concept.
+
+Mọi thao tác kiểm tra ownership. Backend kiểm tra structured output và quote nguyên văn trong đúng context; nguồn/URL lấy từ DB. Generate chạy ngoài transaction HTTP, finalize/confirm kiểm tra lại phiên bản dưới lock. Re-ingest khiến draft cũ sourceCurrent=false và confirm PENDING trả 409. Tên trùng Course, sửa payload của confirm đã thành công hoặc Concept đã xóa cũng trả 409; không ghi đè/merge hay hồi sinh Concept. Không auto-save, auto-publish hoặc thay confidence từ kết quả LLM.
+
+Migration V24 thêm batch/suggestion và provenance snapshot; không đổi schema Concept. Xem [hợp đồng, giới hạn, lỗi và hướng dẫn tích hợp giao diện](../infra/testing/concepts/README.md). Giao diện review được triển khai riêng.

@@ -1,0 +1,13 @@
+$kind: http-request
+name: Open source before approval
+order: 3000
+method: GET
+url: '{{baseUrl}}{{sourceUrl}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Authorized source has fixture evidence', () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json().content).to.include('Atomicity');
+      });

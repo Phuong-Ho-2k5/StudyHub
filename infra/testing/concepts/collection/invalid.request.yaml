@@ -1,0 +1,16 @@
+$kind: http-request
+name: Reject coercion of chunkLimit
+order: 6000
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"chunkLimit":true}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Strict integer contract', () => pm.response.to.have.status(400));

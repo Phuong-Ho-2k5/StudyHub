@@ -1,0 +1,22 @@
+$kind: http-request
+name: Generate another draft to check duplicate name
+order: 5500
+method: POST
+url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Another generation is still a pending draft', () => {
+        pm.response.to.have.status(201);
+        const b = pm.response.json();
+        pm.expect(b.suggestions[0].state).to.eql('PENDING');
+        pm.collectionVariables.set('duplicateBatchId', b.id);
+        pm.collectionVariables.set('duplicateItemId', String(b.suggestions[0].id));
+      });
