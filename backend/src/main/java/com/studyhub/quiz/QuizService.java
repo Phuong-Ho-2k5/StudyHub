@@ -41,6 +41,10 @@ public class QuizService {
     @Transactional
     public QuizResponse update(Long quizId, UpdateQuizRequest request, Long userId) {
         Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED && request.status() == QuizStatus.PUBLISHED) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT, "AI Quiz requires the review workflow before publishing");
+        }
         quiz.setTitle(request.title());
         quiz.setStatus(request.status());
         return toResponse(quiz);

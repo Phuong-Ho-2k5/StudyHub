@@ -1,0 +1,28 @@
+{
+  "$kind": "http-request",
+  "name": "course",
+  "order": 7000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/ai/generate-quiz",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Idempotency-Key",
+      "value": "{{fixtureKey}}-course"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('course: expected behavior',()=>{pm.response.to.have.status(201);pm.expect(pm.response.json().generation.coverage.length).to.eql(2);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Course revision\",\"questionCount\":1,\"documentIds\":[{{documentId}},{{secondDocumentId}}],\"chunkLimit\":2}"
+  }
+}

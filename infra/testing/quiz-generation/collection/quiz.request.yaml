@@ -1,0 +1,15 @@
+{
+  "$kind": "http-request",
+  "name": "quiz",
+  "order": 3000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}",
+  "headers": [],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('quiz: expected behavior',()=>{pm.response.to.have.status(200);pm.expect(pm.response.json().status).to.eql('DRAFT');});"
+    }
+  ]
+}

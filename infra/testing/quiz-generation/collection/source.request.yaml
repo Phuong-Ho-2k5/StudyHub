@@ -1,0 +1,15 @@
+{
+  "$kind": "http-request",
+  "name": "source",
+  "order": 6000,
+  "method": "GET",
+  "url": "{{baseUrl}}{{sourceUrl}}",
+  "headers": [],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('source: expected behavior',()=>{pm.response.to.have.status(200);pm.expect(pm.response.json().content).to.include('Atomicity');});"
+    }
+  ]
+}

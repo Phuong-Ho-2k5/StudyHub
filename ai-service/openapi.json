@@ -221,6 +221,61 @@
         ]
       }
     },
+    "/internal/quizzes/generate": {
+      "post": {
+        "tags": [
+          "Internal Quiz Generation"
+        ],
+        "summary": "Generate",
+        "description": "Generate sourced MCQs from authorized contexts; backend validates and saves the draft.",
+        "operationId": "generate_internal_quizzes_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizGenerationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid internal token"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "422": {
+            "description": "Invalid context, INSUFFICIENT_CONTENT or TOKEN_BUDGET_EXCEEDED"
+          },
+          "502": {
+            "description": "Invalid model output or evidence"
+          },
+          "503": {
+            "description": "LLM unavailable"
+          },
+          "504": {
+            "description": "Generation deadline exceeded"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -732,6 +787,121 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "QuizGenerationRequest": {
+        "properties": {
+          "questionCount": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Questioncount"
+          },
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/RagContext"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Contexts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "questionCount",
+          "contexts"
+        ],
+        "title": "QuizGenerationRequest"
+      },
+      "QuizGenerationResponse": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model"
+          },
+          "promptVersion": {
+            "type": "string",
+            "const": "quiz-generation-v1",
+            "title": "Promptversion",
+            "default": "quiz-generation-v1"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestion"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Questions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model",
+          "questions"
+        ],
+        "title": "QuizGenerationResponse"
+      },
+      "QuizOption": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "correct"
+        ],
+        "title": "QuizOption"
+      },
+      "QuizQuestion": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuizOption"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Options"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "options",
+          "evidence"
+        ],
+        "title": "QuizQuestion"
       },
       "RagAnswerRequest": {
         "properties": {

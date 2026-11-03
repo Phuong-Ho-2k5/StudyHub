@@ -1,0 +1,9 @@
+version: 1
+name: studyhub-quiz-responses
+slug: studyhub-quiz-responses
+protocol: http
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

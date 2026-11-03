@@ -1,0 +1,28 @@
+{
+  "$kind": "http-request",
+  "name": "key-conflict",
+  "order": 10000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/documents/{{documentId}}/ai/generate-quiz",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Idempotency-Key",
+      "value": "{{fixtureKey}}"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('key-conflict: expected behavior',()=>{pm.response.to.have.status(409);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Different\",\"questionCount\":1}"
+  }
+}

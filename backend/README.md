@@ -1,5 +1,9 @@
 # StudyHub Backend
 
+## AI Quiz generation
+
+`POST /api/documents/{id}/ai/generate-quiz` và `POST /api/courses/{id}/ai/generate-quiz` tạo AI DRAFT với MCQ có nguồn. POST yêu cầu JWT + Idempotency-Key; `GET /api/quizzes/{id}/ai-generation` đọc metadata/evidence. Migration V25 lưu provenance và replay snapshot; chặn publish AI qua CRUD hiện tại. Xem [hợp đồng, lỗi và kiểm thử](../infra/testing/quiz-generation/README.md).
+
 ## RAG Chat theo Course
 
 `POST /api/courses/{courseId}/ai/chat`, Bearer JWT, body:

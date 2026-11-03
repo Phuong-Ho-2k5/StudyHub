@@ -1,0 +1,37 @@
+{
+  "$kind": "http-request",
+  "name": "stale",
+  "order": 12000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/documents/{{staleDocumentId}}/ai/generate-quiz",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Idempotency-Key",
+      "value": "{{fixtureKey}}-stale"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('stale: expected behavior',()=>{pm.response.to.have.status(409);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Stale\",\"questionCount\":1}"
+  },
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{staleAccessToken}}"
+      }
+    ]
+  }
+}

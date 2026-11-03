@@ -1,0 +1,15 @@
+{
+  "$kind": "http-request",
+  "name": "metadata",
+  "order": 5000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/ai-generation",
+  "headers": [],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('metadata: expected behavior',()=>{pm.response.to.have.status(200);pm.expect(pm.response.json().sourceCurrent).to.eql(true);});"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ from app.ingestion.api import ExtractionGuard, router as extraction_router
 from app.embedding.api import close_embedding_service, router as embedding_router
 from app.generation.api import router as generation_router
 from app.concepts.api import router as concepts_router
+from app.quizzes.api import router as quizzes_router
 
 
 @asynccontextmanager
@@ -21,6 +22,7 @@ app.include_router(extraction_router)
 app.include_router(embedding_router)
 app.include_router(generation_router)
 app.include_router(concepts_router)
+app.include_router(quizzes_router)
 
 
 class HealthResponse(BaseModel):

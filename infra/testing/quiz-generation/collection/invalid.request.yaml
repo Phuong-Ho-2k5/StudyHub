@@ -1,0 +1,28 @@
+{
+  "$kind": "http-request",
+  "name": "invalid",
+  "order": 8000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/documents/{{documentId}}/ai/generate-quiz",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Idempotency-Key",
+      "value": "{{fixtureKey}}-bad"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('invalid: expected behavior',()=>{pm.response.to.have.status(400);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Revision\",\"questionCount\":true}"
+  }
+}

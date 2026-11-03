@@ -1,0 +1,28 @@
+{
+  "$kind": "http-request",
+  "name": "foreign",
+  "order": 9000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/documents/{{foreignDocumentId}}/ai/generate-quiz",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Idempotency-Key",
+      "value": "{{fixtureKey}}-foreign"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('foreign: expected behavior',()=>{pm.response.to.have.status(404);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Revision\",\"questionCount\":1}"
+  }
+}

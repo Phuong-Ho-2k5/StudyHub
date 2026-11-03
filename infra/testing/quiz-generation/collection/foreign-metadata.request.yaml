@@ -1,0 +1,15 @@
+{
+  "$kind": "http-request",
+  "name": "foreign-metadata",
+  "order": 13000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/quizzes/{{foreignQuizId}}/ai-generation",
+  "headers": [],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('foreign-metadata: expected behavior',()=>{pm.response.to.have.status(404);});"
+    }
+  ]
+}

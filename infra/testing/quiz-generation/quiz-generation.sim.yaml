@@ -1,0 +1,5 @@
+simulation: studyhub-quiz-generation
+routing: path
+mocks:
+  - routeKey: openai
+    path: ./openai/config.yaml

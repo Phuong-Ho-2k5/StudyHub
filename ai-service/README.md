@@ -1,5 +1,9 @@
 # AI service
 
+## Quiz generation
+
+`POST /internal/quizzes/generate` dùng `X-AI-Service-Token`, nhận questionCount + contexts đã được backend kiểm tra quyền. Structured output chỉ gồm MCQ có 4 option/1 đáp án đúng và evidence; thiếu nội dung trả 422, output sai 502. Dùng lại LLM settings/provider adapter, token budget và deadline. Service không lưu Quiz; backend validate lại rồi lưu DRAFT. Xem [hướng dẫn tích hợp và simulation](../infra/testing/quiz-generation/README.md).
+
 ## RAG Chat và OpenAI
 
 Backend gọi `POST /internal/rag/answer` với `X-AI-Service-Token`, `question` và 1–20 `contexts` đã kiểm tra quyền. FastAPI không retrieve hoặc truy vấn DB. Nội dung question và các context được chọn được gửi tới OpenAI; không gửi PDF đầy đủ hay credential nội bộ. Endpoint dùng Responses API với JSON schema, `store=false`, không tools, không streaming và không retry generation.

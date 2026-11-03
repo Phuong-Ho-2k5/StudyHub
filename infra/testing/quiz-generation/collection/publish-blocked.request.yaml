@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "publish-blocked",
+  "order": 11000,
+  "method": "PUT",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('publish-blocked: expected behavior',()=>{pm.response.to.have.status(409);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Publish\",\"status\":\"PUBLISHED\"}"
+  }
+}

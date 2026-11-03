@@ -1,0 +1,12 @@
+name: studyhub-quiz-generation
+scope: Local HTTP integration of sourced quiz generation using the existing Responses wire adapter.
+evidence:
+  - ai-service/app/generation/provider.py defines the reused transport and envelope validation.
+  - app/quizzes/schemas.py and QuizGenerationClient.java define the structured quiz contract.
+assumptions:
+  - Synthetic token counts test orchestration, not real tokenization.
+  - Synthetic document markers select failures and have no production meaning.
+  - One-port routing is reused from the existing Concept simulation for isolated explicit base URLs.
+unverified:
+  - Semantic correctness and educational value of questions from a real model.
+  - Current external provider availability and schema capability.

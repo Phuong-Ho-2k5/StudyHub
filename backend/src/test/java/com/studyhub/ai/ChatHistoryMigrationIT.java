@@ -24,8 +24,10 @@ class ChatHistoryMigrationIT {
             long owner=jdbc.queryForObject("INSERT INTO users(email,password_hash,name) VALUES ('history@test.local','hash','Owner') RETURNING id",Long.class);
             long workspace=jdbc.queryForObject("INSERT INTO workspaces(name,owner_id) VALUES ('Workspace',?) RETURNING id",Long.class,owner);
             long course=jdbc.queryForObject("INSERT INTO courses(name,workspace_id) VALUES ('Course',?) RETURNING id",Long.class,workspace);
-            // V23 creates history; V24 adds Concept suggestion drafts on top of it.
-            assertEquals(2,flyway.migrate().migrationsExecuted);
+            // Check the history upgrade itself, then apply all subsequent migrations.
+            // The test must not depend on how many unrelated features are added later.
+            assertEquals(1,Flyway.configure().configuration(flyway.getConfiguration()).target("23").load().migrate().migrationsExecuted);
+            flyway.migrate();
             long session=jdbc.queryForObject("INSERT INTO chat_sessions(user_id,course_id,title) VALUES (?,?,'History') RETURNING id",Long.class,owner,course);
             jdbc.update("INSERT INTO chat_messages(session_id,role,content,citations_json) VALUES (?,'USER','Câu hỏi','[]')",session);
             String snapshot="[{\"chunkId\":999,\"quote\":\"Nguyên tử\",\"pageStart\":null}]";

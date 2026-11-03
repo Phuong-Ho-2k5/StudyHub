@@ -1,0 +1,28 @@
+{
+  "$kind": "http-request",
+  "name": "generate",
+  "order": 1000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/documents/{{documentId}}/ai/generate-quiz",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Idempotency-Key",
+      "value": "{{fixtureKey}}"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('generate: expected behavior',()=>{pm.response.to.have.status(201);const b=pm.response.json();pm.expect(b.quiz.status).to.eql('DRAFT');pm.expect(b.quiz.sourceType).to.eql('AI_GENERATED');pm.expect(b.questions[0].options.length).to.eql(4);pm.expect(b.generation.evidence[0].citations[0].chunkId).to.eql(Number(pm.variables.get('chunkId')));pm.collectionVariables.set('quizId',String(b.quiz.id));pm.collectionVariables.set('sourceUrl',b.generation.evidence[0].citations[0].sourceUrl);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Revision\",\"questionCount\":1}"
+  }
+}

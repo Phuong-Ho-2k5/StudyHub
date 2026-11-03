@@ -56,6 +56,12 @@ public class Quiz {
         this.sourceType = QuizSourceType.MANUAL;
     }
 
+    public static Quiz aiGenerated(String title, Course course) {
+        Quiz quiz = new Quiz(title, course);
+        quiz.sourceType = QuizSourceType.AI_GENERATED;
+        return quiz;
+    }
+
     public Long getId() { return id; }
     public String getTitle() { return title; }
     public QuizStatus getStatus() { return status; }

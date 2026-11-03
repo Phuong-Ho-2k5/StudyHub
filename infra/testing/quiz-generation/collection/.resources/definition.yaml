@@ -1,0 +1,14 @@
+{
+  "$kind": "collection",
+  "name": "StudyHub AI Quiz Generation",
+  "description": "Disposable synthetic fixtures; sourced drafts, retry and ownership.",
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}"
+      }
+    ]
+  }
+}
