@@ -44,9 +44,10 @@ public class QuestionController {
     }
 
     @PostMapping("/quizzes/{quizId}/questions")
-    @Operation(summary = "Tạo câu hỏi", description = "MULTIPLE_CHOICE có ít nhất 4 lựa chọn và ít nhất 1 lựa chọn đúng; TRUE_FALSE có 2 lựa chọn và đúng 1 lựa chọn đúng. Cả hai loại phải bỏ referenceAnswer hoặc gửi null. SHORT_ANSWER cần referenceAnswer có nội dung, options rỗng. Concept liên kết phải cùng Course.")
+    @Operation(summary = "Tạo câu hỏi", description = "MANUAL: MULTIPLE_CHOICE có ít nhất 4 lựa chọn và ít nhất 1 đúng; TRUE_FALSE có 2 lựa chọn và đúng 1 đúng; SHORT_ANSWER cần referenceAnswer và options rỗng. AI: chỉ MCQ với đúng 4 option khác nhau, đúng 1 đáp án đúng, referenceAnswer null; bắt buộc expectedRevision từ GET review, chỉ DRAFT/CONFIRMED. Tạo câu tăng revision, quay DRAFT và xóa confirmation. Concept phải cùng Course.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Thành công"),
+        @ApiResponse(responseCode = "409", description = "AI Quiz revision is stale or its state forbids editing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
@@ -84,9 +85,10 @@ public class QuestionController {
     }
 
     @PutMapping("/questions/{id}")
-    @Operation(summary = "Cập nhật câu hỏi", description = "Thay toàn bộ nội dung và danh sách lựa chọn. MULTIPLE_CHOICE và TRUE_FALSE phải bỏ referenceAnswer hoặc gửi null; SHORT_ANSWER cần referenceAnswer có nội dung và options rỗng. Quy tắc giống tạo câu hỏi; không tính lại điểm các Attempt đã lưu.")
+    @Operation(summary = "Cập nhật câu hỏi", description = "Thay toàn bộ nội dung/options theo quy tắc tạo câu hỏi; không tính lại điểm Attempt đã lưu. AI chỉ nhận MCQ đúng 4 option khác nhau, đúng 1 đáp án đúng, referenceAnswer null và expectedRevision hiện tại. Chỉ DRAFT/CONFIRMED được sửa; sửa hủy approval câu này, tăng revision và quay DRAFT. PUBLISHED/ARCHIVED khóa sửa. MANUAL giữ quy tắc hiện có.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Thành công"),
+        @ApiResponse(responseCode = "409", description = "AI Quiz revision is stale or its state forbids editing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
@@ -99,15 +101,19 @@ public class QuestionController {
     }
 
     @DeleteMapping("/questions/{id}")
-    @Operation(summary = "Xóa câu hỏi", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @Operation(summary = "Xóa câu hỏi", description = "Owner-only; ngoài scope trả 404. AI cần query expectedRevision, chỉ DRAFT/CONFIRMED; xóa tăng revision, quay DRAFT và hủy confirmation. MANUAL không bắt buộc revision.")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Thành công", content = @Content),
+        @ApiResponse(responseCode = "409", description = "AI Quiz revision is stale or its state forbids editing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Missing or invalid AI content revision", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<Void> delete(@PathVariable Long id,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Required for AI Quiz: revision from GET review. AI PUBLISHED/ARCHIVED cannot be edited.")
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Long expectedRevision,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        questionService.delete(id, currentUser.getId());
+        questionService.delete(id, currentUser.getId(), expectedRevision);
         return ResponseEntity.noContent().build();
     }
 }

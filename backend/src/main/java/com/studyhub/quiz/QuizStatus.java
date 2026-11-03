@@ -1,5 +1,5 @@
 package com.studyhub.quiz;
 
 public enum QuizStatus {
-    DRAFT, PUBLISHED, ARCHIVED
+    DRAFT, CONFIRMED, PUBLISHED, ARCHIVED
 }

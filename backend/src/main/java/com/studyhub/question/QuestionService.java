@@ -7,6 +7,9 @@ import com.studyhub.question.dto.AnswerOptionResponse;
 import com.studyhub.question.dto.QuestionRequest;
 import com.studyhub.question.dto.QuestionResponse;
 import com.studyhub.quiz.Quiz;
+import com.studyhub.quiz.QuizReviewMutationGuard;
+import com.studyhub.quiz.QuizSourceType;
+import com.studyhub.quiz.AiQuizQuestionValidator;
 import com.studyhub.concept.Concept;
 import com.studyhub.security.ResourceAccessService;
 import org.springframework.http.HttpStatus;
@@ -18,21 +21,26 @@ import org.springframework.web.server.ResponseStatusException;
 public class QuestionService {
     private final QuestionRepository questionRepository;
     private final ResourceAccessService resourceAccessService;
+    private final QuizReviewMutationGuard reviewGuard;
 
-    public QuestionService(QuestionRepository questionRepository, ResourceAccessService resourceAccessService) {
+    public QuestionService(QuestionRepository questionRepository, ResourceAccessService resourceAccessService,
+            QuizReviewMutationGuard reviewGuard) {
         this.questionRepository = questionRepository;
         this.resourceAccessService = resourceAccessService;
+        this.reviewGuard = reviewGuard;
     }
 
     @Transactional
     public QuestionResponse create(Long quizId, QuestionRequest request, Long userId) {
-        Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
+        Quiz quiz = reviewGuard.requireEditable(quizId, userId, request.expectedRevision());
         validate(request);
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED) AiQuizQuestionValidator.validate(request);
         Question question = new Question(quiz, request.text(), request.type(), request.referenceAnswer());
         question.setConcept(resolveConcept(request.conceptId(), quiz, userId));
         for (AnswerOptionRequest option : request.options()) {
             question.addOption(option.text(), option.correct());
         }
+        reviewGuard.contentChanged(quiz);
         return toResponse(questionRepository.saveAndFlush(question));
     }
 
@@ -49,18 +57,30 @@ public class QuestionService {
 
     @Transactional
     public QuestionResponse update(Long id, QuestionRequest request, Long userId) {
+        Quiz quiz = requireEditableQuestionQuiz(id, userId, request.expectedRevision());
         Question question = requireQuestion(id, userId);
         validate(request);
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED) AiQuizQuestionValidator.validate(request);
         question.update(request.text(), request.type(), request.referenceAnswer(), request.options().stream()
                 .map(option -> new AnswerOption(question, option.text(), option.correct())).toList());
         question.setConcept(resolveConcept(request.conceptId(), question.getQuiz(), userId));
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED) question.clearReview();
+        reviewGuard.contentChanged(quiz);
         questionRepository.flush();
         return toResponse(question);
     }
 
     @Transactional
-    public void delete(Long id, Long userId) {
+    public void delete(Long id, Long userId, Long expectedRevision) {
+        Quiz quiz = requireEditableQuestionQuiz(id, userId, expectedRevision);
         questionRepository.delete(requireQuestion(id, userId));
+        reviewGuard.contentChanged(quiz);
+    }
+
+    private Quiz requireEditableQuestionQuiz(Long id, Long userId, Long revision) {
+        Long quizId = questionRepository.findQuizIdInScope(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Question not found"));
+        return reviewGuard.requireEditable(quizId, userId, revision);
     }
 
     private Question requireQuestion(Long id, Long userId) {
@@ -86,7 +106,9 @@ public class QuestionService {
         if (conceptId == null) {
             return null;
         }
-        Concept concept = resourceAccessService.requireConcept(conceptId, userId);
+        Concept concept = quiz.getSourceType() == QuizSourceType.AI_GENERATED
+                ? resourceAccessService.requireConceptForUpdate(conceptId, userId)
+                : resourceAccessService.requireConcept(conceptId, userId);
         if (!concept.getCourse().getId().equals(quiz.getCourse().getId())){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Concept does not belong to the same course as the quiz");
         }

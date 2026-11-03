@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "cross-quiz-question",
+  "order": 5000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/questions/{{foreignQuestionId}}/review",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('cross-quiz-question: workflow contract',()=>{pm.response.to.have.status(404);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  }
+}

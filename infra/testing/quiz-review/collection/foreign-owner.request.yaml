@@ -1,0 +1,20 @@
+{
+  "$kind": "http-request",
+  "name": "foreign-owner",
+  "order": 4000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/quizzes/{{foreignQuizId}}/review",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('foreign-owner: workflow contract',()=>{pm.response.to.have.status(404);const b=pm.response.json();});"
+    }
+  ]
+}

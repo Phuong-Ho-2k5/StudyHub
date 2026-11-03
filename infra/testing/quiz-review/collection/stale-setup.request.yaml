@@ -1,0 +1,33 @@
+{
+  "$kind": "http-request",
+  "name": "stale-setup",
+  "order": 14000,
+  "method": "PUT",
+  "url": "{{baseUrl}}/api/quizzes/{{staleQuizId}}",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('stale-setup: workflow contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Changed\",\"status\":\"DRAFT\",\"expectedRevision\":0}"
+  },
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{staleAccessToken}}"
+      }
+    ]
+  }
+}

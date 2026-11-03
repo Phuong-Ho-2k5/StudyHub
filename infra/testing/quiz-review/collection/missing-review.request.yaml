@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "missing-review",
+  "order": 3000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/confirm",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('missing-review: workflow contract',()=>{pm.response.to.have.status(409);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  }
+}

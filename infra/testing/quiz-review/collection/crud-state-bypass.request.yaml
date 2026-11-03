@@ -1,0 +1,33 @@
+{
+  "$kind": "http-request",
+  "name": "crud-state-bypass",
+  "order": 16000,
+  "method": "PUT",
+  "url": "{{baseUrl}}/api/quizzes/{{staleQuizId}}",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('crud-state-bypass: workflow contract',()=>{pm.response.to.have.status(409);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Bypass\",\"status\":\"CONFIRMED\",\"expectedRevision\":1}"
+  },
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{staleAccessToken}}"
+      }
+    ]
+  }
+}

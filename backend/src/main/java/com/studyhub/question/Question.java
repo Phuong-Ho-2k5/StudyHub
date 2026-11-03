@@ -51,6 +51,19 @@ public class Question {
 
     protected Question() {}
 
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
+    @Column(name = "reviewed_at")
+    private java.sql.Timestamp reviewedAt;
+
+    public Long getReviewedBy() { return reviewedBy; }
+    public java.sql.Timestamp getReviewedAt() { return reviewedAt; }
+    public void review(Long userId) {
+        reviewedBy = userId;
+        reviewedAt = java.sql.Timestamp.from(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+    }
+    public void clearReview() { reviewedBy = null; reviewedAt = null; }
+
     public Question(Quiz quiz, String text, QuestionType type, String referenceAnswer) {
         this.quiz = quiz;
         this.text = text;

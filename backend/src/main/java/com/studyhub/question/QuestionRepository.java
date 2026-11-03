@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface QuestionRepository extends JpaRepository<Question, Long> {
+    boolean existsByConceptIdAndQuizSourceType(Long conceptId, com.studyhub.quiz.QuizSourceType sourceType);
+    @org.springframework.data.jpa.repository.Query("select q.quiz.id from Question q where q.id = :id and q.quiz.course.workspace.owner.id = :ownerId")
+    Optional<Long> findQuizIdInScope(Long id, Long ownerId);
     @EntityGraph(attributePaths = "options")
     List<Question> findAllByQuizIdOrderByIdAsc(Long quizId);
     Optional<Question> findByIdAndQuizCourseWorkspaceOwnerId(Long id, Long ownerId);

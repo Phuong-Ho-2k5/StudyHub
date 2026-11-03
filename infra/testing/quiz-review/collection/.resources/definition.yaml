@@ -1,0 +1,14 @@
+{
+  "$kind": "collection",
+  "name": "StudyHub AI Quiz Review",
+  "description": "Actual Spring workflow on disposable PostgreSQL fixtures; no LLM calls.",
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}"
+      }
+    ]
+  }
+}

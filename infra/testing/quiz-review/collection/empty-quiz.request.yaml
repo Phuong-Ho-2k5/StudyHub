@@ -1,0 +1,33 @@
+{
+  "$kind": "http-request",
+  "name": "empty-quiz",
+  "order": 6000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{emptyQuizId}}/confirm",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('empty-quiz: workflow contract',()=>{pm.response.to.have.status(409);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  },
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{emptyAccessToken}}"
+      }
+    ]
+  }
+}

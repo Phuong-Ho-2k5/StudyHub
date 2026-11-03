@@ -50,6 +50,10 @@ public class ResourceAccessService {
     public Concept requireConcept(Long conceptId, Long userId) {
         return requireConcept(conceptId, userId, "Concept not found");
     }
+    public Concept requireConceptForUpdate(Long conceptId, Long userId) {
+        return conceptRepository.findForUpdateInScope(conceptId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Concept not found"));
+    }
 
     public Concept requirePrerequisiteConcept(Long conceptId, Long userId) {
         return requireConcept(conceptId, userId, "Prerequisite concept not found");

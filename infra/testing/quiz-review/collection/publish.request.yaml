@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "publish",
+  "order": 11000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/publish",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('publish: workflow contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.quiz.status).to.eql('PUBLISHED');pm.expect(b.publishedAt).to.be.a('string');});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  }
+}

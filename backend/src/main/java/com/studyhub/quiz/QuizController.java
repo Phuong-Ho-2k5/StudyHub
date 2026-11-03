@@ -91,7 +91,7 @@ public class QuizController {
     }
 
     @PutMapping("/quizzes/{id}")
-    @Operation(summary = "Cập nhật Quiz", description = "Thay title và status DRAFT, PUBLISHED hoặc ARCHIVED. Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @Operation(summary = "Cập nhật Quiz", description = "MANUAL: thay title/status DRAFT, PUBLISHED hoặc ARCHIVED. AI: chỉ sửa title khi DRAFT/CONFIRMED, status phải bằng trạng thái hiện tại, bắt buộc expectedRevision từ GET review; sửa sẽ quay DRAFT và xóa confirmation. Mọi chuyển trạng thái AI dùng workflow review. Sai revision/state trả 409; thiếu revision trả 400. Ngoài scope trả 404.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Thành công"),
         @ApiResponse(responseCode = "400", description = "Dữ liệu, tham số hoặc quy tắc nghiệp vụ không hợp lệ; lỗi validation có fieldErrors.",

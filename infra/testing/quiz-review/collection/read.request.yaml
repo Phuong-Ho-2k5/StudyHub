@@ -1,0 +1,20 @@
+{
+  "$kind": "http-request",
+  "name": "read",
+  "order": 1000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/review",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('read: workflow contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.contentRevision).to.eql(0);pm.expect(b.reviewedQuestions).to.eql(0);pm.expect(b.totalQuestions).to.eql(2);});"
+    }
+  ]
+}

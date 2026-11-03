@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "archive",
+  "order": 13000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/archive",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('archive: workflow contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.quiz.status).to.eql('ARCHIVED');});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  }
+}

@@ -26,12 +26,15 @@ public class ConceptService {
     private final ConceptRepository conceptRepository;
     private final ConceptDependencyRepository conceptDependencyRepository;
     private final ResourceAccessService resourceAccessService;
+    private final com.studyhub.question.QuestionRepository questionRepository;
 
     public ConceptService(ConceptRepository conceptRepository,
-            ConceptDependencyRepository conceptDependencyRepository, ResourceAccessService resourceAccessService) {
+            ConceptDependencyRepository conceptDependencyRepository, ResourceAccessService resourceAccessService,
+            com.studyhub.question.QuestionRepository questionRepository) {
         this.conceptRepository = conceptRepository;
         this.conceptDependencyRepository = conceptDependencyRepository;
         this.resourceAccessService = resourceAccessService;
+        this.questionRepository = questionRepository;
     }
 
     public List<ConceptResponse> getConceptFromCourse(Long courseId, Long currentUserId) {
@@ -97,7 +100,10 @@ public class ConceptService {
     }
 
     public void deleteConcept(Long id, Long currentUserId) {
-        Concept concept = resourceAccessService.requireConcept(id, currentUserId);
+        // Serialize deletion with AI question linking; do not silently SET NULL on reviewed content.
+        Concept concept = resourceAccessService.requireConceptForUpdate(id, currentUserId);
+        if (questionRepository.existsByConceptIdAndQuizSourceType(id, com.studyhub.quiz.QuizSourceType.AI_GENERATED))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Concept is referenced by an AI Quiz; unlink it from an editable Quiz first");
         conceptRepository.delete(concept);
     }
 

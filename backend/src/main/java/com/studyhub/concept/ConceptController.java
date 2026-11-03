@@ -163,9 +163,10 @@ public class ConceptController {
     }
 
     @DeleteMapping("/concepts/{id}")
-    @Operation(summary = "Xóa Concept", description = "Chỉ thao tác tài nguyên thuộc người dùng đăng nhập qua owner Workspace. Không tồn tại hoặc không có quyền trả 404.")
+    @Operation(summary = "Xóa Concept", description = "Owner-only; ngoài scope trả 404. Concept đang được câu hỏi AI Quiz tham chiếu trả 409; bỏ liên kết khi Quiz còn editable hoặc xóa Quiz trước để không làm thay đổi nội dung đã duyệt.")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Thành công", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Concept is referenced by an AI Quiz", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Tài nguyên không tồn tại hoặc người dùng không có quyền truy cập.",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiErrorResponse.class)))
     })

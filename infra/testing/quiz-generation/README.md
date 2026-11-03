@@ -1,6 +1,6 @@
 # Sinh Quiz nháp có nguồn
 
-Chức năng sinh Quiz tạo Quiz `AI_GENERATED / DRAFT` và lưu toàn bộ Question/AnswerOption cùng evidence trong một transaction. Backend không giữ transaction trong lúc gọi AI. Workflow duyệt từng câu → CONFIRMED → publish và giao diện duyệt sẽ được bổ sung riêng.
+Chức năng sinh Quiz tạo Quiz `AI_GENERATED / DRAFT` và lưu toàn bộ Question/AnswerOption cùng evidence trong một transaction. Backend không giữ transaction trong lúc gọi AI. Workflow duyệt từng câu → CONFIRMED → publish đã được triển khai; xem [hợp đồng review](../quiz-review/README.md). Giao diện duyệt sẽ được triển khai riêng.
 
 ## API
 
@@ -39,7 +39,7 @@ Khi nguồn đổi version/xóa trong lúc sinh, backend từ chối lưu. GET m
 
 Idempotency key unique theo User; fingerprint gồm mode/resource và body chuẩn hóa, kể cả default. Cùng key/payload trả **snapshot generation ban đầu**, kể cả Quiz đã sửa title/câu/đáp án sau đó; dùng GET Quiz/Question để đọc nội dung hiện tại. Metadata/evidence mô tả nội dung lúc AI sinh, không tự chứng thực chỉnh sửa sau này. Cùng key khác payload trả 409; Quiz đã xóa thì 409, dùng key mới nếu muốn sinh lại. Request thất bại không giữ key thành công. Hai request đồng thời có thể gọi model hai lần nhưng chỉ commit một Quiz; không hứa exactly-once chi phí LLM.
 
-Quote đúng chỉ chứng minh có đoạn trích trong context; không chứng minh câu hỏi và đáp án đúng về ngữ nghĩa. Người dùng vẫn phải đối chiếu khi duyệt. Dữ liệu bàn giao cho workflow duyệt gồm generation ID, question IDs, evidence/coverage, sourceCurrent và guard publish trong QuizService. Workflow sau phải xử lý việc sửa/xóa câu làm thay đổi trạng thái duyệt; chức năng sinh nháp hiện chưa thêm CONFIRMED.
+Quote đúng chỉ chứng minh có đoạn trích trong context; không chứng minh câu hỏi và đáp án đúng về ngữ nghĩa. Người dùng vẫn phải đối chiếu khi duyệt. Workflow duyệt Quiz sử dụng generation ID, question IDs, evidence/coverage và sourceCurrent cho review. Sửa nội dung phải có expectedRevision, hủy approval câu sửa và confirmation; CONFIRMED/publish chỉ qua workflow, không qua PUT Quiz. Replay generate và snapshot ban đầu giữ nguyên.
 
 | HTTP | Ý nghĩa |
 | --- | --- |

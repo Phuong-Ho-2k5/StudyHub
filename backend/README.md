@@ -1,5 +1,9 @@
 # StudyHub Backend
 
+## AI Quiz review
+
+Chức năng duyệt Quiz AI sử dụng workflow `DRAFT → CONFIRMED → PUBLISHED` cho Quiz AI. GET `/api/quizzes/{id}/review` trả nội dung hiện tại, `contentRevision`, approval từng câu và evidence gốc. POST review từng câu, confirm rồi publish riêng; POST archive kết thúc workflow. CRUD AI cần `expectedRevision`, không được tự gán status; sửa nội dung hủy confirmation và approval câu sửa, PUBLISHED/ARCHIVED khóa sửa. MANUAL giữ quy tắc cũ và không dùng CONFIRMED. Xem [hợp đồng, trạng thái và kiểm thử](../infra/testing/quiz-review/README.md). Các mô tả CRUD tổng quát bên dưới áp dụng quy tắc câu hỏi MANUAL; AI dùng MCQ đúng 4 option/1 đáp án đúng theo hợp đồng review.
+
 ## AI Quiz generation
 
 `POST /api/documents/{id}/ai/generate-quiz` và `POST /api/courses/{id}/ai/generate-quiz` tạo AI DRAFT với MCQ có nguồn. POST yêu cầu JWT + Idempotency-Key; `GET /api/quizzes/{id}/ai-generation` đọc metadata/evidence. Migration V25 lưu provenance và replay snapshot; chặn publish AI qua CRUD hiện tại. Xem [hợp đồng, lỗi và kiểm thử](../infra/testing/quiz-generation/README.md).

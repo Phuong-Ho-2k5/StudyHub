@@ -1,5 +1,7 @@
 # StudyHub
 
+Quiz AI sử dụng workflow duyệt `DRAFT → CONFIRMED → PUBLISHED`, revision chống sửa/duyệt dữ liệu cũ và guard CRUD. Hợp đồng API, cách chạy PostgreSQL/Postman và bàn giao giao diện duyệt Quiz: [AI Quiz Review](infra/testing/quiz-review/README.md).
+
 AI Quiz generation tạo Quiz `AI_GENERATED / DRAFT` từ Document hoặc các Document được chọn trong Course, kèm evidence và retry key chống lưu trùng. Xem [API và kiểm thử Quiz generation](infra/testing/quiz-generation/README.md). Workflow duyệt và xuất bản sẽ được bổ sung riêng.
 
 RAG Chat theo Course có tại `POST /api/courses/{courseId}/ai/chat`: backend kiểm tra quyền, retrieve tài liệu đã công bố và gọi OpenAI qua FastAPI. Câu trả lời có citation với quote nguyên văn và API mở đúng chunk/PDF theo quyền owner. Tab **Trợ lý AI** tại `/courses/{courseId}?tab=ai` hỗ trợ tìm kiếm ngữ nghĩa, hỏi đáp độc lập, đọc đoạn nguồn và xem PDF đúng trang bằng PDF.js. Tab Tài liệu hiển thị ingestion và cho xử lý lại. Giao diện lịch sử theo User + Course cho tạo/mở session, đọc message/citation đã lưu và gửi tiếp câu hỏi. Mỗi câu hỏi vẫn độc lập; AI chưa dùng các lượt trước làm ngữ cảnh. Xem [cấu hình OpenAI](ai-service/README.md), [hợp đồng chat và nguồn](backend/README.md), [kiểm thử pipeline](infra/testing/rag/README.md) và [kiểm tra giao diện](infra/testing/rag/UI-CHECKLIST.md).

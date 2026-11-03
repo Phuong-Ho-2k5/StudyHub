@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "locked-edit",
+  "order": 12000,
+  "method": "PUT",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('locked-edit: workflow contract',()=>{pm.response.to.have.status(409);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"title\":\"Locked\",\"status\":\"PUBLISHED\",\"expectedRevision\":0}"
+  }
+}

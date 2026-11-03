@@ -37,6 +37,15 @@ public class Quiz {
     @Column(name = "source_type", nullable = false, length = 20)
     private QuizSourceType sourceType;
 
+    @Column(name = "content_revision", nullable = false)
+    private long contentRevision;
+    @Column(name = "confirmed_by")
+    private Long confirmedBy;
+    @Column(name = "confirmed_at")
+    private Timestamp confirmedAt;
+    @Column(name = "published_at")
+    private Timestamp publishedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
@@ -66,6 +75,25 @@ public class Quiz {
     public String getTitle() { return title; }
     public QuizStatus getStatus() { return status; }
     public QuizSourceType getSourceType() { return sourceType; }
+    public long getContentRevision() { return contentRevision; }
+    public Long getConfirmedBy() { return confirmedBy; }
+    public Timestamp getConfirmedAt() { return confirmedAt; }
+    public Timestamp getPublishedAt() { return publishedAt; }
+    public void contentChanged() {
+        contentRevision = Math.incrementExact(contentRevision);
+        status = QuizStatus.DRAFT;
+        confirmedBy = null;
+        confirmedAt = null;
+    }
+    public void confirm(Long userId) {
+        status = QuizStatus.CONFIRMED;
+        confirmedBy = userId;
+        confirmedAt = Timestamp.from(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+    }
+    public void publish() {
+        status = QuizStatus.PUBLISHED;
+        publishedAt = Timestamp.from(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+    }
     public Course getCourse() { return course; }
     public Timestamp getCreatedAt() { return createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }

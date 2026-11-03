@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "review-first",
+  "order": 7000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/questions/{{firstQuestionId}}/review",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('review-first: workflow contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.reviewedQuestions).to.eql(1);pm.expect(b.canConfirm).to.eql(false);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  }
+}

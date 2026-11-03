@@ -36,6 +36,11 @@ public class QuizGenerationRepository {
         var g=json.readValue(snapshots.getFirst(),GenerationResponse.class).generation();
         return new GenerationMetadata(g.id(),g.model(),g.promptVersion(),g.coverage(),g.evidence(),sources.current(g.coverage()));
     }
+    /** Internal snapshot lookup; callers must establish Quiz ownership first. */
+    public Optional<GenerationResponse> findSnapshot(Long quiz) {
+        return jdbc.queryForList("SELECT response_json FROM quiz_generations WHERE quiz_id=?", String.class, quiz)
+                .stream().findFirst().map(value -> json.readValue(value, GenerationResponse.class));
+    }
     private void requireQuiz(Long quiz,Long user) {
         if(jdbc.queryForList("SELECT q.id FROM quizzes q JOIN courses c ON c.id=q.course_id JOIN workspaces w ON w.id=c.workspace_id WHERE q.id=? AND w.owner_id=?",Long.class,quiz,user).isEmpty())throw missing();
     }

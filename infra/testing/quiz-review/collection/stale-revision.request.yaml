@@ -1,0 +1,33 @@
+{
+  "$kind": "http-request",
+  "name": "stale-revision",
+  "order": 15000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{staleQuizId}}/confirm",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('stale-revision: workflow contract',()=>{pm.response.to.have.status(409);const b=pm.response.json();});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  },
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{staleAccessToken}}"
+      }
+    ]
+  }
+}

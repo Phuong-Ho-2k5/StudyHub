@@ -15,10 +15,13 @@ import com.studyhub.security.ResourceAccessService;
 public class QuizService {
     private final QuizRepository quizRepository;
     private final ResourceAccessService resourceAccessService;
+    private final QuizReviewMutationGuard reviewGuard;
 
-    public QuizService(QuizRepository quizRepository, ResourceAccessService resourceAccessService) {
+    public QuizService(QuizRepository quizRepository, ResourceAccessService resourceAccessService,
+            QuizReviewMutationGuard reviewGuard) {
         this.quizRepository = quizRepository;
         this.resourceAccessService = resourceAccessService;
+        this.reviewGuard = reviewGuard;
     }
 
     @Transactional
@@ -40,13 +43,25 @@ public class QuizService {
 
     @Transactional
     public QuizResponse update(Long quizId, UpdateQuizRequest request, Long userId) {
-        Quiz quiz = resourceAccessService.requireQuiz(quizId, userId);
-        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED && request.status() == QuizStatus.PUBLISHED) {
+        // Lock before loading the entity elsewhere in the persistence context.
+        Quiz quiz = quizRepository.findForUpdateByIdAndCourseWorkspaceOwnerId(quizId, userId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Quiz not found"));
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED && request.status() != quiz.getStatus()) {
             throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.CONFLICT, "AI Quiz requires the review workflow before publishing");
+                    org.springframework.http.HttpStatus.CONFLICT, "AI Quiz state changes require the review workflow");
+        }
+        if (quiz.getSourceType() == QuizSourceType.MANUAL && request.status() == QuizStatus.CONFIRMED) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT, "CONFIRMED is reserved for AI Quiz review");
+        }
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED) {
+            QuizReviewService.requireRevision(quiz, request.expectedRevision());
+            QuizReviewService.requireState(quiz, QuizStatus.DRAFT, QuizStatus.CONFIRMED);
         }
         quiz.setTitle(request.title());
-        quiz.setStatus(request.status());
+        if (quiz.getSourceType() == QuizSourceType.AI_GENERATED) reviewGuard.contentChanged(quiz);
+        else quiz.setStatus(request.status());
         return toResponse(quiz);
     }
 

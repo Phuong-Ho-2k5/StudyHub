@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "review-second",
+  "order": 9000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/quizzes/{{quizId}}/questions/{{secondQuestionId}}/review",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('review-second: workflow contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.canConfirm).to.eql(true);});"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"expectedRevision\":0}"
+  }
+}
