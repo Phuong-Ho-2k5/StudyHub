@@ -10,6 +10,7 @@ import { QuizEditorDialog } from '../components/quiz/QuizEditorDialog'
 import { QuestionEditorDialog } from '../components/quiz/QuestionEditorDialog'
 import { QUESTION_LABELS, QUIZ_LABELS } from '../components/quiz/quizForms.js'
 import { quizError } from '../components/quiz/quizErrors.js'
+import { AiQuizReviewPanel } from '../components/quiz/AiQuizReviewPanel'
 
 function QuizDetail({ courseId, quizId, token }) {
   const navigate = useNavigate()
@@ -88,6 +89,14 @@ function QuizDetail({ courseId, quizId, token }) {
   const linkedConcepts = concepts.filter((concept) => questions.some((question) => question.conceptId === concept.id))
   const disabled = busy || submitting
 
+  if (!loading && !loadError && quiz?.sourceType === 'AI_GENERATED') return <main className="dashboard-page">
+    <AppHeader currentCourse={course} />
+    <div className="detail-shell quiz-detail-shell" id="main-content" tabIndex={-1}>
+      <Link className="text-link" to={back}>← Khóa học</Link>
+      <AiQuizReviewPanel quizId={quizId} courseId={courseId} token={token} concepts={concepts} onQuizChanged={setQuiz} />
+    </div>
+  </main>
+
   return <main className="dashboard-page">
     <AppHeader currentCourse={course} />
     <div className="detail-shell quiz-detail-shell" id="main-content" tabIndex={-1}>
@@ -143,5 +152,5 @@ function QuizDetail({ courseId, quizId, token }) {
 export function QuizDetailPage() {
   const { courseId, quizId } = useParams()
   const { token } = useAuth()
-  return <QuizDetail key={`${courseId}-${quizId}`} courseId={courseId} quizId={quizId} token={token} />
+  return <QuizDetail key={`${token}-${courseId}-${quizId}`} courseId={courseId} quizId={quizId} token={token} />
 }

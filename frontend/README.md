@@ -82,6 +82,20 @@ Frontend lưu JWT trong `localStorage`, gửi token qua header `Authorization: B
 | `vite.config.js` | Cấu hình Vite và proxy `/api` khi phát triển. |
 | `e2e/`, `playwright.config.js` | Kiểm thử tương tác Course AI bằng Chromium với public API fixtures. |
 
+## Duyệt và xuất bản Quiz AI
+
+Trong Course → **Bài kiểm tra**, mở **Duyệt Quiz AI** ở Quiz đã được AI sinh. Màn hình dùng nội dung hiện tại từ backend, hiển thị số câu đã duyệt và nguồn gốc của từng câu.
+
+1. Đọc câu hỏi, đáp án và **Xem nguồn**. Có thể sửa tên Quiz, thêm/sửa/xóa câu khi còn nháp hoặc đã xác nhận. Câu AI có đúng bốn lựa chọn khác nhau và một đáp án đúng.
+2. Bấm **Duyệt câu** cho từng câu. Khi tất cả câu hợp lệ đã được duyệt, bấm **Xác nhận Quiz**.
+3. Trạng thái **Đã xác nhận** chưa cho phép làm bài. Bấm **Xuất bản Quiz** và xác nhận riêng để mở bài; nội dung sẽ được khóa.
+
+Sửa nội dung hoặc hủy duyệt có thể đưa Quiz về bản nháp và yêu cầu xác nhận lại. Nếu một tab khác đã thay đổi nội dung, giao diện yêu cầu **Tải lại nội dung**, không tự ghi đè bằng revision mới. Với form đang nhập, sao chép phần muốn giữ trước khi tải lại vì biểu mẫu cũ sẽ đóng. Khi lỗi mạng khiến chưa rõ thao tác có được lưu hay không, cũng tải lại để đối chiếu trước khi thao tác tiếp.
+
+Trích dẫn mô tả bản AI sinh ban đầu, không chứng thực câu hỏi/đáp án đã chỉnh sửa. Nguồn đã đổi hoặc thiếu metadata được hiển thị thành cảnh báo; không tự chặn xuất bản. Quiz đã lưu trữ không thể mở lại. Quiz thủ công tiếp tục dùng form và luồng xuất bản hiện có.
+
+Chức năng này duyệt Quiz AI đã có; chưa cung cấp biểu mẫu sinh Quiz AI. Workflow duyệt không gọi LLM. Xem [checklist nghiệm thu](../infra/testing/quiz-review/UI-CHECKLIST.md).
+
 ## Build
 
 Chạy lệnh sau trong thư mục `frontend/`:

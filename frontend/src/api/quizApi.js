@@ -13,5 +13,5 @@ export const deleteQuiz = (token, id) => request(`/api/quizzes/${id}`, authorize
 export const listQuestions = (token, quizId) => request(`/api/quizzes/${quizId}/questions`, authorized(token))
 export const createQuestion = (token, quizId, data) => request(`/api/quizzes/${quizId}/questions`, authorized(token, 'POST', data))
 export const updateQuestion = (token, id, data) => request(`/api/questions/${id}`, authorized(token, 'PUT', data))
-export const deleteQuestion = (token, id) => request(`/api/questions/${id}`, authorized(token, 'DELETE'))
+export const deleteQuestion = (token, id, expectedRevision) => request(`/api/questions/${id}${expectedRevision === undefined ? '' : `?expectedRevision=${encodeURIComponent(expectedRevision)}`}`, authorized(token, 'DELETE'))
 export const submitQuiz = (token, quizId, data) => request(`/api/quizzes/${quizId}/submit`, authorized(token, 'POST', data))

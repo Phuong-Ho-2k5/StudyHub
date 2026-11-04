@@ -3,12 +3,13 @@ export const QUESTION_TYPES = [
 ]
 export const QUESTION_LABELS = Object.fromEntries(QUESTION_TYPES)
 export const QUIZ_STATUSES = [['DRAFT', 'Bản nháp'], ['PUBLISHED', 'Đã xuất bản'], ['ARCHIVED', 'Đã lưu trữ']]
-export const QUIZ_LABELS = Object.fromEntries(QUIZ_STATUSES)
+export const QUIZ_LABELS = { ...Object.fromEntries(QUIZ_STATUSES), CONFIRMED: 'Đã xác nhận' }
 
-export function buildQuestionPayload(draft) {
+export function buildQuestionPayload(draft, { aiGenerated = false } = {}) {
   const text = draft.text.trim()
   if (!text || text.length > 500) throw new Error('Nội dung câu hỏi phải có từ 1 đến 500 ký tự.')
   if (!QUESTION_LABELS[draft.type]) throw new Error('Loại câu hỏi không hợp lệ.')
+  if (aiGenerated && draft.type !== 'MULTIPLE_CHOICE') throw new Error('Quiz AI chỉ hỗ trợ câu hỏi trắc nghiệm.')
   const conceptId = draft.conceptId === '' || draft.conceptId == null ? null : Number(draft.conceptId)
   if (conceptId !== null && (!Number.isSafeInteger(conceptId) || conceptId < 1)) {
     throw new Error('Khái niệm không hợp lệ.')
@@ -21,6 +22,12 @@ export function buildQuestionPayload(draft) {
   const options = (draft.options ?? []).map((item) => ({ text: item.text.trim(), correct: Boolean(item.correct) }))
   if (options.some((item) => !item.text || item.text.length > 500)) throw new Error('Mỗi lựa chọn phải có từ 1 đến 500 ký tự.')
   const correctCount = options.filter((item) => item.correct).length
+  if (aiGenerated) {
+    const normalized = options.map(item => item.text.normalize('NFKC').trim().toLowerCase())
+    if (options.length !== 4 || correctCount !== 1 || normalized.some(text => !text) || new Set(normalized).size !== 4) {
+      throw new Error('Quiz AI cần đúng 4 lựa chọn khác nhau và đúng 1 đáp án đúng.')
+    }
+  }
   if (draft.type === 'MULTIPLE_CHOICE' && (options.length < 4 || correctCount < 1)) {
     throw new Error('Trắc nghiệm cần ít nhất 4 lựa chọn và ít nhất 1 đáp án đúng.')
   }

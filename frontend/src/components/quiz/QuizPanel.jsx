@@ -49,11 +49,12 @@ export function QuizPanel({ courseId, token }) {
     </div>}
     {!loading && !error && (quizzes.length ? <div className="resource-list">{quizzes.map((quiz) => <article className="resource-card quiz-card" key={quiz.id}>
       <div className="resource-copy"><h3><Link className="quiz-title-link" to={`/courses/${courseId}/quizzes/${quiz.id}`}>{quiz.title}</Link></h3>
-        <p>{quiz.status === 'PUBLISHED' ? 'Sẵn sàng để làm bài' : quiz.status === 'DRAFT' ? 'Thêm câu hỏi và xuất bản khi đã sẵn sàng' : 'Đã lưu trữ'}</p>
+        <p>{quiz.sourceType === 'AI_GENERATED' && <span className="status-badge">AI · </span>}{quiz.status === 'PUBLISHED' ? 'Sẵn sàng để làm bài' : quiz.status === 'CONFIRMED' ? 'Đã xác nhận, chưa xuất bản' : quiz.status === 'DRAFT' ? 'Thêm câu hỏi và xuất bản khi đã sẵn sàng' : 'Đã lưu trữ'}</p>
       </div>
       <span className={`status-badge quiz-status-${quiz.status.toLowerCase()}`}>{QUIZ_LABELS[quiz.status] ?? quiz.status}</span>
       <div className="course-actions"><Link className="text-link" to={`/courses/${courseId}/quizzes/${quiz.id}`}>Mở Quiz</Link>
-        <button type="button" disabled={deleting !== null} onClick={() => setEditor({ item: quiz })}>Sửa</button>
+        {quiz.sourceType === 'AI_GENERATED' ? <Link className="text-link" to={`/courses/${courseId}/quizzes/${quiz.id}`}>Duyệt Quiz AI</Link>
+          : <button type="button" disabled={deleting !== null} onClick={() => setEditor({ item: quiz })}>Sửa</button>}
         <button type="button" disabled={deleting !== null} onClick={() => remove(quiz)}>{deleting === quiz.id ? 'Đang xóa…' : 'Xóa'}</button>
       </div>
     </article>)}</div> : <div className="empty-state"><h3>Chưa có bài kiểm tra</h3>
