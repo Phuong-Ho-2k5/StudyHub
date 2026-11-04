@@ -44,6 +44,7 @@ class QuizGenerationClientTest {
                 status.set(entry.getKey());response.set("{\"detail\":{\"code\":\"INSUFFICIENT_CONTENT\"}}");
                 assertEquals(entry.getValue(),assertThrows(ResponseStatusException.class,()->client.generate(window,1)).getStatusCode().value());
             }
+            status.set(200);
             response.set("{}");assertEquals(502,assertThrows(ResponseStatusException.class,()->client.generate(window,1)).getStatusCode().value());
         }finally {server.stop(0);}
     }
