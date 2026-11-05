@@ -276,6 +276,61 @@
         ]
       }
     },
+    "/internal/advice/generate": {
+      "post": {
+        "tags": [
+          "Internal learning advice"
+        ],
+        "summary": "Generate",
+        "description": "Generate from backend-authorized facts and sources; never reads the database.",
+        "operationId": "generate_internal_advice_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdviceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid internal token"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "422": {
+            "description": "Invalid context or token budget exceeded"
+          },
+          "502": {
+            "description": "Invalid model output"
+          },
+          "503": {
+            "description": "LLM unavailable"
+          },
+          "504": {
+            "description": "Total generation deadline exceeded"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -300,6 +355,98 @@
   },
   "components": {
     "schemas": {
+      "AdviceRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "learningEvidence": {
+            "items": {
+              "$ref": "#/components/schemas/LearningFact"
+            },
+            "type": "array",
+            "maxItems": 37,
+            "minItems": 1,
+            "title": "Learningevidence"
+          },
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/RagContext"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Contexts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question",
+          "learningEvidence",
+          "contexts"
+        ],
+        "title": "AdviceRequest"
+      },
+      "AdviceResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ANSWERED",
+              "LEARNING_DATA_ONLY",
+              "INSUFFICIENT_CONTEXT"
+            ],
+            "title": "Status"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 32768,
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "usedLearningEvidenceIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 37,
+            "title": "Usedlearningevidenceids"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Evidence"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "promptVersion": {
+            "type": "string",
+            "const": "learning-advice-v1",
+            "title": "Promptversion",
+            "default": "learning-advice-v1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "answer",
+          "usedLearningEvidenceIds",
+          "evidence",
+          "model"
+        ],
+        "title": "AdviceResponse"
+      },
       "Body_extract_document_internal_documents_extract_post": {
         "properties": {
           "documentId": {
@@ -787,6 +934,40 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "LearningFact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PROGRESS",
+              "CONCEPT",
+              "PREREQUISITE",
+              "QUIZ_ATTEMPT",
+              "STUDY_SUMMARY"
+            ],
+            "title": "Type"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "data"
+        ],
+        "title": "LearningFact"
       },
       "QuizGenerationRequest": {
         "properties": {

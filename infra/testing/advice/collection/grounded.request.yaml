@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "grounded",
+  "order": 1000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/ai/learning-advice",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"question\": \"Help\"}"
+  },
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('expected status',()=>pm.response.to.have.status(200));pm.test('advice state',()=>pm.expect(pm.response.json().status).to.eql('ANSWERED'));pm.test('grounded facts and sources',()=>{const r=pm.response.json();pm.expect(r.learningEvidence.length).above(0);pm.expect(r.citations.length).above(0);pm.expect(r.learningEvidence[0].data.confidence).to.eql(20);});"
+    }
+  ]
+}

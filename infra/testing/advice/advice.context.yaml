@@ -1,0 +1,30 @@
+purpose:
+  stands_in_for: External OpenAI Responses API used by learning advice; derived from the existing repository RAG fixture.
+  unblocks: Local validation of personalized advice transport, structured output, evidence, budget and upstream failures without paid calls.
+assumptions:
+  - id: advice-wire-contract
+    status: supported
+    claim: The advice adapter sends the configured schema, authenticated input-token and generation requests and validates referenced facts and document quotes against the actual prompt inputs in the tested scenarios.
+    reason: The mock validates request framing and responds with input-derived fact IDs and source quotes; forged outputs are rejected by application code.
+    verification: Provider simulation tests exercise success, learning-only, insufficient, budget, malformed, unknown fact, forged chunk/quote, unavailable, rate limit and timeout over HTTP. Nine tests passed on 2026-11-05.
+    source: ai-service/tests/test_advice_provider_simulation.py; ai-service/app/advice/; infra/testing/advice/openai/default.js
+    updated_at: '2026-11-05'
+  - id: real-model-quality
+    status: unknown
+    claim: A real configured model generates useful personalized advice whose factual claims are all supported by the supplied learning facts and sources.
+    reason: Deterministic mock answers and structural provenance validation do not establish semantic quality or real tokenizer behavior.
+    verification: No paid provider evaluation performed; the README describes a three-profile evaluation to perform separately.
+    source: infra/testing/advice/README.md; infra/testing/advice/openai/default.js
+    updated_at: '2026-11-05'
+  - id: course-scoped-pipeline
+    status: supported
+    claim: The public advice endpoint integrates scoped learning facts, published-source retrieval and verified citation responses through real Spring, PostgreSQL/pgvector, FastAPI and E5 in the tested scenarios.
+    reason: Three pipeline tests passed against disposable database schemas; the optional collection ran seven requests and thirteen passing assertions. Simulation request events confirm the external dependency path ran.
+    verification: Ran LearningAdvicePipelineIT with ADVICE_AI_URL, PGVECTOR_TEST_* and RUN_ADVICE_COLLECTION=1 on 2026-11-05. Checked cold start, learning-only, grounded sources, cross-user access, updated confidence and upstream failures. No paid provider was called.
+    source: backend/src/test/java/com/studyhub/ai/advice/LearningAdvicePipelineIT.java; infra/testing/advice/collection/
+    updated_at: '2026-11-05'
+fingerprints:
+  - id: local-advice-fixture
+    date: '2026-11-05'
+    commit: null
+    cli: '1.73.0'

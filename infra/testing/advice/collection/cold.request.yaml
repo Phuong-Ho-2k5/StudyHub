@@ -1,0 +1,33 @@
+{
+  "$kind": "http-request",
+  "name": "cold",
+  "order": 2000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/courses/{{coldCourseId}}/ai/learning-advice",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"question\": \"Help\"}"
+  },
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('expected status',()=>pm.response.to.have.status(200));pm.test('advice state',()=>pm.expect(pm.response.json().status).to.eql('INSUFFICIENT_CONTEXT'));pm.test('no fabricated sources',()=>pm.expect(pm.response.json().citations).to.eql([]));"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{coldAccessToken}}"
+      }
+    ]
+  }
+}

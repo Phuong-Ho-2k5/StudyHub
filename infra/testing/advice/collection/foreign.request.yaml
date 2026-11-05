@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "foreign",
+  "order": 4000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/courses/{{foreignCourseId}}/ai/learning-advice",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"question\": \"Help\"}"
+  },
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('expected status',()=>pm.response.to.have.status(404));"
+    }
+  ]
+}

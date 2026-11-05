@@ -475,3 +475,7 @@ Backend sinh gợi ý Concept có nguồn từ Document đã publish, lưu bản
 Mọi thao tác kiểm tra ownership. Backend kiểm tra structured output và quote nguyên văn trong đúng context; nguồn/URL lấy từ DB. Generate chạy ngoài transaction HTTP, finalize/confirm kiểm tra lại phiên bản dưới lock. Re-ingest khiến draft cũ sourceCurrent=false và confirm PENDING trả 409. Tên trùng Course, sửa payload của confirm đã thành công hoặc Concept đã xóa cũng trả 409; không ghi đè/merge hay hồi sinh Concept. Không auto-save, auto-publish hoặc thay confidence từ kết quả LLM.
 
 Migration V24 thêm batch/suggestion và provenance snapshot; không đổi schema Concept. Xem [hợp đồng, giới hạn, lỗi và hướng dẫn tích hợp giao diện](../infra/testing/concepts/README.md). Giao diện review được triển khai riêng.
+
+## Tư vấn học tập cá nhân hóa
+
+Public API: `POST /api/courses/{courseId}/ai/learning-advice`, Bearer JWT, body `{"question":"Tôi nên ôn gì?","topK":5}`. Backend tự dựng learning snapshot theo User/Course; không nhận facts từ client. Trả `ANSWERED`, `LEARNING_DATA_ONLY` hoặc `INSUFFICIENT_CONTEXT`, với fact học tập và citation kiểm chứng. Không lưu advice hoặc sửa confidence. [Hợp đồng, giới hạn và kiểm thử](../infra/testing/advice/README.md).

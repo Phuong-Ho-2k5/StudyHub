@@ -1,5 +1,7 @@
 # StudyHub
 
+Tư vấn học tập cá nhân hóa qua `POST /api/courses/{courseId}/ai/learning-advice` kết hợp Progress, Concept confidence, QuizAttempt, StudySession và RAG theo đúng User/Course. Có learning facts, citation kiểm chứng và fallback khi thiếu dữ liệu; không thay đổi dữ liệu học tập. Xem [hợp đồng và kiểm thử advice](infra/testing/advice/README.md).
+
 Quiz AI sử dụng workflow duyệt `DRAFT → CONFIRMED → PUBLISHED`, revision chống sửa/duyệt dữ liệu cũ và guard CRUD. Hợp đồng API, cách chạy PostgreSQL/Postman và bàn giao giao diện duyệt Quiz: [AI Quiz Review](infra/testing/quiz-review/README.md).
 
 AI Quiz generation tạo Quiz `AI_GENERATED / DRAFT` từ Document hoặc các Document được chọn trong Course, kèm evidence và retry key chống lưu trùng. Xem [API và kiểm thử Quiz generation](infra/testing/quiz-generation/README.md). Workflow duyệt và xuất bản sẽ được bổ sung riêng.

@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "forged-fact",
+  "order": 7000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/ai/learning-advice",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"question\": \"[unknown-fact] Help\"}"
+  },
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('expected status',()=>pm.response.to.have.status(502));"
+    }
+  ]
+}

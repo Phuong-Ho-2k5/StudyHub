@@ -8,6 +8,7 @@ from app.embedding.api import close_embedding_service, router as embedding_route
 from app.generation.api import router as generation_router
 from app.concepts.api import router as concepts_router
 from app.quizzes.api import router as quizzes_router
+from app.advice.api import router as advice_router
 
 
 @asynccontextmanager
@@ -23,6 +24,7 @@ app.include_router(embedding_router)
 app.include_router(generation_router)
 app.include_router(concepts_router)
 app.include_router(quizzes_router)
+app.include_router(advice_router)
 
 
 class HealthResponse(BaseModel):
