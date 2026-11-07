@@ -1,0 +1,23 @@
+{
+  "$kind": "http-request",
+  "name": "cycle",
+  "order": 5000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{cycleCourseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('cycle: recommendation contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.status).to.eql('BLOCKED_BY_GRAPH');pm.expect(b.recommendations).to.eql([]);pm.expect(b.limitations).to.include('CYCLIC_PREREQUISITES');});"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{cycleAccessToken}}"
+      }
+    ]
+  }
+}

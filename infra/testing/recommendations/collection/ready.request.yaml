@@ -1,0 +1,14 @@
+{
+  "$kind": "http-request",
+  "name": "ready",
+  "order": 1000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('ready: recommendation contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.status).to.eql('READY');pm.expect(b.algorithmVersion).to.eql('next-concepts-v1');pm.expect(b.recommendations.map(x=>x.conceptId)).to.eql([Number(pm.environment.get('foundationId'))]);pm.expect(b.recommendations[0].unlocksCount).to.eql(2);});"
+    }
+  ]
+}

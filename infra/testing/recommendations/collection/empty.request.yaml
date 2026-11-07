@@ -1,0 +1,23 @@
+{
+  "$kind": "http-request",
+  "name": "empty",
+  "order": 3000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{emptyCourseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('empty: recommendation contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.status).to.eql('NO_CONCEPTS');pm.expect(b.recommendations).to.eql([]);});"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{emptyAccessToken}}"
+      }
+    ]
+  }
+}

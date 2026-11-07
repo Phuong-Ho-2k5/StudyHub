@@ -1,0 +1,23 @@
+{
+  "$kind": "http-request",
+  "name": "all-mastered",
+  "order": 4000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{masteredCourseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('all-mastered: recommendation contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(b.status).to.eql('ALL_MASTERED');pm.expect(b.recommendations).to.eql([]);});"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{masteredAccessToken}}"
+      }
+    ]
+  }
+}

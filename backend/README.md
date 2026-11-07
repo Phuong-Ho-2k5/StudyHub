@@ -1,5 +1,7 @@
 # StudyHub Backend
 
+API đề xuất Concept nên học tiếp: `GET /api/courses/{courseId}/recommendations/next-concepts?limit=5`, Bearer JWT. Chỉ đề xuất Concept confidence dưới 80 đã đủ prerequisite trực tiếp/gián tiếp; trả thứ tự, lý do và evidence học tập. Không gọi AI hoặc sửa dữ liệu. Xem [hợp đồng, giới hạn và kiểm thử](../infra/testing/recommendations/README.md).
+
 ## AI Quiz review
 
 Chức năng duyệt Quiz AI sử dụng workflow `DRAFT → CONFIRMED → PUBLISHED` cho Quiz AI. GET `/api/quizzes/{id}/review` trả nội dung hiện tại, `contentRevision`, approval từng câu và evidence gốc. POST review từng câu, confirm rồi publish riêng; POST archive kết thúc workflow. CRUD AI cần `expectedRevision`, không được tự gán status; sửa nội dung hủy confirmation và approval câu sửa, PUBLISHED/ARCHIVED khóa sửa. MANUAL giữ quy tắc cũ và không dùng CONFIRMED. Xem [hợp đồng, trạng thái và kiểm thử](../infra/testing/quiz-review/README.md). Các mô tả CRUD tổng quát bên dưới áp dụng quy tắc câu hỏi MANUAL; AI dùng MCQ đúng 4 option/1 đáp án đúng theo hợp đồng review.

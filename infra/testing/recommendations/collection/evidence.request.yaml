@@ -1,0 +1,14 @@
+{
+  "$kind": "http-request",
+  "name": "evidence",
+  "order": 2000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('evidence: recommendation contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();const ids=b.learningEvidence.map(x=>x.id);pm.expect(new Set(ids).size).to.eql(ids.length);for(const item of b.recommendations)for(const id of item.learningEvidenceIds){pm.expect(ids).to.include(id);pm.expect(id).to.match(/^concept:/);}pm.expect(b.recommendations[0].action).to.eql('REVIEW');});"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$kind": "collection",
+  "name": "StudyHub Next Concept Recommendations",
+  "description": "Read-only assertions against Spring HTTP and disposable fixtures; no AI calls.",
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}"
+      }
+    ]
+  }
+}

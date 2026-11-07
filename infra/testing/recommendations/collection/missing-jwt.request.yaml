@@ -1,0 +1,17 @@
+{
+  "$kind": "http-request",
+  "name": "missing-jwt",
+  "order": 9000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('missing-jwt: recommendation contract',()=>{pm.response.to.have.status(401);pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED');});"
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  }
+}

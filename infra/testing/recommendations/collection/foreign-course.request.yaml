@@ -1,0 +1,14 @@
+{
+  "$kind": "http-request",
+  "name": "foreign-course",
+  "order": 8000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{foreignCourseId}}/recommendations/next-concepts",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('foreign-course: recommendation contract',()=>{pm.response.to.have.status(404);pm.expect(pm.response.json().code).to.eql('NOT_FOUND');});"
+    }
+  ]
+}

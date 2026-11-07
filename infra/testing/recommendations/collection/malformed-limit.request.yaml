@@ -1,0 +1,20 @@
+{
+  "$kind": "http-request",
+  "name": "malformed-limit",
+  "order": 7000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/recommendations/next-concepts?limit=text",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('malformed-limit: recommendation contract',()=>{pm.response.to.have.status(400);pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST');});"
+    }
+  ],
+  "queryParams": [
+    {
+      "key": "limit",
+      "value": "text"
+    }
+  ]
+}

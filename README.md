@@ -1,5 +1,7 @@
 # StudyHub
 
+Đề xuất Concept nên học tiếp qua `GET /api/courses/{courseId}/recommendations/next-concepts?limit=5`, dựa trên confidence và prerequisite graph, kèm evidence học tập đúng User/Course. Xem [quy tắc và kiểm thử](infra/testing/recommendations/README.md).
+
 Tư vấn học tập cá nhân hóa qua `POST /api/courses/{courseId}/ai/learning-advice` kết hợp Progress, Concept confidence, QuizAttempt, StudySession và RAG theo đúng User/Course. Có learning facts, citation kiểm chứng và fallback khi thiếu dữ liệu; không thay đổi dữ liệu học tập. Xem [hợp đồng và kiểm thử advice](infra/testing/advice/README.md).
 
 Quiz AI sử dụng workflow duyệt `DRAFT → CONFIRMED → PUBLISHED`, revision chống sửa/duyệt dữ liệu cũ và guard CRUD. Hợp đồng API, cách chạy PostgreSQL/Postman và bàn giao giao diện duyệt Quiz: [AI Quiz Review](infra/testing/quiz-review/README.md).
