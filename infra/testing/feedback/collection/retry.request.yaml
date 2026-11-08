@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "retry",
+  "order": 3000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/ai/messages/{{messageId}}/feedback",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('retry: feedback contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(String(b.id)).to.eql(pm.environment.get('feedbackId'));pm.expect(b.updatedAt).to.eql(pm.environment.get('updatedAt'));});"
+    }
+  ],
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"rating\": \"NOT_HELPFUL\", \"note\": \"Examples\"}"
+  }
+}

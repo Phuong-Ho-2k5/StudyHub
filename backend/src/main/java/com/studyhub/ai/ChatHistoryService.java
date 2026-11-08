@@ -20,11 +20,14 @@ public class ChatHistoryService {
     private final ResourceAccessService access;
     private final ObjectMapper json;
     private final CourseRepository courses;
+    private final com.studyhub.ai.feedback.AIFeedbackRepository feedback;
 
     public ChatHistoryService(ChatSessionRepository sessions, ChatMessageRepository messages,
-            ResourceAccessService access, ObjectMapper json, CourseRepository courses) {
+            ResourceAccessService access, ObjectMapper json, CourseRepository courses,
+            com.studyhub.ai.feedback.AIFeedbackRepository feedback) {
         this.sessions=sessions; this.messages=messages; this.access=access; this.json=json;
         this.courses=courses;
+        this.feedback=feedback;
     }
 
     @Transactional
@@ -42,9 +45,14 @@ public class ChatHistoryService {
     @Transactional(readOnly=true)
     public Page<ChatMessageResponse> listMessages(Long courseId, Long userId, Long sessionId, Pageable page) {
         requireSession(courseId,userId,sessionId);
-        return messages.findBySessionId(sessionId,page).map(message -> new ChatMessageResponse(
+        var result=messages.findBySessionId(sessionId,page);
+        var ids=result.stream().filter(m->m.getRole()==ChatMessageRole.ASSISTANT).map(ChatMessage::getId).toList();
+        var byMessage=new java.util.HashMap<Long,com.studyhub.ai.feedback.FeedbackResponse>();
+        if(!ids.isEmpty()) feedback.findAllByUserIdAndMessageIdIn(userId,ids).forEach(f->
+            byMessage.put(f.getMessageId(),com.studyhub.ai.feedback.FeedbackResponse.from(f)));
+        return result.map(message -> new ChatMessageResponse(
             message.getId(),message.getSessionId(),message.getRole(),message.getContent(),message.getStatus(),
-            message.getModel(),message.getPromptVersion(),json.readValue(message.getCitationsJson(),CITATIONS),message.getCreatedAt()));
+            message.getModel(),message.getPromptVersion(),json.readValue(message.getCitationsJson(),CITATIONS),message.getCreatedAt(),byMessage.get(message.getId())));
     }
 
     @Transactional(readOnly=true)

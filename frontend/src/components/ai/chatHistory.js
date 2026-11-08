@@ -1,4 +1,5 @@
 import { validateChatResponse } from './aiDisplay.js'
+import { validateFeedback } from './feedbackDisplay.js'
 
 export const validHistoryId = value => Number.isSafeInteger(value) && value > 0
 const timestamp = value => typeof value === 'string' && Number.isFinite(Date.parse(value))
@@ -19,6 +20,7 @@ export function validateSessionPage(data, courseId) {
 export function validateMessagePage(data, sessionId) {
   return !!validPage(data) && data.content.every(item => validHistoryId(item.id) && item.sessionId === sessionId &&
     typeof item.content === 'string' && timestamp(item.createdAt) && Array.isArray(item.citations) &&
+    (item.feedback == null || (item.role === 'ASSISTANT' && validateFeedback(item.feedback, item.id))) &&
     (item.role === 'USER'
       ? item.status === null && item.model === null && item.promptVersion === null && item.citations.length === 0
       : item.role === 'ASSISTANT' && (item.model === null || typeof item.model === 'string') && typeof item.promptVersion === 'string' &&

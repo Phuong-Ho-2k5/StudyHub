@@ -1,0 +1,27 @@
+{
+  "$kind": "http-request",
+  "name": "no-jwt",
+  "order": 7000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/ai/messages/{{messageId}}/feedback",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('no-jwt: feedback contract',()=>{pm.response.to.have.status(401);const b=pm.response.json();pm.expect(b.code).to.be.a('string');});"
+    }
+  ],
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"rating\": \"HELPFUL\"}"
+  },
+  "auth": {
+    "type": "noauth"
+  }
+}

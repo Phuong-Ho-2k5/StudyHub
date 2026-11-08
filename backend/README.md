@@ -481,3 +481,7 @@ Migration V24 thêm batch/suggestion và provenance snapshot; không đổi sche
 ## Tư vấn học tập cá nhân hóa
 
 Public API: `POST /api/courses/{courseId}/ai/learning-advice`, Bearer JWT, body `{"question":"Tôi nên ôn gì?","topK":5}`. Backend tự dựng learning snapshot theo User/Course; không nhận facts từ client. Trả `ANSWERED`, `LEARNING_DATA_ONLY` hoặc `INSUFFICIENT_CONTEXT`, với fact học tập và citation kiểm chứng. Không lưu advice hoặc sửa confidence. [Hợp đồng, giới hạn và kiểm thử](../infra/testing/advice/README.md).
+
+## Phản hồi câu trả lời AI
+
+`POST /api/ai/messages/{messageId}/feedback` tạo 201/cập nhật 200 feedback của chính người dùng cho ASSISTANT đã lưu. Lịch sử message trả thêm `feedback` nullable theo batch; không đổi chat/citation hoặc thứ tự Session. Hợp đồng payload, full replacement, ownership, locking và hướng dẫn kiểm thử hai tài khoản: [AI Feedback](../infra/testing/feedback/README.md).

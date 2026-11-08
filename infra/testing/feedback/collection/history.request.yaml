@@ -1,0 +1,14 @@
+{
+  "$kind": "http-request",
+  "name": "history",
+  "order": 4000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/ai/chat-sessions/{{sessionId}}/messages",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('history: feedback contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();const m=b.content.find(m=>m.id===Number(pm.environment.get('messageId')));pm.expect(String(m.feedback.id)).to.eql(pm.environment.get('feedbackId'));pm.expect(m.feedback.note).to.eql('Examples');pm.expect(b.content.find(m=>m.role==='USER').feedback).to.eql(null);});"
+    }
+  ]
+}

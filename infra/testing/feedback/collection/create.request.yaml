@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "create",
+  "order": 1000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/ai/messages/{{messageId}}/feedback",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('create: feedback contract',()=>{pm.response.to.have.status(201);const b=pm.response.json();pm.expect(b.note).to.eql('Clear');pm.expect(b.messageId).to.eql(Number(pm.environment.get('messageId')));pm.environment.set('feedbackId',String(b.id));pm.environment.set('createdAt',b.createdAt);});"
+    }
+  ],
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"rating\": \"HELPFUL\", \"note\": \"  Clear  \"}"
+  }
+}

@@ -64,7 +64,7 @@ export function ChatSessionPanel({ courseId, token, session, busy, onBusyChange,
         throw new ApiError('Invalid saved turn', 502)
       }
       if (generation !== sequence.current) return
-      const common = { sessionId: session.id, createdAt: null }
+      const common = { sessionId: session.id, createdAt: null, feedback: null }
       setMessages(current => mergeMessages(current, [
         { ...common, id: data.userMessageId, role: 'USER', content: submitted, status: null, model: null, promptVersion: null, citations: [] },
         { ...common, id: data.assistantMessageId, role: 'ASSISTANT', content: data.answer, status: data.status, model: data.model, promptVersion: data.promptVersion, citations: data.citations },
@@ -91,7 +91,7 @@ export function ChatSessionPanel({ courseId, token, session, busy, onBusyChange,
     </div>
     {loading && <p role="status">Đang tải tin nhắn…</p>}
     {readError && <p role="alert" className="form-message error">{readError}</p>}
-    <ChatMessageList messages={messages} courseId={courseId} onOpenSource={onOpenSource} />
+    <ChatMessageList messages={messages} courseId={courseId} token={token} onOpenSource={onOpenSource} />
     {loaded && !loading && !readError && messages.length === 0 && <p>Hội thoại chưa có tin nhắn.</p>}
     {!paging.last && <button type="button" className="secondary-button" disabled={busy || loading} onClick={() => load(paging.next)}>Tải thêm tin nhắn</button>}
     {!paging.last && <p className="inline-help">Tải hết tin nhắn để tiếp tục hội thoại.</p>}

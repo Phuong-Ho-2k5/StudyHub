@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "update",
+  "order": 2000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/ai/messages/{{messageId}}/feedback",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('update: feedback contract',()=>{pm.response.to.have.status(200);const b=pm.response.json();pm.expect(String(b.id)).to.eql(pm.environment.get('feedbackId'));pm.expect(b.rating).to.eql('NOT_HELPFUL');pm.expect(b.note).to.eql('Examples');pm.expect(b.createdAt).to.eql(pm.environment.get('createdAt'));pm.environment.set('updatedAt',b.updatedAt);});"
+    }
+  ],
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"rating\": \"NOT_HELPFUL\", \"note\": \"Examples\"}"
+  }
+}

@@ -668,3 +668,9 @@ progress.course-progress { appearance: none; overflow: hidden; border: 0; border
   .ai-quiz-review .question-card-heading { flex-wrap: wrap; }
   .ai-quiz-review .question-card-heading h3 { flex: 1; min-width: 0; }
 }
+.message-feedback { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--border-color, #dce3ed); }
+.message-feedback fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.message-feedback legend { font-size: .875rem; margin-bottom: .5rem; }
+.feedback-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+.feedback-actions [aria-pressed="true"] { background: #e2edff; border-color: #3564bd; color: #173c81; }
+.message-feedback textarea { width: 100%; box-sizing: border-box; }

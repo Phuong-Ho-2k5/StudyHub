@@ -1,0 +1,14 @@
+{
+  "$kind": "collection",
+  "name": "StudyHub AI Answer Feedback",
+  "description": "Real Spring HTTP contract on disposable fixtures; no provider calls.",
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}"
+      }
+    ]
+  }
+}

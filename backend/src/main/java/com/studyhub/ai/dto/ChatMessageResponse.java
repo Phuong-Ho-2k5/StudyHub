@@ -7,4 +7,5 @@ import java.util.List;
 
 public record ChatMessageResponse(Long id, Long sessionId, ChatMessageRole role, String content,
         @Schema(nullable=true) String status, @Schema(nullable=true) String model,
-        @Schema(nullable=true) String promptVersion, List<CourseCitationResponse> citations, Instant createdAt) {}
+        @Schema(nullable=true) String promptVersion, List<CourseCitationResponse> citations, Instant createdAt,
+        @Schema(nullable=true) com.studyhub.ai.feedback.FeedbackResponse feedback) {}

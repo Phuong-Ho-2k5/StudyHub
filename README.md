@@ -1,5 +1,7 @@
 # StudyHub
 
+Đánh giá câu trả lời AI đã lưu bằng **Hữu ích / Chưa hữu ích** và ghi chú; tạo/sửa feedback, mở lại cùng lịch sử chat, kiểm tra quyền sở hữu và chống trùng khi ghi đồng thời. Xem [API, giao diện và kiểm thử feedback](infra/testing/feedback/README.md).
+
 Đề xuất Concept nên học tiếp qua `GET /api/courses/{courseId}/recommendations/next-concepts?limit=5`, dựa trên confidence và prerequisite graph, kèm evidence học tập đúng User/Course. Xem [quy tắc và kiểm thử](infra/testing/recommendations/README.md).
 
 Tư vấn học tập cá nhân hóa qua `POST /api/courses/{courseId}/ai/learning-advice` kết hợp Progress, Concept confidence, QuizAttempt, StudySession và RAG theo đúng User/Course. Có learning facts, citation kiểm chứng và fallback khi thiếu dữ liệu; không thay đổi dữ liệu học tập. Xem [hợp đồng và kiểm thử advice](infra/testing/advice/README.md).

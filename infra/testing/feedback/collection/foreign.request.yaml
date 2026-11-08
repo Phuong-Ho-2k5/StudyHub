@@ -1,0 +1,24 @@
+{
+  "$kind": "http-request",
+  "name": "foreign",
+  "order": 8000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/ai/messages/{{foreignMessageId}}/feedback",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('foreign: feedback contract',()=>{pm.response.to.have.status(404);const b=pm.response.json();pm.expect(b.code).to.eql('NOT_FOUND');pm.expect(b).not.to.have.property('content');});"
+    }
+  ],
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"rating\": \"HELPFUL\"}"
+  }
+}
