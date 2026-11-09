@@ -189,3 +189,7 @@ Backend và frontend Quiz hỗ trợ CRUD Question, nộp bài, tính điểm, l
 ## AI trích xuất Concept
 
 Document đã ingest có thể sinh gợi ý Concept kèm nguồn. Backend lưu bản nháp; người dùng đối chiếu/sửa nội dung rồi xác nhận mới tạo Concept `NEW` với confidence `0`. API kiểm tra scope User + Course + Document, quote nguyên văn, nguồn đã đổi phiên bản và retry xác nhận. Giao diện duyệt được triển khai riêng. Xem [hợp đồng và hướng dẫn kiểm thử](infra/testing/concepts/README.md).
+
+## Durable AI jobs
+
+The backend provides persistent AI job lifecycle tracking and `GET /api/ai/jobs/{jobId}` with JWT and Course ownership checks. See [the API contract, PostgreSQL verification and async integration checklist](infra/testing/ai-jobs/README.md).

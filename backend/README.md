@@ -485,3 +485,7 @@ Public API: `POST /api/courses/{courseId}/ai/learning-advice`, Bearer JWT, body 
 ## Phản hồi câu trả lời AI
 
 `POST /api/ai/messages/{messageId}/feedback` tạo 201/cập nhật 200 feedback của chính người dùng cho ASSISTANT đã lưu. Lịch sử message trả thêm `feedback` nullable theo batch; không đổi chat/citation hoặc thứ tự Session. Hợp đồng payload, full replacement, ownership, locking và hướng dẫn kiểm thử hai tài khoản: [AI Feedback](../infra/testing/feedback/README.md).
+
+## Durable AI jobs
+
+`GET /api/ai/jobs/{jobId}` reads a durable job using Bearer JWT, the original requester and current Course ownership. V28 adds a separate job table with guarded claim/completion/failure transitions. The internal lifecycle is ready for later async integration. See [contract, tests and integration checklist](../infra/testing/ai-jobs/README.md).

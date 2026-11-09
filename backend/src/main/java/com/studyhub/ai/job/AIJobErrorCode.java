@@ -1,0 +1,3 @@
+package com.studyhub.ai.job;
+
+public enum AIJobErrorCode { AI_UNAVAILABLE, AI_TIMEOUT, AI_INVALID_RESPONSE, NO_CONTENT, SOURCE_CHANGED, JOB_FAILED }
