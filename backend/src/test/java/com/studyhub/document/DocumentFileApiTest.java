@@ -89,7 +89,7 @@ class DocumentFileApiTest {
         String path = "/api/documents/" + doc.path("id").asLong() + "/ingest";
         assertEquals(401, request("POST", path, null, null).statusCode());
         assertEquals(404, request("POST", path, login(), null).statusCode());
-        assertEquals(503, request("POST", path, token, null).statusCode());
+        assertEquals(409, request("POST", path, token, null).statusCode()); // upload already enqueued ingestion
         var legacy = tree(request("POST", "/api/courses/" + courseId + "/documents", token,
                 Map.of("title", "Legacy", "fileName", "secret.pdf", "fileType", "application/pdf", "storagePath", "C:/private/secret.pdf")));
         assertEquals(409, request("POST", "/api/documents/" + legacy.path("id").asLong() + "/ingest", token, null).statusCode());

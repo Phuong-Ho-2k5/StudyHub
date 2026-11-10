@@ -121,3 +121,16 @@ npm run test:e2e -- --workers=2
 Playwright tự khởi động Vite tại `127.0.0.1:4179`; cần cổng trống. Để `VITE_API_URL` trống khi chạy bộ fixture này. E2E dùng response API được điều khiển trong test nên không cần backend, tài khoản hoặc khóa LLM thật; không thay thế kiểm thử pipeline tích hợp. Trace khi thất bại và ảnh giao diện nằm trong `test-results/` đã ignore.
 
 Xem [checklist kiểm tra giao diện AI](../infra/testing/rag/UI-CHECKLIST.md) để biết phạm vi đã kiểm tra, các giới hạn và bước nghiệm thu với PostgreSQL/pgvector, Docling/E5 và dịch vụ AI thật.
+
+## Theo dõi tác vụ AI
+
+Trong Course, dùng nút Gợi ý khái niệm/Sinh Quiz bằng AI trên tài liệu có bản published, hoặc chọn tối đa năm tài liệu từ tab Quiz. Sau accepted, URL giữ `job=<uuid>` để tải lại trang vẫn theo dõi được. Bốn trạng thái và lỗi an toàn được hiển thị; mất kết nối chỉ dừng polling, không gửi lại POST. Có thể mở Quiz để duyệt hoặc đối chiếu nguồn rồi xác nhận thêm Concept.
+
+Upload progress chỉ mô tả tải/lưu tệp; ingestion chạy nền và giữ bản index cũ khi rebuild lỗi. Poller dọn request/timer khi đổi Course hoặc logout, dừng ở trạng thái terminal và tạm dừng khi tab ẩn.
+
+```powershell
+npm test
+npm run lint
+npm run build
+npm run test:e2e -- e2e/ai-jobs.spec.js e2e/course-ai.spec.js e2e/quiz-review.spec.js
+```

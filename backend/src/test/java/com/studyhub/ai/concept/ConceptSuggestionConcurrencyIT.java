@@ -107,7 +107,9 @@ class ConceptSuggestionConcurrencyIT extends ConceptPostgresSupport {
             assertTrue(release.await(15,TimeUnit.SECONDS));return result(call.getArgument(0));
         }).when(client).extract(any(),anyInt());
         try(var pool=Executors.newSingleThreadExecutor()) {
-            var pending=pool.submit(()->send("POST",path(f),f.token(),Map.of()));
+            var accepted=call("POST",path(f),f.token(),Map.of(),202);
+            var id=UUID.fromString(accepted.path("jobId").asText());
+            var pending=pool.submit(()->jobWorker.process(id));
             try {
                 assertTrue(entered.await(15,TimeUnit.SECONDS));
                 if(delete) call("DELETE","/api/documents/"+f.document(),f.token(),null,204);
@@ -117,7 +119,9 @@ class ConceptSuggestionConcurrencyIT extends ConceptPostgresSupport {
                     jdbc.update("UPDATE documents SET published_ingestion_id=? WHERE id=?",newer,f.document());
                 }
             } finally { release.countDown(); }
-            assertEquals(delete?404:409,pending.get(15,TimeUnit.SECONDS).statusCode());
+            assertTrue(pending.get(15,TimeUnit.SECONDS));
+            if(delete)call("GET","/api/ai/jobs/"+id,f.token(),null,404);
+            else assertEquals(com.studyhub.ai.job.AIJobErrorCode.SOURCE_CHANGED,jobs.get(id,f.owner()).errorCode());
             assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM concept_suggestion_batches WHERE document_id=?",Integer.class,f.document()));
             assertEquals(0,concepts(f));
         }

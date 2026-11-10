@@ -55,6 +55,7 @@ public class DocumentChunkRepository {
                     UPDATE documents SET published_ingestion_id=?,ingestion_status='INDEXED',ingestion_error=NULL,
                         updated_at=CURRENT_TIMESTAMP WHERE id=?
                     """,claim.id(),source.id());
+            queue.completeJob(claim);
         });
     }
 }

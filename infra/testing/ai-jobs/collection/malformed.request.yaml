@@ -1,0 +1,14 @@
+{
+  "$kind": "http-request",
+  "name": "Reject malformed job ID",
+  "order": 3000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/ai/jobs/not-a-uuid",
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('malformed UUID gets 400',()=>pm.response.to.have.status(400));"
+    }
+  ]
+}

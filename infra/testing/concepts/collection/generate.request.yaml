@@ -1,30 +1,24 @@
-$kind: http-request
-name: Generate draft without saving Concept
-order: 1000
-method: POST
-url: '{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions'
-headers:
-  - key: Content-Type
-    value: application/json
-body:
-  type: json
-  content: '{"startChunkIndex":0,"chunkLimit":10,"maxSuggestions":5}'
-scripts:
-  - type: afterResponse
-    language: text/javascript
-    code: |-
-      pm.test('Draft contains validated source and explicit coverage', () => {
-        pm.response.to.have.status(201);
-        const b = pm.response.json();
-        pm.expect(b.promptVersion).to.eql('document-concepts-v1');
-        pm.expect(b.sourceCurrent).to.eql(true);
-        pm.expect(b.coverage.includedChunkIds.length).to.be.above(0);
-        pm.expect(b.suggestions.length).to.be.above(0);
-        const s = b.suggestions[0];
-        pm.expect(s.state).to.eql('PENDING');
-        pm.expect(s.conceptId).to.eql(null);
-        pm.expect(s.citations[0].documentId).to.eql(Number(pm.variables.get('documentId')));
-        pm.collectionVariables.set('batchId', b.id);
-        pm.collectionVariables.set('itemId', String(s.id));
-        pm.collectionVariables.set('sourceUrl', s.citations[0].sourceUrl);
-      });
+{
+  "$kind": "http-request",
+  "name": "generate",
+  "order": 1000,
+  "method": "POST",
+  "url": "{{baseUrl}}/api/courses/{{courseId}}/documents/{{documentId}}/ai/concept-suggestions",
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "body": {
+    "type": "json",
+    "content": "{\"startChunkIndex\":0,\"chunkLimit\":10,\"maxSuggestions\":5}"
+  },
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('accepted asynchronously',()=>{pm.response.to.have.status(202);pm.expect(pm.response.headers.get('Location')).to.eql(pm.response.json().statusUrl);});\nconst accepted=pm.response.json();\npm.expect(accepted.jobId).to.match(/^[0-9a-f-]{36}$/i);\nconst base=pm.variables.get('baseUrl'), token=pm.variables.get('accessToken');\nconst get=url=>new Promise((resolve,reject)=>pm.sendRequest({url,method:'GET',header:{Authorization:'Bearer '+token}},(error,response)=>error?reject(error):resolve(response)));\nlet job;\nfor(let attempt=0;attempt<100;attempt++) {\n const response=await get(base+'/api/ai/jobs/'+accepted.jobId);\n pm.expect(response.code).to.eql(200);job=response.json();\n if(['COMPLETED','FAILED'].includes(job.status))break;\n await new Promise(resolve=>setTimeout(resolve,100));\n}\npm.test('job completes within bounded polling',()=>pm.expect(job.status).to.eql('COMPLETED'));\nif(job.status!=='COMPLETED')throw new Error('AI job did not complete: '+job.status);\nconst result=await get(base+'/api/courses/'+job.courseId+'/documents/'+job.documentId+'/ai/concept-suggestions/'+job.result.id);pm.expect(result.code).to.eql(200);const b=result.json();\npm.test('draft has verified sources and coverage',()=>{pm.expect(b.promptVersion).to.eql('document-concepts-v1');pm.expect(b.sourceCurrent).to.eql(true);pm.expect(b.coverage.includedChunkIds.length).to.be.above(0);pm.expect(b.suggestions[0].state).to.eql('PENDING');pm.expect(b.suggestions[0].conceptId).to.eql(null);});\npm.collectionVariables.set('batchId',b.id);pm.collectionVariables.set('itemId',String(b.suggestions[0].id));pm.collectionVariables.set('sourceUrl',b.suggestions[0].citations[0].sourceUrl);"
+    }
+  ]
+}

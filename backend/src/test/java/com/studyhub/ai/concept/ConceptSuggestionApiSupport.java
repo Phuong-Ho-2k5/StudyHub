@@ -46,6 +46,8 @@ abstract class ConceptSuggestionApiSupport {
     }
     @Value("${local.server.port}") int port;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.studyhub.ai.job.AIJobGenerationWorker jobWorker;
+    @Autowired com.studyhub.ai.job.AIJobService jobs;
     final HttpClient http=HttpClient.newHttpClient();
     record Fixture(String token,long owner,long course,long document,long chunk,String version) {}
     @BeforeEach void sourceTable() {
@@ -80,7 +82,18 @@ abstract class ConceptSuggestionApiSupport {
         return http.send(request.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body),StandardCharsets.UTF_8)).build(),HttpResponse.BodyHandlers.ofString());
     }
     JsonNode call(String method,String path,String token,Object body,int expected) throws Exception {
-        var response=send(method,path,token,body);assertEquals(expected,response.statusCode(),response.body());
+        var response=send(method,path,token,body);if(method.equals("POST") && path.endsWith("/concept-suggestions") && expected!=202 && response.statusCode()==202) {
+            var id=UUID.fromString(json.readTree(response.body()).path("jobId").asText());jobWorker.process(id);
+            var read=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/ai/jobs/"+id)).header("Authorization","Bearer "+token).GET().build();
+            var job=json.readTree(http.send(read,HttpResponse.BodyHandlers.ofString()).body());
+            if(job.path("status").asText().equals("FAILED")) {
+                int actual=switch(job.path("errorCode").asText()){case "AI_INVALID_RESPONSE"->502;case "AI_UNAVAILABLE"->503;case "AI_TIMEOUT"->504;case "SOURCE_CHANGED"->409;case "NO_CONTENT"->422;default->500;};
+                assertEquals(expected,actual,job.toString());return job;
+            }
+            assertEquals("COMPLETED",job.path("status").asText(),job.toString());assertEquals(201,expected);
+            return call("GET",path+"/"+job.at("/result/id").asText(),token,null,200);
+        }
+        assertEquals(expected,response.statusCode(),response.body());
         return response.body().isBlank()?json.nullNode():json.readTree(response.body());
     }
 }

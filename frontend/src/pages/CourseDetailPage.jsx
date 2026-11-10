@@ -15,6 +15,8 @@ import { DiscussionPanel } from '../components/discussion/DiscussionPanel'
 import { DocumentUploadDialog } from '../components/DocumentUploadDialog'
 import { CourseAiPanel } from '../components/ai/CourseAiPanel'
 import { DocumentIngestionStatus } from '../components/documents/DocumentIngestionStatus'
+import { AIJobStatus } from '../components/ai/AIJobStatus'
+import { AIGenerationDialog } from '../components/ai/AIGenerationDialog'
 import { useDocumentIngestionPolling } from '../hooks/useDocumentIngestionPolling'
 
 const CONCEPT_STATUSES = [
@@ -154,9 +156,11 @@ function CourseDetail() {
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
   const [dialog, setDialog] = useState(null)
+  const [generation, setGeneration] = useState(null)
+  function accepted(jobId) { setGeneration(null); setSearchParams(current => { const next = new URLSearchParams(current); next.set('job',jobId); return next }) }
   const [deleting, setDeleting] = useState(null)
   const updateDocumentRow = (item) => setDocuments(current => current.map(row => row.id === item.id ? item : row))
-  const ingestionPolling = useDocumentIngestionPolling({ token, courseId, documents: tab === 'documents' && !loading && !courseError ? documents : [], onDocumentUpdated: updateDocumentRow })
+  const ingestionPolling = useDocumentIngestionPolling({ token, courseId, documents: tab === 'documents' && !loading && !courseError ? documents.filter(item => !item.ingestionJobId) : [], onDocumentUpdated: updateDocumentRow })
   useEffect(() => {
     let active = true
     getCourse(token, courseId).then((data) => { if (active) setCourse(data) })
@@ -185,7 +189,7 @@ function CourseDetail() {
   function refresh() { setRevision((value) => value + 1); setDialog(null); setLoading(true) }
   function changeTab(value) {
     if (value === tab) return
-    setSearchParams({ tab: value }); setError(''); setLoading(true)
+    setSearchParams(current => { const next = new URLSearchParams(current); next.set('tab',value); return next }); setError(''); setLoading(true)
   }
   async function remove(type, item) {
     if (!window.confirm(`Xóa “${type === 'document' ? item.title : item.name}”?`)) return
@@ -208,6 +212,8 @@ function CourseDetail() {
       <div className="page-heading"><div><p className="section-kicker">Chi tiết khóa học</p><h1>{course?.name ?? 'Khóa học'}</h1><p>{course?.description}</p></div></div>
       {courseError && <p className="form-message error" role="alert">{courseError}</p>}
       {course && !courseError && <div className="course-learning-grid"><CourseProgress courseId={courseId} revision={revision} /><StudySessionPanel courseId={courseId} /></div>}
+      {!courseError && searchParams.get('job') && <AIJobStatus key={`${token}-${courseId}-${searchParams.get('job')}`} token={token} courseId={courseId} jobId={searchParams.get('job')} />}
+      {generation && <AIGenerationDialog key={`${token}-${courseId}-${generation.mode}-${generation.document.id}`} token={token} courseId={courseId} document={generation.document} mode={generation.mode} onClose={() => setGeneration(null)} onAccepted={accepted} />}
       {!courseError && <div className="course-panel">
         <div className="detail-toolbar">
           <div className="detail-tabs" role="tablist" aria-label="Nội dung khóa học">
@@ -218,7 +224,7 @@ function CourseDetail() {
         {tab === 'ai' && course && <CourseAiPanel key={`${courseId}-${token}`} courseId={courseId} token={token} />}
         {tab === 'documents' && ingestionPolling.error && <div role="alert" className="form-message error">Không thể tự cập nhật trạng thái. <button type="button" className="secondary-button" onClick={ingestionPolling.retry}>Cập nhật trạng thái</button></div>}
         {tab === 'discussions' && <DiscussionPanel key={courseId} courseId={courseId} />}
-        {tab === 'quizzes' && <QuizPanel key={courseId} courseId={courseId} token={token} />}
+        {tab === 'quizzes' && <QuizPanel key={courseId} courseId={courseId} token={token} onJobAccepted={accepted} />}
         {tab !== 'quizzes' && tab !== 'discussions' && tab !== 'ai' && <>
         {tab === 'documents' ? <>
           <p className="inline-help">Tải PDF lên để lưu và quản lý tài liệu của khóa học.</p>
@@ -230,6 +236,8 @@ function CourseDetail() {
           <div className="resource-copy"><h3>{item.title}</h3><p>{item.fileName} · {item.fileType}</p><p className="resource-path">{item.managedFile ? 'PDF đã lưu' : 'Chỉ có thông tin tệp'}</p></div>
           <div className="document-processing"><span className="status-badge">{DOCUMENT_LABELS[item.status] ?? item.status}</span><DocumentIngestionStatus document={item} token={token} onChanged={updateDocumentRow} /></div>
           <div className="course-actions">
+            <button type="button" disabled={!item.publishedIngestionId} onClick={() => setGeneration({mode:"concept",document:item})}>Gợi ý khái niệm</button>
+            <button type="button" disabled={!item.publishedIngestionId} onClick={() => setGeneration({mode:"quiz",document:item})}>Sinh Quiz bằng AI</button>
             <button type="button" onClick={() => setDialog({ type: 'document', item })}>Sửa</button>
             <button type="button" onClick={() => remove('document', item)} disabled={deleting === `document-${item.id}`}>Xóa</button>
           </div>

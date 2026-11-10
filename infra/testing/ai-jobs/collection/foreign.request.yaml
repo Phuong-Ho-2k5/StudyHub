@@ -1,0 +1,23 @@
+{
+  "$kind": "http-request",
+  "name": "Job is private to its requester",
+  "order": 2000,
+  "method": "GET",
+  "url": "{{baseUrl}}/api/ai/jobs/{{jobId}}",
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{foreignAccessToken}}"
+      }
+    ]
+  },
+  "scripts": [
+    {
+      "type": "afterResponse",
+      "language": "text/javascript",
+      "code": "pm.test('foreign requester gets 404',()=>pm.response.to.have.status(404));"
+    }
+  ]
+}

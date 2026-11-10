@@ -1,5 +1,8 @@
 # Sinh Quiz nháp có nguồn
 
+> Generation POST hiện trả `202 {jobId,statusUrl}` + `Location`, thay cho response đồng bộ mô tả ở tài liệu lịch sử bên dưới. Poll `GET /api/ai/jobs/{jobId}` đến terminal rồi đọc batch/Quiz qua API nghiệp vụ. Lỗi provider sau accepted nằm trong `job.errorCode`; lỗi input/scope vẫn từ chối trước enqueue. Xem [hợp đồng async hiện hành](../ai-jobs/README.md#async-contract). Collection đã chuyển sang contract async.
+
+
 Chức năng sinh Quiz tạo Quiz `AI_GENERATED / DRAFT` và lưu toàn bộ Question/AnswerOption cùng evidence trong một transaction. Backend không giữ transaction trong lúc gọi AI. Workflow duyệt từng câu → CONFIRMED → publish đã được triển khai; xem [hợp đồng review](../quiz-review/README.md). Giao diện duyệt sẽ được triển khai riêng.
 
 ## API
@@ -8,7 +11,7 @@ Yêu cầu Bearer JWT; mọi POST generate cần `Idempotency-Key` (1–100 ký 
 
 | Request | Kết quả |
 | --- | --- |
-| `POST /api/documents/{id}/ai/generate-quiz` | 201 lần đầu, 200 khi replay cùng key/payload |
+| `POST /api/documents/{id}/ai/generate-quiz` | 202 + jobId; cùng key/payload trả lại cùng job |
 | `POST /api/courses/{id}/ai/generate-quiz` | Cùng semantics, dùng nhiều Document được chọn trong Course |
 | `GET /api/quizzes/{id}/ai-generation` | Metadata generation, coverage, evidence, sourceCurrent; không gọi AI |
 | `GET /api/quizzes/{id}` và `GET /api/quizzes/{id}/questions` | Đọc Quiz/Question hiện tại qua API có sẵn |

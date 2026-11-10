@@ -17,6 +17,7 @@ public class DocumentIngestionRepository {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
     private final long leaseSeconds;
+    private final DocumentIngestionJobBridge bridge;
     private final int maxAttempts;
 
     public record Claim(String id, Long documentId, Long userId, String token) {}
@@ -29,10 +30,16 @@ public class DocumentIngestionRepository {
             @Value("${studyhub.ingestion.max-attempts:3}") int maxAttempts) {
         if (aiTimeout<=0 || leaseSeconds<aiTimeout+30 || maxAttempts<1)
             throw new IllegalArgumentException("Ingestion lease must exceed AI timeout by at least 30 seconds; attempts must be positive");
+        this.bridge=new DocumentIngestionJobBridge(jdbc,manager);
         this.jdbc=jdbc;this.tx=new TransactionTemplate(manager);this.leaseSeconds=leaseSeconds;this.maxAttempts=maxAttempts;
     }
 
     /** Called only for a newly inserted document, in the upload transaction. */
+    public void lockUploadScope(Long courseId,Long userId) {
+        if(!TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Upload scope lock requires a transaction");
+        bridge.lockUploadScope(courseId,userId);
+    }
+
     public void enqueueUploaded(Long documentId,Long userId) {
         if(!TransactionSynchronizationManager.isActualTransactionActive())
             throw new IllegalStateException("Upload queue insertion requires the upload transaction");
@@ -42,8 +49,22 @@ public class DocumentIngestionRepository {
     private String enqueue(Long documentId,Long userId) {
         String id=UUID.randomUUID().toString();
         jdbc.update("INSERT INTO document_ingestions(id,document_id,requested_by,status,active_slot) VALUES (?,?,?,'PENDING',1)",id,documentId,userId);
+        bridge.enqueue(id,documentId,userId);
         jdbc.update("UPDATE documents SET ingestion_status='PENDING',ingestion_error=NULL WHERE id=?",documentId);
         return id;
+    }
+
+    public UUID enqueueRequested(Long documentId,Long userId) {
+        return tx.execute(status->{
+            var document=lockDocument(documentId,userId);
+            if(!document.managed())throw new ResponseStatusException(HttpStatus.CONFLICT,"Upload a PDF before ingestion.");
+            if(active(documentId)!=null)throw new ResponseStatusException(HttpStatus.CONFLICT,"Ingestion is already active.");
+            String id=enqueue(documentId,userId);
+            return UUID.fromString(jdbc.queryForObject("SELECT ai_job_id FROM document_ingestions WHERE id=?",String.class,id));
+        });
+    }
+    public UUID latestJob(Long documentId) {
+        return jdbc.queryForList("SELECT ai_job_id FROM document_ingestions WHERE document_id=? AND ai_job_id IS NOT NULL ORDER BY created_at DESC,id DESC LIMIT 1",String.class,documentId).stream().findFirst().map(UUID::fromString).orElse(null);
     }
 
     public Claim claimNow(Long documentId,Long userId) {
@@ -86,6 +107,7 @@ public class DocumentIngestionRepository {
     }
 
     private Claim claim(String id,Long documentId,Long userId) {
+        bridge.claim(id);
         String token=UUID.randomUUID().toString();
         jdbc.update("""
                 UPDATE document_ingestions SET status='PROCESSING',claim_token=?,lease_until=?,
@@ -126,7 +148,10 @@ public class DocumentIngestionRepository {
         }
     }
 
+    public void completeJob(Claim claim) { bridge.finish(claim.id(),null); }
+
     private void finishFailure(String id,Long documentId,String code) {
+        bridge.finish(id,code);
         jdbc.update("UPDATE document_ingestions SET status='FAILED',active_slot=NULL,error_code=?,claim_token=NULL,lease_until=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?",code,id);
         jdbc.update("UPDATE documents SET ingestion_status='FAILED',ingestion_error=? WHERE id=?",code,documentId);
     }
@@ -143,6 +168,7 @@ public class DocumentIngestionRepository {
     }
 
     private LockedDocument lockDocument(Long documentId,Long userId) {
+        if(jdbc.queryForList("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,userId).isEmpty())throw missing();
         var ancestors=jdbc.query("SELECT c.id,c.workspace_id FROM documents d JOIN courses c ON c.id=d.course_id WHERE d.id=?",
                 (rs,row)->new long[]{rs.getLong(1),rs.getLong(2)},documentId);
         if(ancestors.isEmpty())throw missing();

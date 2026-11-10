@@ -41,6 +41,7 @@ public class DocumentService {
 
     @Transactional
     public DocumentResponse upload(Long courseId, String title, MultipartFile file, Long userId) {
+        ingestion.lockUploadScope(courseId,userId);
         Course course = resourceAccessService.requireCourse(courseId, userId);
         if (title == null || title.isBlank() || title.length() > 200)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tiêu đề phải có từ 1 đến 200 ký tự.");
@@ -139,6 +140,6 @@ public class DocumentService {
     private DocumentResponse toResponse(Document document) {
         return new DocumentResponse(document.getId(), document.getCourse().getId(), document.getTitle(), document.getFileName(),
                 document.getFileType(), document.getStoragePath(), document.getStatus(), document.isManagedFile(),
-                document.getIngestionStatus(),document.getPublishedIngestionId(),document.getIngestionError());
+                document.getIngestionStatus(),document.getPublishedIngestionId(),document.getIngestionError(),ingestion.latestJob(document.getId()));
     }
 }

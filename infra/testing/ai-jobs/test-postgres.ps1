@@ -14,7 +14,10 @@ $simulationLog = Join-Path ([System.IO.Path]::GetTempPath()) ('studyhub-ai-jobs-
 $simulationError = $simulationLog + '.err'
 $testExitCode = 1
 $startedAt = Get-Date
-$integrationTests = @('AIJobMigrationIT', 'AIJobConcurrencyIT', 'DocumentIngestionMigrationIT', 'DocumentIngestionApiIT')
+$integrationTests = @('AIJobMigrationIT', 'AIJobConcurrencyIT', 'AIJobCommandConcurrencyIT', 'DocumentIngestionMigrationIT', 'DocumentIngestionApiIT')
+
+if ($env:CONCEPT_PIPELINE_AI_URL) { $integrationTests += @('ConceptSuggestionPipelineIT', 'ConceptSuggestionConcurrencyIT') }
+if ($env:QUIZ_PIPELINE_AI_URL) { $integrationTests += @('QuizGenerationPipelineIT', 'QuizGenerationConcurrencyIT') }
 
 try {
     if (-not $env:AI_SIMULATION_URL) {
@@ -71,7 +74,9 @@ try {
         $ErrorActionPreference = 'Stop'
         if ($testExitCode -eq 0) {
             foreach ($test in $integrationTests) {
-                $report = Get-Item "target/failsafe-reports/TEST-com.studyhub.$(if ($test.StartsWith('AIJob')) { 'ai.job' } else { 'document' }).$test.xml" -ErrorAction Stop
+                $reports = @(Get-ChildItem "target/failsafe-reports/TEST-*.$test.xml" -ErrorAction Stop)
+                if ($reports.Count -ne 1) { throw "Expected one report for $test" }
+                $report = $reports[0]
                 if ($report.LastWriteTime -lt $startedAt) { throw "Stale report for $test" }
                 [xml]$result = Get-Content $report.FullName
                 $suite = $result.testsuite

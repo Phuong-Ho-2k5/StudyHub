@@ -40,10 +40,12 @@ class QuizGenerationPipelineIT extends QuizGenerationPostgresSupport {
         jdbc.update("UPDATE documents SET published_ingestion_id=NULL WHERE id=?",stale.document());
         var vars=new HashMap<String,String>();vars.put("baseUrl","http://localhost:"+port);vars.put("accessToken",f.token());vars.put("fixtureKey",UUID.randomUUID().toString());
         vars.put("courseId",Long.toString(f.course()));vars.put("documentId",Long.toString(f.document()));vars.put("chunkId",Long.toString(f.chunk()));
-        vars.put("secondDocumentId",Long.toString(second));vars.put("foreignDocumentId",Long.toString(foreign.document()));vars.put("foreignQuizId",foreignQuiz.at("/quiz/id").asText());
+        vars.put("foreignAccessToken",foreign.token());vars.put("secondDocumentId",Long.toString(second));vars.put("foreignDocumentId",Long.toString(foreign.document()));vars.put("foreignQuizId",foreignQuiz.at("/quiz/id").asText());
         vars.put("staleDocumentId",Long.toString(stale.document()));vars.put("staleAccessToken",stale.token());
         Path root=Path.of("..").toAbsolutePath().normalize(),environment=Files.createTempFile("quiz-", ".environment.yaml");
         Path output=root.resolve(".superpowers/quiz-collection.log");Files.createDirectories(output.getParent());
+        var workerLoop=java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+        workerLoop.scheduleWithFixedDelay(()->{try{jobWorker.processNext();}catch(RuntimeException ignored){}},0,100,TimeUnit.MILLISECONDS);
         try {
             json.writeValue(environment.toFile(),Map.of("name","Disposable Quiz fixtures","values",vars.entrySet().stream()
                 .map(e->Map.of("key",e.getKey(),"value",e.getValue(),"enabled",true,"type",e.getKey().contains("Token")?"secret":"default")).toList()));
@@ -51,6 +53,9 @@ class QuizGenerationPipelineIT extends QuizGenerationPostgresSupport {
                 .directory(root.toFile()).redirectErrorStream(true).redirectOutput(output.toFile()).start();
             if(!process.waitFor(90,TimeUnit.SECONDS)){process.destroyForcibly();fail("Collection timed out");}
             assertEquals(0,process.exitValue(),"See .superpowers/quiz-collection.log");assertEquals(2,quizzes(f));
-        }finally {Files.deleteIfExists(environment);}
+            var jobsProcess=new ProcessBuilder("postman","collection","run",root.resolve("infra/testing/ai-jobs/collection").toString(),"--environment",environment.toString()).directory(root.toFile()).redirectErrorStream(true).redirectOutput(root.resolve(".superpowers/jobs-collection.log").toFile()).start();
+            if(!jobsProcess.waitFor(90,TimeUnit.SECONDS)){jobsProcess.destroyForcibly();fail("Job collection timed out");}
+            assertEquals(0,jobsProcess.exitValue(),"See .superpowers/jobs-collection.log");assertEquals(2,quizzes(f));
+        }finally {workerLoop.shutdownNow();Files.deleteIfExists(environment);}
     }
 }

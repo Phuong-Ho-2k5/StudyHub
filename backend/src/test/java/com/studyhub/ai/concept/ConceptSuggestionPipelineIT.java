@@ -54,6 +54,8 @@ class ConceptSuggestionPipelineIT extends ConceptPostgresSupport {
         variables.put("approvedName","Reviewed-"+UUID.randomUUID());
         Path root=Path.of("..").toAbsolutePath().normalize(),environment=Files.createTempFile("concept-", ".environment.yaml");
         Path output=root.resolve(".superpowers/concept-collection.log");
+        var workerLoop=java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+        workerLoop.scheduleWithFixedDelay(()->{try{jobWorker.processNext();}catch(RuntimeException ignored){}},0,100,TimeUnit.MILLISECONDS);
         try {
             json.writeValue(environment.toFile(),Map.of("name","Disposable Concept fixture","values",variables.entrySet().stream()
                 .map(e->Map.of("key",e.getKey(),"value",e.getValue(),"enabled",true,"type",e.getKey().contains("Token")?"secret":"default")).toList()));
@@ -61,6 +63,6 @@ class ConceptSuggestionPipelineIT extends ConceptPostgresSupport {
                 .directory(root.toFile()).redirectErrorStream(true).redirectOutput(output.toFile()).start();
             if(!process.waitFor(90,TimeUnit.SECONDS)) {process.destroyForcibly();fail("Collection timed out");}
             assertEquals(0,process.exitValue(),"See .superpowers/concept-collection.log");assertEquals(1,concepts(f));
-        } finally { Files.deleteIfExists(environment); }
+        } finally { workerLoop.shutdownNow();Files.deleteIfExists(environment); }
     }
 }

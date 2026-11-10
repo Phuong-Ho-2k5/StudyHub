@@ -24,6 +24,10 @@ public class AIJobService {
             c->c.getMetaData().getDatabaseProductName().equals("PostgreSQL")));
         userLock=postgres?" FOR KEY SHARE":" FOR UPDATE";
     }
+    /** Lock ancestors before inserting children whose foreign keys acquire PostgreSQL row locks. */
+    public void lockOwnedCourse(Long courseId,Long userId) {
+        tx.executeWithoutResult(status->{if(!lockScope(userId,courseId,null))throw missing();});
+    }
     public UUID enqueue(CreateAIJob command,Long userId) {
         if(command==null || command.type()==null || command.courseId()==null || userId==null ||
             (command.type()==AIJobType.INGEST_DOCUMENT && command.documentId()==null))
@@ -63,6 +67,16 @@ public class AIJobService {
             return jobs.finish(claim,result,code);
         }));
     }
+    /** Serialize scope/claim before output writes; all output and terminal state share this transaction. */
+    public void publish(AIJobClaim claim,java.util.function.Supplier<AIJobResult> output) {
+        tx.executeWithoutResult(status->{
+            var job=locked(claim.jobId()).orElseThrow(AIJobService::missing);
+            if(job.status()!=AIJobStatus.PROCESSING || !claim.token().toString().equals(job.claimToken()))
+                throw new IllegalStateException("Publication claim rejected");
+            if(!complete(claim,output.get()))throw new IllegalStateException("Publication completion rejected");
+        });
+    }
+
     public AIJobResponse get(UUID jobId,Long userId) {
         Objects.requireNonNull(jobId);Objects.requireNonNull(userId);
         return AIJobResponse.from(jobs.findOwned(jobId,userId).orElseThrow(AIJobService::missing));

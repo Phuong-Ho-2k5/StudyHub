@@ -674,3 +674,8 @@ progress.course-progress { appearance: none; overflow: hidden; border: 0; border
 .feedback-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
 .feedback-actions [aria-pressed="true"] { background: #e2edff; border-color: #3564bd; color: #173c81; }
 .message-feedback textarea { width: 100%; box-sizing: border-box; }
+
+.ai-job-status { min-width: 0; margin-bottom: 20px; padding: 22px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.ai-job-status > h3 { margin: 0 0 12px; font-size: 17px; }
+.ai-job-status .resource-card { margin-top: 12px; }
+.ai-job-status .resource-copy { min-width: 0; overflow-wrap: anywhere; }

@@ -13,5 +13,6 @@ public record DocumentResponse(
     boolean managedFile,
     com.studyhub.document.DocumentIngestionStatus ingestionStatus,
     String publishedIngestionId,
-    String ingestionError
+    String ingestionError,
+    java.util.UUID ingestionJobId
 ) {}

@@ -1,0 +1,13 @@
+{
+  "$kind": "collection",
+  "name": "StudyHub async AI jobs",
+  "auth": {
+    "type": "bearer",
+    "credentials": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}"
+      }
+    ]
+  }
+}

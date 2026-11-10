@@ -18,7 +18,7 @@
     {
       "type": "afterResponse",
       "language": "text/javascript",
-      "code": "pm.test('course: expected behavior',()=>{pm.response.to.have.status(201);pm.expect(pm.response.json().generation.coverage.length).to.eql(2);});"
+      "code": "pm.test('accepted asynchronously',()=>{pm.response.to.have.status(202);pm.expect(pm.response.headers.get('Location')).to.eql(pm.response.json().statusUrl);});\nconst accepted=pm.response.json();\npm.expect(accepted.jobId).to.match(/^[0-9a-f-]{36}$/i);\nconst base=pm.variables.get('baseUrl'), token=pm.variables.get('accessToken');\nconst get=url=>new Promise((resolve,reject)=>pm.sendRequest({url,method:'GET',header:{Authorization:'Bearer '+token}},(error,response)=>error?reject(error):resolve(response)));\nlet job;\nfor(let attempt=0;attempt<100;attempt++) {\n const response=await get(base+'/api/ai/jobs/'+accepted.jobId);\n pm.expect(response.code).to.eql(200);job=response.json();\n if(['COMPLETED','FAILED'].includes(job.status))break;\n await new Promise(resolve=>setTimeout(resolve,100));\n}\npm.test('job completes within bounded polling',()=>pm.expect(job.status).to.eql('COMPLETED'));\nif(job.status!=='COMPLETED')throw new Error('AI job did not complete: '+job.status);\nconst metadata=(await get(base+'/api/quizzes/'+job.result.id+'/ai-generation')).json();pm.test('explicit multi-document coverage',()=>pm.expect(metadata.coverage.length).to.eql(2));"
     }
   ],
   "body": {

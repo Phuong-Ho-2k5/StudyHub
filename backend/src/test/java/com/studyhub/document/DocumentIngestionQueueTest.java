@@ -45,6 +45,7 @@ class DocumentIngestionQueueTest {
         assertEquals("NOT_REQUESTED",state());
         tx.executeWithoutResult(status->queue.enqueueUploaded(documentId,userId));
         assertEquals("PENDING",state());
+        assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM ai_jobs WHERE document_id=?",String.class,documentId));
         assertNotNull(queue.claimNext());
         assertEquals("PROCESSING",state());
         assertNull(queue.claimNext());
@@ -80,6 +81,7 @@ class DocumentIngestionQueueTest {
         queue.renew(recovered);
         queue.fail(recovered,"AI_UNAVAILABLE");
         assertEquals("FAILED",state());
+        assertEquals("FAILED",jdbc.queryForObject("SELECT status FROM ai_jobs WHERE document_id=?",String.class,documentId));
         assertEquals("AI_UNAVAILABLE",jdbc.queryForObject("SELECT ingestion_error FROM documents",String.class));
         assertNotEquals(old.id(),queue.claimNow(documentId,userId).id());
     }

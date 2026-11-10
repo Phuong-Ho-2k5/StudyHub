@@ -1,5 +1,8 @@
 # Concept suggestions có nguồn và duyệt trước khi lưu
 
+> Generation POST hiện trả `202 {jobId,statusUrl}` + `Location`, thay cho response đồng bộ mô tả ở tài liệu lịch sử bên dưới. Poll `GET /api/ai/jobs/{jobId}` đến terminal rồi đọc batch/Quiz qua API nghiệp vụ. Lỗi provider sau accepted nằm trong `job.errorCode`; lỗi input/scope vẫn từ chối trước enqueue. Xem [hợp đồng async hiện hành](../ai-jobs/README.md#async-contract). Collection đã chuyển sang contract async.
+
+
 Luồng: chọn Document đã ingest → generate bản nháp → mở citation đối chiếu → sửa tên/mô tả → confirm từng gợi ý. Chỉ confirm tạo Concept `NEW`, confidence `0`; generate và GET draft không thay đổi tiến độ học.
 
 API public có prefix `/api/courses/{courseId}/documents/{documentId}/ai/concept-suggestions`, Bearer JWT:

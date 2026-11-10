@@ -105,14 +105,11 @@ class DocumentIngestionApiIT {
         assertEquals("StudyHub extracted text",citation.path("quote").asText());
         var citedSource=call("GET",citation.path("sourceUrl").asText(),token,null,200);
         assertEquals(citation.path("chunkId"),citedSource.path("chunkId"));
-        var summary=call("POST",path,token,null,200);
-        String second=summary.path("ingestionId").asText();
-        assertNotEquals(first,second);
-        assertEquals(documentId,summary.path("documentId").asLong());
-        assertEquals(1,summary.path("chunkCount").asInt());
-        assertEquals(MODEL,summary.path("embeddingModel").asText());
-        assertEquals(384,summary.path("embeddingDimensions").asInt());
-        assertFalse(summary.has("vectors"));
+        var accepted=call("POST",path,token,null,202);
+        assertTrue(worker.processNext());
+        var completed=call("GET",accepted.path("statusUrl").asText(),token,null,200);
+        assertEquals("COMPLETED",completed.path("status").asText());
+        String second=completed.at("/result/id").asText();assertNotEquals(first,second);
         var row=jdbc.queryForMap("SELECT embedding_text,metadata::text,embedding_model,embedding_dimensions,vector_dims(embedding) AS actual_dimensions FROM document_chunks WHERE document_id=?",documentId);
         assertEquals("StudyHub\nStudyHub extracted text",row.get("embedding_text"));
         assertEquals(MODEL,row.get("embedding_model"));
@@ -135,8 +132,10 @@ class DocumentIngestionApiIT {
         assertEquals(1,call("POST",searchPath,token,Map.of("query","Transaction"),200).path("items").size());
         assertEquals("ANSWERED",call("POST",chatPath,token,Map.of("question","Question"),200).path("status").asText());
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM document_chunks ch JOIN documents d ON d.id=ch.document_id AND d.published_ingestion_id=ch.ingestion_id WHERE d.id=?",Integer.class,documentId));
-        var retry=call("POST",path,token,null,200);
-        assertNotEquals(second,retry.path("ingestionId").asText());
+        var retryAccepted=call("POST",path,token,null,202);
+        assertTrue(worker.processNext());
+        var retry=call("GET",retryAccepted.path("statusUrl").asText(),token,null,200);
+        assertNotEquals(second,retry.at("/result/id").asText());
         assertEquals(1L,jdbc.queryForObject("SELECT count(*) FROM document_chunks WHERE document_id=?",Long.class,documentId));
         assertEquals("READY",call("GET","/api/documents/"+documentId,token,null,200).path("status").asText());
         assertTrue(call("GET","/api/documents/"+documentId,token,null,200).path("ingestionError").isNull());
@@ -145,6 +144,33 @@ class DocumentIngestionApiIT {
         assertEquals(0L,jdbc.queryForObject("SELECT count(*) FROM document_chunks WHERE document_id=?",Long.class,documentId));
         assertFalse(worker.processNext());
         assertEquals(0,call("POST",searchPath,token,Map.of("query","Question"),200).path("items").size());
+    }
+
+    @Test void uploadWaitsForAncestorBeforeInsertingDocumentFk() throws Exception {
+        String token=login();
+        long workspace=call("POST","/api/workspaces",token,Map.of("name","Lock test","description","Test"),201).path("id").asLong();
+        long course=call("POST","/api/workspaces/"+workspace+"/courses",token,Map.of("name","Lock course","description","Test"),201).path("id").asLong();
+        try(var connection=jdbc.getDataSource().getConnection();var pool=java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            connection.setAutoCommit(false);
+            try(var statement=connection.createStatement()){statement.executeQuery("SELECT id FROM workspaces WHERE id="+workspace+" FOR UPDATE").close();}
+            var upload=pool.submit(()->upload(course,token));
+            try {
+                boolean waiting=false;long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(15);
+                while(System.nanoTime()<deadline) {
+                    int count=jdbc.queryForObject("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND lower(query) LIKE '%workspaces%' AND lower(query) LIKE '%for update%'",Integer.class);
+                    if(count>0){waiting=true;break;}Thread.sleep(10);
+                }
+                assertTrue(waiting,"Upload must wait on the ancestor lock");
+                try(var statement=connection.createStatement()) {
+                    statement.execute("SET LOCAL lock_timeout='750ms'");
+                    try(var rows=statement.executeQuery("SELECT id FROM courses WHERE id="+course+" FOR UPDATE")){assertTrue(rows.next());}
+                }
+            } finally {
+                connection.rollback();
+                upload.get(20,java.util.concurrent.TimeUnit.SECONDS);
+                jdbc.update("DELETE FROM courses WHERE id=?",course);
+            }
+        }
     }
 
     String login() throws Exception {

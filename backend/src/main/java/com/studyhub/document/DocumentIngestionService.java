@@ -24,6 +24,8 @@ public class DocumentIngestionService {
         this.queue = queue;
     }
 
+    public java.util.UUID enqueue(Long documentId,Long userId) {return queue.enqueueRequested(documentId,userId);}
+
     // The source read commits before extraction/model calls; only persist() opens a write transaction.
     public DocumentIngestionResponse ingest(Long documentId, Long userId) {
         var source = documents.readForExtraction(documentId, userId);

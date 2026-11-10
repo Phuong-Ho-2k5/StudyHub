@@ -48,8 +48,8 @@ class QuizGenerationApiTest extends QuizGenerationApiSupport {
         jdbc.update("UPDATE document_chunks SET content='Atomicity [fake-quote]' WHERE document_id=?",f.document());
         call("POST",path(f),f.token(),"bad",body(),502);assertEquals(1,quizzes(f));
         jdbc.update("UPDATE document_chunks SET content='Atomicity [unavailable]' WHERE document_id=?",f.document());
-        call("POST",path(f),f.token(),"bad",body(),503);assertEquals(1,quizzes(f));
+        call("POST",path(f),f.token(),"bad-unavailable",body(),503);assertEquals(1,quizzes(f));
         jdbc.update("UPDATE document_chunks SET content='Atomicity valid' WHERE document_id=?",f.document());
-        call("POST",path(f),f.token(),"bad",body(),201);assertEquals(2,quizzes(f));
+        call("POST",path(f),f.token(),"good-new",body(),201);assertEquals(2,quizzes(f));
     }
 }

@@ -44,6 +44,8 @@ abstract class QuizGenerationApiSupport {
     }
     @Value("${local.server.port}") int port;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.studyhub.ai.job.AIJobGenerationWorker jobWorker;
+    @Autowired com.studyhub.ai.job.AIJobService jobs;
     final HttpClient http=HttpClient.newHttpClient();
     record Fixture(String token,long owner,long course,long document,long chunk,String version) {}
     @BeforeEach void sourceTable() {
@@ -80,7 +82,20 @@ abstract class QuizGenerationApiSupport {
         return http.send(request.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build(),HttpResponse.BodyHandlers.ofString());
     }
     JsonNode call(String method,String path,String token,String key,Object body,int expected) throws Exception {
-        var response=send(method,path,token,key,body);assertEquals(expected,response.statusCode(),response.body());
+        var response=send(method,path,token,key,body);
+        if(method.equals("POST") && path.endsWith("/ai/generate-quiz") && expected!=202 && response.statusCode()==202) {
+            var accepted=json.readTree(response.body());var id=UUID.fromString(accepted.path("jobId").asText());
+            jobWorker.process(id);
+            var job=json.readTree(send("GET","/api/ai/jobs/"+id,token,null,null).body());
+            if(job.path("status").asText().equals("FAILED")) {
+                int actual=switch(job.path("errorCode").asText()){case "AI_INVALID_RESPONSE"->502;case "AI_UNAVAILABLE"->503;case "AI_TIMEOUT"->504;case "SOURCE_CHANGED"->409;case "NO_CONTENT"->422;default->500;};
+                assertEquals(expected,actual,job.toString());return job;
+            }
+            assertEquals("COMPLETED",job.path("status").asText(),job.toString());
+            assertTrue(expected==200 || expected==201,"Unexpected success for "+expected);
+            return json.readTree(jdbc.queryForObject("SELECT response_json FROM quiz_generations WHERE quiz_id=?",String.class,job.at("/result/id").asLong()));
+        }
+        assertEquals(expected,response.statusCode(),response.body());
         return response.body().isBlank()?json.nullNode():json.readTree(response.body());
     }
 }

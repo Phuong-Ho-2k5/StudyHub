@@ -1,3 +1,4 @@
+import { AIGenerationDialog } from '../ai/AIGenerationDialog'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteQuiz, listQuizzes } from '../../api/quizApi.js'
@@ -5,12 +6,13 @@ import { QuizEditorDialog } from './QuizEditorDialog'
 import { QUIZ_LABELS } from './quizForms.js'
 import { quizError } from './quizErrors.js'
 
-export function QuizPanel({ courseId, token }) {
+export function QuizPanel({ courseId, token, onJobAccepted }) {
   const [quizzes, setQuizzes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
   const [editor, setEditor] = useState(null)
+  const [generating, setGenerating] = useState(false)
   const [deleting, setDeleting] = useState(null)
 
   useEffect(() => {
@@ -39,6 +41,8 @@ export function QuizPanel({ courseId, token }) {
   }
 
   return <section aria-label="Bài kiểm tra của khóa học">
+    {generating && <AIGenerationDialog token={token} courseId={courseId} mode="quiz" onClose={() => setGenerating(false)} onAccepted={id => { setGenerating(false); onJobAccepted(id) }} />}
+    <button type="button" className="secondary-button" onClick={() => setGenerating(true)}>Sinh Quiz bằng AI</button>
     <div className="quiz-section-heading"><div><h2>Bài kiểm tra</h2>
       <p className="inline-help">Soạn câu hỏi, làm bài và cập nhật mức độ hiểu của bạn.</p></div>
       <button className="primary-button detail-add" type="button" onClick={() => setEditor({ item: null })} disabled={loading || Boolean(error)}>+ Tạo Quiz</button>

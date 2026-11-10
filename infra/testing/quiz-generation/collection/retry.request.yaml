@@ -18,7 +18,7 @@
     {
       "type": "afterResponse",
       "language": "text/javascript",
-      "code": "pm.test('retry: expected behavior',()=>{pm.response.to.have.status(200);pm.expect(String(pm.response.json().quiz.id)).to.eql(pm.collectionVariables.get('quizId'));});"
+      "code": "pm.test('same key returns original job',()=>{pm.response.to.have.status(202);pm.expect(pm.response.json().jobId).to.eql(pm.collectionVariables.get('jobId'));});"
     }
   ],
   "body": {

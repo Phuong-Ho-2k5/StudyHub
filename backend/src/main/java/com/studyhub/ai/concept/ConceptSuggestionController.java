@@ -25,20 +25,18 @@ import org.springframework.web.bind.annotation.*;
 })
 public class ConceptSuggestionController {
     private final ConceptSuggestionService service;
-    public ConceptSuggestionController(ConceptSuggestionService service) { this.service=service; }
+    private final com.studyhub.ai.job.AIJobExecutionService async;
+    public ConceptSuggestionController(ConceptSuggestionService service,com.studyhub.ai.job.AIJobExecutionService async) { this.service=service;this.async=async; }
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
+
     @ApiResponses({
-        @ApiResponse(responseCode="201",description="Saved draft; no Concept created"),
-        @ApiResponse(responseCode="422",description="Window outside document or TOKEN_BUDGET_EXCEEDED"),
-        @ApiResponse(responseCode="502",description="Invalid AI output or evidence"),
-        @ApiResponse(responseCode="503",description="AI unavailable or unconfigured"),
-        @ApiResponse(responseCode="504",description="AI generation deadline exceeded")
+        @ApiResponse(responseCode="202",description="Accepted; Location points to job status"),
+        @ApiResponse(responseCode="422",description="Source window is empty or outside the document")
     })
-    @Operation(summary="Generate sourced Concept drafts",description="Does not create Concepts. Uses an explicit published chunk window; overflow requires a smaller chunkLimit.")
-    public DraftBatch generate(@PathVariable Long courseId,@PathVariable Long documentId,
+    @Operation(summary="Generate sourced Concept drafts",description="Queues a draft, never creates Concepts. AI failures are exposed by the job status API. Uses an explicit published chunk window.")
+    public ResponseEntity<com.studyhub.ai.job.AIJobAcceptedResponse> generate(@PathVariable Long courseId,@PathVariable Long documentId,
         @RequestBody GenerateConceptSuggestionsRequest request,@AuthenticationPrincipal CustomUserDetails user) {
-        return service.generate(courseId,documentId,user.getId(),request);
+        return async.submitConcept(courseId,documentId,user.getId(),request).accepted();
     }
     @GetMapping("/{batchId}")
     @Operation(summary="Read a saved draft",description="Snapshot remains readable after re-ingest with sourceCurrent=false; stale pending items cannot be confirmed.")

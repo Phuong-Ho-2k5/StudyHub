@@ -1,6 +1,6 @@
 # Durable AI jobs
 
-AI jobs record a long-running operation independently of an HTTP request. They do not execute work. The backend currently exposes the read API and an internal lifecycle; existing upload, ingestion and generation endpoints retain their current behavior. No provider credentials are needed for these tests.
+AI jobs record a long-running operation independently of an HTTP request. They do not execute work. The backend exposes the read API, durable asynchronous producers and background workers for ingestion, Concept drafts and Quiz drafts. No provider credentials are needed for these tests.
 
 ## Storage and lifecycle
 
@@ -77,18 +77,51 @@ The runner starts the existing local Postman extraction simulation on a free por
 
 The PostgreSQL checks cover upgrade from the previous schema with an existing published index and pending ingestion, repeat migrations, competing claims, competing completion/failure, deletion/ownership changes before and after publication locks, and the existing ingestion migration/API regressions. HTTP tests exercise real JWT filters and the server, matching the repository's API-test convention.
 
-## Async integration checklist
+## Async contract
 
-- Choose one authoritative queue/state source; avoid independent dual writes and two executing workers.
-- Define migration of pending/processing ingestions and preserve published-index foreign keys and existing lease/token protections.
-- Enqueue in the upload transaction; retain 201 after file upload is saved.
-- Persist all generation inputs required to execute after the request ends.
-- Assign one execution owner and process provider calls outside database locks.
-- Publish output and complete the matching claim atomically; false completion rolls back output.
-- Async ingestion/generation responses use 202, jobId and Location; connect polling UI separately.
-- Add restart/crash recovery, leases/reclaim, retry/backoff, timeout and idempotency before relying on recovery guarantees. Processing jobs have no automatic recovery yet; lost ownership leaves an inaccessible row for future cleanup.
+The following POSTs return **202** with `{jobId,statusUrl}` and `Location: /api/ai/jobs/{jobId}`:
 
-## Verification record
+- `/api/documents/{documentId}/ingest`
+- `/api/courses/{courseId}/documents/{documentId}/ai/concept-suggestions`
+- `/api/documents/{documentId}/ai/generate-quiz`
+- `/api/courses/{courseId}/ai/generate-quiz`
+
+Upload still returns **201** after storing the PDF and enqueueing ingestion in the same transaction. Document responses include nullable `ingestionJobId`. Active re-ingestion returns 409; follow the existing ID from GET Document. Generation request schemas and limits are unchanged. Input/scope errors still reject before enqueue; provider/schema/budget errors after acceptance appear as FAILED plus an allowlisted errorCode when polling the job, rather than synchronous 5xx responses.
+
+Quiz POSTs require Idempotency-Key. A reservation is persisted before execution: same requester/key/normalized payload returns the same job ID in any state; a different payload returns 409. A failed job requires a new key for a new generation. Deleted Quiz results retain the existing 409 replay behavior. Successful pre-V29 quiz generations acquire a completed job on replay without another model call.
+
+V29 adds `ai_job_commands` and ingestion-to-job links. Commands persist request parameters and selected published ingestion versions, never prompts, PDF content or credentials. Stop old workers before migrating; mixed-version rolling deployment is unsupported. Active ingestions are backfilled without changing ingestion IDs, published pointers or chunks. Ingestion remains executed only by DocumentIngestionWorker; the generation worker only scans generation commands.
+
+Ingestion lease reclaim retains one public PROCESSING job while its ingestion token fences obsolete attempts. Output and terminal job state commit atomically; failed completion rolls back output. Generation calls AI outside transactions and validates the queued source versions before generation and again when saving. Polling reads never call AI.
+
+Worker settings:
+
+```yaml
+studyhub:
+  ingestion:
+    worker-enabled: true
+    poll-delay-ms: 1000
+  ai:
+    jobs:
+      worker-enabled: true
+      poll-delay-ms: 1000
+```
+
+**Current recovery boundary:** generation PENDING commands survive restart. Generation PROCESSING jobs do not yet have automatic crash recovery, retry/backoff or a job-level deadline; those are planned for a later resilience phase. Existing ingestion leases/max-attempt recovery remain active. Exactly-once model billing is not guaranteed.
+
+Frontend: Course documents offer Concept suggestions and AI Quiz generation; the Quiz tab offers generation from 1–5 published Documents. An accepted generation is tracked in the `job` URL search parameter, so refresh resumes it. The status component verifies Course scope, polls sequentially every three seconds, pauses while hidden and stops at terminal state or authentication/scope failure. Read errors can retry GET, never generation POST. Results open the existing Quiz review or a sourced Concept batch; confirmation remains an explicit user action. New ingestion rows use job polling; legacy rows fall back to Document polling.
+
+Collection checks:
+
+```powershell
+postman collection lint infra/testing/ai-jobs/collection
+postman collection lint infra/testing/concepts/collection
+postman collection lint infra/testing/quiz-generation/collection
+```
+
+`test-postgres.ps1` always runs job migration/claim/publication/reservation concurrency plus ingestion regressions. If CONCEPT_PIPELINE_AI_URL and/or QUIZ_PIPELINE_AI_URL point to local FastAPI instances backed by the corresponding Postman provider simulation, it also runs those pipeline and concurrency suites. RUN_CONCEPT_COLLECTION=1 / RUN_QUIZ_COLLECTION=1 enable real collection runs on disposable fixture JWTs. The quiz pipeline also runs the AI-job ownership collection. Collections use bounded status polling and then read the business result; their execution, not lint alone, verifies assertions. See the Concepts/Quiz README for simulation startup instructions.
+
+## Historical verification record
 
 Verified on 2026-11-09 with no paid provider calls:
 

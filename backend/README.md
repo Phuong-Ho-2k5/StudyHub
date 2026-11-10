@@ -1,5 +1,8 @@
 # StudyHub Backend
 
+Ingestion và generation hiện chạy nền, trả `202 + jobId + Location`; upload giữ `201` và trả thêm `ingestionJobId`. Polling API và giới hạn recovery được mô tả tại [async AI jobs](../infra/testing/ai-jobs/README.md#async-contract). V29 cần dừng worker cũ trước migration.
+
+
 API đề xuất Concept nên học tiếp: `GET /api/courses/{courseId}/recommendations/next-concepts?limit=5`, Bearer JWT. Chỉ đề xuất Concept confidence dưới 80 đã đủ prerequisite trực tiếp/gián tiếp; trả thứ tự, lý do và evidence học tập. Không gọi AI hoặc sửa dữ liệu. Xem [hợp đồng, giới hạn và kiểm thử](../infra/testing/recommendations/README.md).
 
 ## AI Quiz review
